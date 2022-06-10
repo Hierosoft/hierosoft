@@ -58,6 +58,7 @@ def get_subdir_names(folder_path, hidden=False):
                 ret.append(sub_name)
     return ret
 
+
 def get_file_names(folder_path, hidden=False):
     ret = None
     if os.path.exists(folder_path):
@@ -95,6 +96,7 @@ def get_installed_bin(programs_path, dest_id, flag_names):
             pass
             # print("    not_found: '" + flag_path + "'")
     return ret
+
 
 def is_installed(programs_path, dest_id, flag_names):
     path = get_installed_bin(programs_path, dest_id, flag_names)
