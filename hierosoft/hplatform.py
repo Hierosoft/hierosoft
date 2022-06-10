@@ -57,6 +57,19 @@ def make_shortcut(meta, program_name, mgr, push_label=echo0, uninstall=False):
         BIN = os.path.join(PREFIX, "bin")
         sh_path = os.path.join(BIN, "blendernightly-logged.sh")
         logexec = bin_path
+        # TODO: Prevent Blender startup crash:
+        '''
+        ERROR (gpu.shader): gpu_shader_2D_widget_base FragShader:
+              |
+           81 | layout(depth_any) out float gl_FragDepth;
+              |         ^
+              | Error: unrecognized layout identifier `depth_any'
+        '''
+        # on older video
+        # cards not supporting OpenGL 4.2 as per
+        # <https://developer.blender.org/T98708>:
+        # logexec = "MESA_GL_VERSION_OVERRIDE=4.1" + logexec + ' > ' + CACHE + '/blender-`date "+%Y-%m-%d"`-gl4.1-error.log 2>&1'
+        # MESA_GL_VERSION_OVERRIDE=4.1 /home/owner/Downloads/blendernightly/versions/3.2.0-stable+v32.e05e1e369187.x86_64-release/blender > /home/owner/.cache/blender-nightly/blender-`date "+%Y-%m-%d"`-gl4.1-error.log 2>&1
         CACHES = os.path.join(mgr.profile_path, ".cache")
         CACHE = os.path.join(CACHES, "blender-nightly")
         if not os.path.isdir(CACHE):

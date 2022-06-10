@@ -8,7 +8,6 @@ import threading
 import tarfile
 import zipfile
 
-
 python_mr = sys.version_info.major
 
 if python_mr > 2:  # try:
@@ -30,6 +29,8 @@ else:  # except ImportError:
 import hierosoft
 from hierosoft import (
     echo0,
+    echo1,
+    echo2,
 )
 from hierosoft.hplatform import (
     make_shortcut,
@@ -757,7 +758,7 @@ def main():
     root = None
     try:
         root = tk.Tk()
-    except:
+    except tk.TclError:
         echo0("FATAL ERROR: Cannot use tkinter from terminal")
         sys.exit(1)
 
