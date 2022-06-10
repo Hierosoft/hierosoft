@@ -1,0 +1,3 @@
+include hierosoft/*.py
+include license.txt
+include readme.md
