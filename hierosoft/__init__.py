@@ -146,6 +146,7 @@ replacements = None
 USER = None  # formerly username
 PROFILES = None  # formerly profiles
 LOGS = None  # formerly logsDir
+CACHES = None  # None on Windows, so use LocalAppData/luid/cache in that case!
 if platform.system() == "Windows":
     SHORTCUT_EXT = "bat"
     USER = os.environ.get("USERNAME")
@@ -160,6 +161,7 @@ if platform.system() == "Windows":
 else:
     USER = os.environ.get("USER")
     HOME = os.environ.get("HOME")
+    CACHES = os.path.join(HOME, ".cache")
     LOCALAPPDATA = os.path.join(HOME, ".LOCALAPPDATA")
     share = os.path.join(LOCALAPPDATA, "share")
     if platform.system() == "Darwin":
@@ -308,7 +310,7 @@ non_cloud_warning_shown = False
 # See substitutions for ones implemented as a dictionary or ones not from CLR.
 
 
-def getUnique(luid, key='Share:Unique', extension=".conf", allow_cloud=False):
+def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=False):
     '''
     Get a unique path for your program within a special folder. This
     function exists since in some cases, the extension of the file
@@ -334,6 +336,9 @@ def getUnique(luid, key='Share:Unique', extension=".conf", allow_cloud=False):
             directory if it doesn't exist. Generally, it is a folder
             within .config (but differs by platform following the
             standards of each platform such as %APPDATA%).
+        'Cache:Unique': A directory in the user's cache directory such
+            as .cache/{luid}, but
+            on Windows the order is flipped to LOCALAPPDATA/{luid}/cache
     allow_cloud -- Use the 'Configs:Unique' directory in the cloud,
         but only if a known cloud directory already exists (otherwise
         fall back to 'Configs:Unique' as described.
@@ -341,21 +346,25 @@ def getUnique(luid, key='Share:Unique', extension=".conf", allow_cloud=False):
     global non_cloud_warning_shown
     if key == 'Share:Unique':
         if platform.system() == "Windows":
-            return os.path.join(LOCALAPPDATA, luid)
+            return os.path.join(local, luid)
         else:
             os.path.join(share, luid)
+    elif key == 'Cache:Unique':
+        if platform.system() == "Windows":
+            return os.path.join(LocalAppData, luid, "cache")
+        return os.path.join(CACHES, luid)
     elif key == 'Desktop:Unique':
         # TODO: Consider using https://github.com/newville/pyshortcuts
         #   to generate shortcut files on Windows/Darwin/Linux.
         if platform.system() == "Windows":
-            return os.path.join(SHORTCUTS_DIR, luid+".blnk")
+            return os.path.join(shortcutsDir, luid+".blnk")
         elif platform.system() == "Darwin":
-            return os.path.join(SHORTCUTS_DIR, luid+".desktop")
+            return os.path.join(shortcutsDir, luid+".desktop")
             # TODO: ^ Use ".command", applescript, or something else.
         else:
-            return os.path.join(SHORTCUTS_DIR, luid+".desktop")
+            return os.path.join(shortcutsDir, luid+".desktop")
     elif key == 'Configs:Unique':
-        localUniqueDir = os.path.join(APPDATA, luid)
+        localUniqueDir = os.path.join(AppData, luid)
         if allow_cloud:
             check_cloud()
             if CLOUD_PROFILE is not None:
