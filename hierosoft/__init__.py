@@ -147,8 +147,9 @@ USER = None  # formerly username
 PROFILES = None  # formerly profiles
 LOGS = None  # formerly logsDir
 CACHES = None  # None on Windows, so use LocalAppData/luid/cache in that case!
-_default_prefix = None
 PIXMAPS = None
+PREFIX = os.environ.get('PREFIX')
+SHARE = None  # formerly share
 if platform.system() == "Windows":
     SHORTCUT_EXT = "bat"
     USER = os.environ.get("USERNAME")
@@ -157,17 +158,17 @@ if platform.system() == "Windows":
     APPDATA = os.path.join(_data_parent_, "Roaming")
     LOCALAPPDATA = os.path.join(_data_parent_, "Local")
     del _data_parent_
-    share = LOCALAPPDATA
+    SHARE = LOCALAPPDATA  # TODO: Consider whether this is best.
     SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
     PROFILES = os.environ.get("PROFILESFOLDER")
     temporaryFiles = os.path.join(LOCALAPPDATA, "Temp")
-    _default_prefix = "C:\\ProgramData"
-    PIXMAPS = _default_prefix
+    if PREFIX is None:
+        PREFIX = "C:\\ProgramData"
+    PIXMAPS = PREFIX
 else:
     USER = os.environ.get("USER")
     HOME = os.environ.get("HOME")
     LOCALAPPDATA = os.path.join(HOME, ".config")
-    share = os.path.join(LOCALAPPDATA, "share")
     if platform.system() == "Darwin":
         SHORTCUT_EXT = "command"
         # See also <https://github.com/poikilos/world_clock>
@@ -178,22 +179,23 @@ else:
         LOGS = os.path.join(HOME, "Library", "Logs")
         PROFILES = "/Users"
         temporaryFiles = os.environ.get("TMPDIR")
-        _default_prefix = Library   # TODO: consider whether this is best
+        if PREFIX is None:
+            PREFIX = Library   # TODO: Consider whether this is best.
+        SHARE = LocalAppData  # os.path.join(PREFIX, "share")
+        # TODO: ^ Consider whether this is the best location for SHARE.
     else:
+        if PREFIX is None:
+            PREFIX = os.path.join(HOME, ".local")
         # GNU+Linux Systems
-        SHORTCUTS_DIR = os.path.join(share, "applications")
+        SHARE = os.path.join(PREFIX, "share")
+        SHORTCUTS_DIR = os.path.join(SHARE, "applications")
         APPDATA = os.path.join(HOME, ".config")
         LocalAppData = os.path.join(HOME, ".config")
         LOGS = os.path.join(HOME, ".var", "log")
         PROFILES = "/home"
         temporaryFiles = "/tmp"
-        _default_prefix = os.path.join(HOME, ".local")
 
-PREFIX = os.environ.get('PREFIX')
-if PREFIX is None:
-    PREFIX = _default_prefix
 
-SHARE = os.path.join(PREFIX, "share")
 PIXMAPS = os.path.join(SHARE, "pixmaps")
 
 
@@ -363,10 +365,7 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
     '''
     global non_cloud_warning_shown
     if key == 'Share:Unique':
-        if platform.system() == "Windows":
-            return os.path.join(local, luid)
-        else:
-            return os.path.join(share, luid)
+        return os.path.join(SHARE, luid)
     elif key == 'Cache:Unique':
         if platform.system() == "Windows":
             return os.path.join(LocalAppData, luid, "cache")
