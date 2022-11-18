@@ -163,7 +163,7 @@ if platform.system() == "Windows":
     PROFILES = os.environ.get("PROFILESFOLDER")
     temporaryFiles = os.path.join(LOCALAPPDATA, "Temp")
     if PREFIX is None:
-        PREFIX = "C:\\ProgramData"
+        PREFIX = LOCALAPPDATA
     PIXMAPS = PREFIX
 else:
     USER = os.environ.get("USER")
