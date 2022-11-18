@@ -279,6 +279,22 @@ substitutions = {
 # ^ For cloud, see check_cloud.
 
 
+class TextStream:
+    '''
+    Collect streamed strings or bytes. This class behaves like an
+    opened file in whatever ways are appropriate for the hierosoft
+    module such as for the download method of hierosoft.moreweb
+    submodule's DownloadManager class.
+    '''
+    def __init__(self):
+        self.data = ""
+
+    def write(self, data):
+        if isinstance(data, bytes):
+            data = data.decode('utf-8')
+        self.data += data
+
+
 def check_cloud(cloud_path=None, cloud_name=None):
     '''
     This will check whether there is a "HOME" directory in your
