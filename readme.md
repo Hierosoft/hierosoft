@@ -9,6 +9,9 @@ to download or run a Python program such as an updated copy of:
 - the Hierosoft Launcher (See Project Status).
 - any program (when used by the launcher or blendernightly)
 
+## Checkpath
+To learn more, see the comment (docstring) at the top of [checkpath.py](hierosoft/checkpath.py).
+
 ## Project Status
 - [ ] The gui_tk main function should be launched by the icon.
 - [ ] In Windows, Hierosoft Icon should be compiled as an exe such as

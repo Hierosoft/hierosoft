@@ -147,6 +147,8 @@ USER = None  # formerly username
 PROFILES = None  # formerly profiles
 LOGS = None  # formerly logsDir
 CACHES = None  # None on Windows, so use LocalAppData/luid/cache in that case!
+_default_prefix = None
+PIXMAPS = None
 if platform.system() == "Windows":
     SHORTCUT_EXT = "bat"
     USER = os.environ.get("USERNAME")
@@ -159,6 +161,8 @@ if platform.system() == "Windows":
     SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
     PROFILES = os.environ.get("PROFILESFOLDER")
     temporaryFiles = os.path.join(LOCALAPPDATA, "Temp")
+    _default_prefix = "C:\\ProgramData"
+    PIXMAPS = _default_prefix
 else:
     USER = os.environ.get("USER")
     HOME = os.environ.get("HOME")
@@ -174,6 +178,7 @@ else:
         LOGS = os.path.join(HOME, "Library", "Logs")
         PROFILES = "/Users"
         temporaryFiles = os.environ.get("TMPDIR")
+        _default_prefix = Library   # TODO: consider whether this is best
     else:
         # GNU+Linux Systems
         SHORTCUTS_DIR = os.path.join(share, "applications")
@@ -182,6 +187,17 @@ else:
         LOGS = os.path.join(HOME, ".var", "log")
         PROFILES = "/home"
         temporaryFiles = "/tmp"
+        _default_prefix = os.path.join(HOME, ".local")
+
+PREFIX = os.environ.get('PREFIX')
+if PREFIX is None:
+    PREFIX = _default_prefix
+
+SHARE = os.path.join(PREFIX, "share")
+PIXMAPS = os.path.join(SHARE, "pixmaps")
+
+
+localBinPath = os.path.join(PREFIX, "bin")
 
 if CACHES is None:
     CACHES = os.path.join(HOME, ".cache")
@@ -219,7 +235,6 @@ try:
 except ModuleNotFoundError as ex:
     echo1(str(ex))
 
-localBinPath = os.path.join(LOCALAPPDATA, "bin")
 
 # statedCloud = "owncloud"
 myCloudName = None
