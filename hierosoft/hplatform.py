@@ -8,37 +8,9 @@ import platform
 
 from hierosoft import (
     echo0,
+    SHORTCUT_EXT,
+    CACHES,
 )
-
-HOME = None
-APPDATA = None
-LOCALAPPDATA = None
-SHORTCUT_EXT = "desktop"
-CACHES = None
-if platform.system() == "Windows":
-    SHORTCUT_EXT = "bat"
-    if 'USERPROFILE' in os.environ:
-        HOME = os.environ['USERPROFILE']
-        appdatas_path = os.path.join(HOME, "AppData")
-        LOCALAPPDATA = os.environ.get('LOCALAPPDATA')
-        CACHES = LOCALAPPDATA
-        # LOCALAPPDATA = os.path.join(appdatas_path, "Local")
-        # APPDATA = os.path.join(appdatas_path, "Roaming")
-        APPDATA = os.environ.get('APPDATA')
-    else:
-        print("ERROR: missing USERPROFILE variable")
-else:
-    if platform.system() == "Darwin":
-        SHORTCUT_EXT = "command"
-    if 'HOME' in os.environ:
-        HOME = os.environ['HOME']
-        APPDATA = os.path.join(HOME, ".config")
-    else:
-        echo0("ERROR: missing HOME variable")
-
-
-if CACHES is None:
-    CACHES = os.path.join(HOME, ".cache")
 
 
 def make_shortcut(meta, program_name, mgr, push_label=echo0, uninstall=False):
