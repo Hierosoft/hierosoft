@@ -154,6 +154,7 @@ if platform.system() == "Windows":
     _data_parent_ = os.path.join(HOME, "AppData")
     APPDATA = os.path.join(_data_parent_, "Roaming")
     LOCALAPPDATA = os.path.join(_data_parent_, "Local")
+    del _data_parent_
     share = LOCALAPPDATA
     SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
     PROFILES = os.environ.get("PROFILESFOLDER")
@@ -161,7 +162,6 @@ if platform.system() == "Windows":
 else:
     USER = os.environ.get("USER")
     HOME = os.environ.get("HOME")
-    CACHES = os.path.join(HOME, ".cache")
     LOCALAPPDATA = os.path.join(HOME, ".config")
     share = os.path.join(LOCALAPPDATA, "share")
     if platform.system() == "Darwin":
@@ -182,6 +182,9 @@ else:
         LOGS = os.path.join(HOME, ".var", "log")
         PROFILES = "/home"
         temporaryFiles = "/tmp"
+
+if CACHES is None:
+    CACHES = os.path.join(HOME, ".cache")
 
 # TODO: Consider using os.path.expanduser('~') to get HOME.
 if HOME != os.path.expanduser('~'):
