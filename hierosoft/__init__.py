@@ -138,10 +138,10 @@ def set_verbosity(verbosity_level):
 
 SHORTCUT_EXT = "desktop"
 HOME = None  # formerly profile
-APPDATA = None  # formerly AppData
+APPDATA = None  # formerly APPDATA
 LOCALAPPDATA = None  # formerly local
 # myLocal = None
-SHORTCUTS_DIR = None  # formerly shortcutsDir
+SHORTCUTS_DIR = None  # formerly SHORTCUTS_DIR
 replacements = None
 USER = None  # formerly username
 PROFILES = None  # formerly profiles
@@ -151,7 +151,7 @@ if platform.system() == "Windows":
     SHORTCUT_EXT = "bat"
     USER = os.environ.get("USERNAME")
     HOME = os.environ.get("USERPROFILE")
-    _data_parent_ = os.path.join(HOME, "APPDATA")
+    _data_parent_ = os.path.join(HOME, "AppData")
     APPDATA = os.path.join(_data_parent_, "Roaming")
     LOCALAPPDATA = os.path.join(_data_parent_, "Local")
     share = LOCALAPPDATA
@@ -162,7 +162,7 @@ else:
     USER = os.environ.get("USER")
     HOME = os.environ.get("HOME")
     CACHES = os.path.join(HOME, ".cache")
-    LOCALAPPDATA = os.path.join(HOME, ".LOCALAPPDATA")
+    LOCALAPPDATA = os.path.join(HOME, ".config")
     share = os.path.join(LOCALAPPDATA, "share")
     if platform.system() == "Darwin":
         SHORTCUT_EXT = "command"
@@ -293,7 +293,7 @@ def check_cloud(cloud_path=None, cloud_name=None):
             substitutions['%CLOUD%'] = myCloudPath
             substitutions['$CLOUD'] = myCloudPath
         # Set the HOME path if it exists:
-        tryCloudProfileDir = os.path.join(myCloudPath, "HOME")
+        tryCloudProfileDir = os.path.join(myCloudPath, "profile") # LITERAL PROFILE
         if os.path.isdir(tryCloudProfileDir):
             CLOUD_PROFILE = tryCloudProfileDir
         else:
@@ -348,7 +348,7 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
         if platform.system() == "Windows":
             return os.path.join(local, luid)
         else:
-            os.path.join(share, luid)
+            return os.path.join(share, luid)
     elif key == 'Cache:Unique':
         if platform.system() == "Windows":
             return os.path.join(LocalAppData, luid, "cache")
@@ -357,17 +357,18 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
         # TODO: Consider using https://github.com/newville/pyshortcuts
         #   to generate shortcut files on Windows/Darwin/Linux.
         if platform.system() == "Windows":
-            return os.path.join(shortcutsDir, luid+".blnk")
+            return os.path.join(SHORTCUTS_DIR, luid+".blnk")
         elif platform.system() == "Darwin":
-            return os.path.join(shortcutsDir, luid+".desktop")
+            return os.path.join(SHORTCUTS_DIR, luid+".desktop")
             # TODO: ^ Use ".command", applescript, or something else.
         else:
-            return os.path.join(shortcutsDir, luid+".desktop")
+            return os.path.join(SHORTCUTS_DIR, luid+".desktop")
     elif key == 'Configs:Unique':
-        localUniqueDir = os.path.join(AppData, luid)
+        localUniqueDir = os.path.join(APPDATA, luid)
         if allow_cloud:
             check_cloud()
             if CLOUD_PROFILE is not None:
+                echo0('* CLOUD_PROFILE="{}"'.format(CLOUD_PROFILE))
                 cloudUniqueDir = os.path.join(CLOUD_PROFILE, luid)
                 if os.path.isdir(localUniqueDir):
                     if not non_cloud_warning_shown:
@@ -376,6 +377,8 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
                               ''.format(localUniqueDir, cloudUniqueDir))
                         non_cloud_warning_shown = True
                 return cloudUniqueDir
+        echo0('* APPDATA="{}"'.format(APPDATA))
+        echo0('* localUniqueDir="{}"'.format(localUniqueDir))
         return localUniqueDir
     else:
         raise NotImplementedError("key='{}'".format(key))
