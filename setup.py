@@ -66,6 +66,7 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'hierosoft=hierosoft.gui_tk:main',
+            'ggrep=hierosoft.ggrep:main',
         ],
     },
     install_requires=install_requires,

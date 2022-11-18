@@ -3,6 +3,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Tasks
+- Move moreplatform/__init__.py code to hierosoft/__init__.py which affects:
+  - /home/owner/git/blnk/blnk/__init__.py
+
+## [git] - 2022-11-18
+### Added
+- move ggrep.py from pycodetool to hierosoft/ which affects:
+  - [x] anewcommit
+  - [x] (moved to hierosoft) pycodetool/pycodetool/tests/test_ggrep.py
+  - [x] (moved entry point line to hierosoft/setup.py) pycodetool/setup.py
+  - [x] (moved to hierosoft) pycodetool/scripts/ggrep
+  - [x] linux-preinstall/utilities/ggrep
+  - [x] nopackage/nopackage/__init__.py has "region same as pycodetool.ggrep" but should require hierosoft instead.
+- move path constants (now all caps) from moreplatform/__init__.py to hierosoft/__init__.py which affects:
+  - [x] mtanalyze/mtanalyze/__init__.py has redundant code, but should require hierosoft instead
+- move moremeta.py from moreplatform to hierosoft
+- move checkpath.py from moreplatform to hierosoft
+
 
 ## [git] - 2022-06-10
 (all changes are vs the code moved from blendernightly)

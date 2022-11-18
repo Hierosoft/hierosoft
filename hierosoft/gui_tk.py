@@ -1,4 +1,18 @@
 #!/usr/bin/env python
+'''
+Provide a configured updater window.
+
+Usage:
+
+from hierosoft.gui_tk import show_update_window
+options = {}
+# set options
+show_update_window(options)
+# returns: 0 if ok, 1 if no UI
+
+Options:
+
+'''
 from __future__ import print_function
 import sys
 import os
@@ -7,10 +21,9 @@ import shutil
 import threading
 import tarfile
 import zipfile
+import platform
 
-python_mr = sys.version_info.major
-
-if python_mr > 2:  # try:
+if sys.version_info.major >= 3:  # try:
     from tkinter import messagebox
     from tkinter import filedialog
     import tkinter as tk
@@ -36,12 +49,15 @@ from hierosoft.hplatform import (
     make_shortcut,
 )
 from hierosoft.hweb import (
-    LinkManager,
+    DownloadManager,
     name_from_url,
 )
 
-# formerly part of blendernightly update.pyw:
+from hierosoft.ggrep import (
+    contains_any,
+)
 
+# formerly part of blendernightly update.pyw:
 
 def view_traceback(min_indent="  "):
     ex_type, ex, tb = sys.exc_info()
@@ -51,19 +67,64 @@ def view_traceback(min_indent="  "):
     del tb
 
 
-
-
 # TODO: use classes
 class MainApplication(tk.Frame):
-    def __init__(self, parent, *args, **kwargs):
+
+    HELP = {
+        'title': "Set the window title for the updater.",
+        'platforms': (
+            "A dictionary of platforms where the key can be any"
+            " platform.system() value such as Linux, Windows, or Darwin"
+            " and the value of each is the substring in the filename"
+            " for that platform. Example:"
+            " platforms={'Linux':\"linux\", 'Windows':\"windows\","
+            " 'Darwin':\"macos\"}. The only value of the"
+            " current platform will be set as the entry box value used"
+            " by the DownloadManager."
+        ),
+        'architectures': (
+            "A dictionary of architectures where the key can be any"
+            " platform.system() value such as Linux, Windows, or Darwin"
+            " and the value of each is the substring in the filename"
+            " for that platform. Example:"
+            " platforms={'Linux':\"x64\", 'Windows':\"x64\","
+            " 'Darwin':[\"x64\", \"arm64\"]}. The only value of the"
+            " current platform will be set as the entry box value used"
+            " by the DownloadManager."
+        ),
+    }
+
+    @classmethod
+    def get_option_keys(cls):
+        return list(cls.HELP.keys()) + DownloadManager.get_option_keys()
+
+    @classmethod
+    def get_help(cls, key):
+        if key in DownloadManager.get_option_keys():
+            return DownloadManager.get_help(key)
+        return HELP.get(key)
+
+    def set_options(self, options):
+        for key, value in options.items():
+            if key in DownloadManager.get_option_keys():
+                self.mgr.set_options({key: value})
+            elif key == "platforms":
+                self.mgr.set_options({'platform': value[platform.system()]})
+            elif key == "architectures":
+                self.mgr.set_options({'arch': value[platform.system()]})
+        self.set_entries()
+
+    def __init__(self, parent, options, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
         self.root = parent
+
         self.root.geometry("1000x600")
         self.root.minsize(600, 400)
-        title_s = "Hierosoft Update"
-        if len(sys.argv) >= 3:
-            if sys.argv[1] == "--title":
-                title_s = sys.argv[2]
+
+        key = None
+        title_s = options.get('title')
+        if title_s is None:
+            title_s = "Hierosoft Update"
         self.root.title(title_s)
         self.root.wm_title(title_s)
         self.parent = parent
@@ -84,17 +145,13 @@ class MainApplication(tk.Frame):
         self.v_urls = None  # urls matching specified Blender version (tag)
         self.p_urls = None  # urls matching specified platform flag
         self.a_urls = None  # urls matching specified architecture
+        self.option_entries = {}
+        # self.option_entries['']
         self.version_e = None
         self.refresh_btn = None
         self.pbar = None
         self.del_arc_var = tk.IntVar()
-        default_blender_page_meta = {
-            'linArch': "x86_64",  # formerly linux64 formerly x86_64
-            'winArch': "amd64",  # formerly windows64
-            'darwinArch': ["arm64", "x86_64"],
-            # ^ formerly macOS formerly x86_64
-        }
-        self.mgr = LinkManager(default_blender_page_meta)
+        self.mgr = DownloadManager()
         # ^ contains self.mgr.profile_path
         self.dl_buttons = []
         self.msg_labels = []
@@ -102,19 +159,15 @@ class MainApplication(tk.Frame):
 
         # Formerly before main:
         self.version_e = tk.Entry(self.root)
-        self.version_e.delete(0,tk.END)
-        self.version_e.insert(0, self.mgr.parser.release_version)
         self.version_e.pack()
 
         self.pflag_e = tk.Entry(self.root)
-        self.pflag_e.delete(0,tk.END)
-        self.pflag_e.insert(0, self.mgr.parser.platform_flag)
         self.pflag_e.pack()
 
         self.arch_e = tk.Entry(self.root)
-        self.arch_e.delete(0,tk.END)
-        self.arch_e.insert(0, self.mgr.parser.release_arch)
         self.arch_e.pack()
+
+        self.set_options(options)  # Does call self.mgr.set_options on match
 
         self.refresh_btn = tk.Button(self.root, text="Refresh",
                                      command=self.refresh_click)
@@ -470,7 +523,33 @@ class MainApplication(tk.Frame):
         self.refresh_btn.config(state=tk.NORMAL)
         self.root.update()
 
+    def set_entries(self):
+        if self.mgr.parser is None:
+            echo0('[MainApplication set_entries] INFO: self.mgr.parser is None')
+            return
+        version = self.mgr.parser.get_option('version')
+        platform = self.mgr.parser.get_option('platform')
+        arch = self.mgr.parser.get_option('arch')
+        if self.version_e is None:
+            raise RuntimeError(
+                "[MainApplication set_entries] Error: self.version_e is None."
+                " The GUI must be set up before calling set_entries,"
+                " because the GUI elements are used as the data source"
+                " directly later."
+            )
+        if version is not None:
+            self.version_e.delete(0,tk.END)
+            self.version_e.insert(0, version)
+        if platform is not None:
+            self.pflag_e.delete(0,tk.END)
+            self.pflag_e.insert(0, platform)
+        if arch is not None:
+            self.arch_e.delete(0,tk.END)
+            self.arch_e.insert(0, arch)
+
     def refresh(self):
+        # self.set_entries()
+        must_contain = self.mgr.parser.get_option('must_contain')
         print("")
         print("Downloading the html page...")
         for label in self.msg_labels:
@@ -489,28 +568,35 @@ class MainApplication(tk.Frame):
         self.only_a = self.arch_e.get().strip()
         if len(self.only_a) == 0:
             self.only_a = None
-        self.mgr.parser.release_version = self.only_v
-        self.mgr.parser.platform_flag = only_p
-        self.mgr.parser.release_arch = self.only_a
+        elif " " in self.only_a:
+            self.only_a = self.only_a.split()
+        # Update options to whatever the user sees/changed in the GUI:
+        self.mgr.set_options({
+            'version': self.only_v,
+            'platform': only_p,
+            'arch': self.only_a,
+        })
         self.v_urls = []
         self.p_urls = []
         self.a_urls = []
-        self.urls = self.mgr.get_urls(verbose=False,
-                                      must_contain="/blender-")
-        print("Of the total " + str(len(self.urls)) + " blender download url(s)")
+        self.urls = self.mgr.get_urls()
+        echo0('Of the total {} download url(s) matching "{}"'
+              ''.format(len(self.urls), must_contain))
         count = 0
         v_msg = ""
         a_msg = ""
         p_msg = ""
         print("all:")
         if self.only_v is not None:
-            v_msg = self.only_v + " "
+            v_msg = "{} ".format(self.only_v)
         if self.only_a is not None:
-            a_msg = self.only_a + " "
+            a_msg = "{} ".format(self.only_a)  # can be a list.
         for url in self.urls:
             if (self.only_v is None) or (self.only_v in url):
                 self.v_urls.append(url)
-                print(url)
+                echo1('- (matched version) "{}"'.format(url))
+            else:
+                echo1('- "{}" is not version "{}"'.format(url, self.only_v))
         # self.count_label.config(text=v_msg+"count: "+str(len(self.v_urls)))
         print("  matched " + str(len(self.v_urls)) + " " + v_msg + "url(s)")
 
@@ -518,7 +604,9 @@ class MainApplication(tk.Frame):
         for url in self.v_urls:
             if (only_p is None) or (only_p in url):
                 self.p_urls.append(url)
-                print(url)
+                echo1('- (matched platform) "{}"'.format(url))
+            else:
+                echo1('- "{}" is not for "{}" platform'.format(url, self.only_v))
 
         print("  matched " + str(len(self.p_urls)) + " " + p_msg + "url(s)")
 
@@ -527,8 +615,12 @@ class MainApplication(tk.Frame):
         archives_path = os.path.join(bn_path, "archives")
 
         metas = []
+        if isinstance(self.only_a, list):
+            arches = self.only_a
+        else:
+            arches = [self.only_a]
         for url in self.p_urls:
-            if (self.only_a is None) or (self.only_a in url):
+            if (self.only_a is None) or contains_any(url, arches):
                 self.a_urls.append(url)
                 print(url)
                 meta = {}
@@ -733,39 +825,65 @@ class MainApplication(tk.Frame):
             # self.root.config(height=self.root.winfo_width()+expand)
             self.root.geometry('400x' + str(old_bottom+expand))
 
-
     def start_refresh(self):
         # self.refresh_btn.pack_forget()
         # self.refresh_btn.config(fg='gray')
         # self.refresh()
         if self.thread1 is None:
-            print("")
-            print("Starting refresh thread...")
+            echo0("")
+            echo0("Starting refresh thread...")
             self.thread1 = threading.Thread(target=self.refresh, args=())
             self.refresh_btn.config(state=tk.DISABLED)
             self.root.update()
             self.thread1.start()
         else:
-            print("WARNING: Refresh is already running.")
+            echo0("WARNING: Refresh is already running.")
 
     def refresh_click(self):
         self.start_refresh()
 
-def main():
-    # Avoid "RuntimeError: main thread is not in main loop"
-    # such as on self.count_label.config
-    # (not having a separate main function may help).
+
+def show_update_window(options):
     root = None
     try:
         root = tk.Tk()
     except tk.TclError:
         echo0("FATAL ERROR: Cannot use tkinter from terminal")
-        sys.exit(1)
-
-    app = MainApplication(root)
+        return 1
+    option_keys = MainApplication.get_option_keys()
+    for key, value in option_keys.items():
+        if key not in option_keys:
+            raise ValueError("{} is not a valid option.".format(key))
+    app = MainApplication(root, options)
     app.pack(side="top", fill="both", expand=True)
     root.after(500, app.start_refresh)
     root.mainloop()
+    return 0
+
+
+def main():
+    # Avoid "RuntimeError: main thread is not in main loop"
+    # such as on self.count_label.config
+    # (not having a separate main function may help).
+    options = {}
+    options['title'] = "Hierosoft Update"
+
+    # option_keys = MainApplication.get_option_keys()
+    if len(sys.argv) >= 3:
+        for argI in range(len(sys.argv)):
+            arg = sys.argv[argI]
+            if key is not None:
+                options[key] = arg
+                key = None
+            elif arg.startswith("--"):
+                if arg in ["--verbose", "--debug"]:
+                    # already handled by __init__.py
+                    pass
+                else:
+                    key = arg[2:]
+
+    show_update_window(options)
+
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,19 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+import re
+import sys
+import os
+import platform
+
+SCRIPTS_DIR = os.path.dirname(os.path.realpath(__file__))
+# ^ Without realpath, . will be included as a separate directory
+#   & break dirname.
+REPO_DIR = os.path.dirname(SCRIPTS_DIR)
+if os.path.isfile(os.path.join(REPO_DIR, "pycodetool", "ggrep.py")):
+    sys.path.insert(0, REPO_DIR)
+
+from hierosoft.ggrep import main
+
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())

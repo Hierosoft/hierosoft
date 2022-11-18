@@ -4,15 +4,47 @@ import os
 import shutil
 import tempfile
 import subprocess
+import platform
 
 from hierosoft import (
     echo0,
 )
 
+HOME = None
+APPDATA = None
+LOCALAPPDATA = None
+SHORTCUT_EXT = "desktop"
+CACHES = None
+if platform.system() == "Windows":
+    SHORTCUT_EXT = "bat"
+    if 'USERPROFILE' in os.environ:
+        HOME = os.environ['USERPROFILE']
+        appdatas_path = os.path.join(HOME, "AppData")
+        LOCALAPPDATA = os.environ.get('LOCALAPPDATA')
+        CACHES = LOCALAPPDATA
+        # LOCALAPPDATA = os.path.join(appdatas_path, "Local")
+        # APPDATA = os.path.join(appdatas_path, "Roaming")
+        APPDATA = os.environ.get('APPDATA')
+    else:
+        print("ERROR: missing USERPROFILE variable")
+else:
+    if platform.system() == "Darwin":
+        SHORTCUT_EXT = "command"
+    if 'HOME' in os.environ:
+        HOME = os.environ['HOME']
+        APPDATA = os.path.join(HOME, ".config")
+    else:
+        echo0("ERROR: missing HOME variable")
+
+
+if CACHES is None:
+    CACHES = os.path.join(HOME, ".cache")
+
+
 def make_shortcut(meta, program_name, mgr, push_label=echo0, uninstall=False):
     ret = True
     desktop_path = mgr.get_desktop_path()
-    sc_ext = mgr.get_shortcut_ext()
+    sc_ext = SHORTCUT_EXT
     bin_path = meta.get('installed_bin')
     action = "create"
     if uninstall:
@@ -70,7 +102,6 @@ def make_shortcut(meta, program_name, mgr, push_label=echo0, uninstall=False):
         # <https://developer.blender.org/T98708>:
         # logexec = "MESA_GL_VERSION_OVERRIDE=4.1" + logexec + ' > ' + CACHE + '/blender-`date "+%Y-%m-%d"`-gl4.1-error.log 2>&1'
         # MESA_GL_VERSION_OVERRIDE=4.1 /home/owner/Downloads/blendernightly/versions/3.2.0-stable+v32.e05e1e369187.x86_64-release/blender > /home/owner/.cache/blender-nightly/blender-`date "+%Y-%m-%d"`-gl4.1-error.log 2>&1
-        CACHES = os.path.join(mgr.profile_path, ".cache")
         CACHE = os.path.join(CACHES, "blender-nightly")
         if not os.path.isdir(CACHE):
             os.makedirs(CACHE)
@@ -114,8 +145,9 @@ def make_shortcut(meta, program_name, mgr, push_label=echo0, uninstall=False):
                 # Keep the desktop shortcut and mark it executable.
                 os.chmod(desktop_sc_path, 0o755)
                 # ^ leading 0o denotes octal
-            except:
-                print("WARNING: could not mark icon as executable")
+            except Exception as ex:
+                echo0("Warning: could not mark icon as executable ({})"
+                      "".format(ex))
         else:
             pass
             # print("* {} is skipping shortcut writing".format(action))
