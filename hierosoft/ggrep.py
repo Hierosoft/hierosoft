@@ -78,7 +78,7 @@ from datetime import (
     timedelta,
 )
 
-from pycodetool import (
+from hierosoft import (
     echo0,  # formerly prerr as error
     echo1,  # formerly debug
     echo2,  # formerly extra
