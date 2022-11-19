@@ -13,9 +13,9 @@ Integrate Python programs with the system in various ways:
   - `from hierosoft.moreplatform import make_shortcut`
 - Get more metadata such as for images.
   - `hierosoft.moremeta`
-- Simulate grep but get a data structure instead.
-  - `hierosoft.ggrep`
-- Simulate netcat but get callbacks during the upload.
+- Emulate grep but also: Get a list of files; Process .gitignore files (and optionally get include and exclude filters for rsync).
+  - `from hierosoft.ggrep import (ggrep, gitignore_to_rsync_pair)`
+- Emulate netcat but get callbacks during the upload.
   - `from hierosoft.moreweb import netcat`
 - See nonexistent paths that may be safe to remove from the
   environment's PATH variable.
