@@ -100,3 +100,57 @@ def view_traceback(indent=""):
     traceback.print_tb(tb)
     del tb
     print("", file=sys.stderr)
+
+
+# syntax_error_fmt = "{path}:{row}:{column}: {message}"
+syntax_error_fmt = 'File "{path}", line {row}, {column} {message}'
+# ^ such as (Python-style, so readable by Geany):
+'''
+  File "/redacted/git/pycodetool/pycodetool/spec.py", line 336, in read_spec
+'''
+
+
+def set_syntax_error_fmt(fmt):
+    global syntax_error_fmt
+    syntax_error_fmt = fmt
+
+
+def to_syntax_error(path, lineN, msg, col=None):
+    '''
+    Convert the error to a syntax error that specifies the file and line
+    number that has the bad syntax.
+
+    Keyword arguments:
+    col -- is the character index relative to the start of the line,
+        starting at 1 for compatibility with outputinspector (which will
+        subtract 1 if using editors that start at 0).
+    '''
+    this_fmt = syntax_error_fmt
+
+    if col is None:
+        part = "{column}"
+        removeI = this_fmt.find(part)
+        if removeI > -1:
+            suffixI = removeI + len(part) + 1
+            # ^ +1 to get punctuation!
+            this_fmt = this_fmt[:removeI] + this_fmt[suffixI:]
+    if lineN is None:
+        part = "{row}"
+        removeI = this_fmt.find(part)
+        if removeI > -1:
+            suffixI = removeI + len(part) + 1
+            # ^ +1 to get punctuation!
+            this_fmt = this_fmt[:removeI] + this_fmt[suffixI:]
+    return this_fmt.format(path=path, row=lineN, column=col, message=msg)
+    # ^ Settings values not in this_fmt is ok.
+
+
+def echo_SyntaxWarning(path, lineN, msg, col=None):
+    msg = to_syntax_error(path, lineN, msg, col=col)
+    echo0(msg)
+    # ^ So the IDE can try to parse what path&line has an error.
+
+
+def raise_SyntaxError(path, lineN, msg, col=None):
+    echo_SyntaxWarning(path, lineN, msg, col=col)
+    raise SyntaxError(msg)

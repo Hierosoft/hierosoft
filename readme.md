@@ -26,7 +26,12 @@ Integrate Python programs with the system in various ways:
   version.
   - `hierosoft.moreweb`
 
-Example projects using this module:
+## Filesystem shortcuts
+- [doc/join_if_exists.md](doc/join_if_exists.md)
+
+
+## Example projects
+(using this module)
 - <https://github.com/poikilos/blendernightly>
 - <https://github.com/poikilos/world_clock>
 

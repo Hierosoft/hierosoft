@@ -357,6 +357,25 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
         raise NotImplementedError("key='{}'".format(key))
 
 
+def join_if_exists(parent, sub):
+    '''
+    Join an existing sub(s), otherwise return none.
+
+    Sequential arguments:
+    parent -- The parent directory possibly containing sub(s).
+    sub -- A path or multiple paths (assumed to be iterable if not str).
+    '''
+    if isinstance(sub, str):
+        subs = [sub]
+    else:
+        subs = sub
+    for sub in subs:
+        try_path = os.path.join(parent, sub)
+        if os.path.exists(try_path):
+            return try_path
+    return None
+
+
 def replace_isolated(path, old, new, case_sensitive=True):
     '''
     Replace old only if it is at the start or end of a path or is
@@ -429,7 +448,7 @@ def run_and_get_lists(cmd_parts, collect_stderr=True):
     # See <https://stackoverflow.com/a/7468726/4541104>
     # "This approach is preferable to the accepted answer as it allows
     # one to read through the output as the sub process produces it."
-    # –Hoons Jul 21 '16 at 23:19
+    # -Hoons Jul 21 '16 at 23:19
     if collect_stderr:
         sp = subprocess.Popen(cmd_parts, stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
@@ -574,7 +593,7 @@ def which(program_name, more_paths=[]):
     for path in (paths + more_paths):
         echo1("[hierosoft which] looking in {}".format(path))
         try_path = os.path.join(path, program_name)
-        is_exe(try_path):
+        if is_exe(try_path):
             return try_path
         elif os.path.isfile(try_path):
             echo0('[hierosoft which] Warning: "{}" exists'
