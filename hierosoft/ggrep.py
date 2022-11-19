@@ -77,13 +77,13 @@ from datetime import (
     datetime,
     timedelta,
 )
-
 from hierosoft import (
     echo0,  # formerly prerr as error
     echo1,  # formerly debug
     echo2,  # formerly extra
     echo3,
     set_verbosity,
+    join_if_exists,
 )
 
 default_includes = [
@@ -553,7 +553,7 @@ def is_like_any(haystack, needles, allow_blank=False, quiet=False):
 
 
 def gitignore_to_rsync_pair(gitignore_path, rsync_from, tmp_dir,
-                            ignore_from=None):
+                            ignore_root=None):
     '''
     Get a pair of include and exclude files (one or both can be None if
     not applicable) from the projects .gitignore file.
@@ -569,21 +569,21 @@ def gitignore_to_rsync_pair(gitignore_path, rsync_from, tmp_dir,
         are done being used.
 
     Keyword arguments:
-    ignore_from -- Construct each include and exclude as if the
+    ignore_root -- Construct each include and exclude as if the
         .gitignore is in this directory.
     '''
     if rsync_from is not None:
         if len(rsync_from.strip()) == 0:
             rsync_from = None
-    if ignore_from is None:
-        ignore_from = os.path.dirname(gitignore_path)
-    elif ignore_from is not None:
-        if len(ignore_from.strip()) == 0:
-            ignore_from = None
+    if ignore_root is None:
+        ignore_root = os.path.dirname(gitignore_path)
+    elif ignore_root is not None:
+        if len(ignore_root.strip()) == 0:
+            ignore_root = None
     if rsync_from is None:
         raise ValueError("rsync_from is blank.")
-    if ignore_from is None:
-        raise ValueError("ignore_from is blank.")
+    if ignore_root is None:
+        raise ValueError("ignore_root is blank.")
     paths = [None, None]
     patterns = [[], []]
     names = ["include", "exclude"]
@@ -775,13 +775,16 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
         file).
     quiet -- Only return lines, do not print them.
     ignore -- Ignore a list of files (automatically changed to content
-        of .gitignore if present and path is a directory and gitignore
-        is True).
+        of .gitignore or .grepignore if present and path is a directory
+        and gitignore is True).
     ignore_root -- This is required when using ignore since .gitignore
-        may have paths starting with "/" and they must be a path
-        relative to the gitignore file.
+        or .grepignore may have paths starting with "/" or having "/"
+        before the end and, as per git's .gitignore spec, must be a
+        path relative to the gitignore file in those two cases.
     gitignore -- Set to True to read .gitignore files recursively and to
-        ignore files and directories specified in those files.
+        ignore files and directories specified in those files. Git's
+        .gitignore spec (including exclusions using "!") is the format
+        spec used (Report issues where that is not followed).
     show_args_warnings -- Show a warning for each command switch in
         more_args that is not implemented. The value is True for only
         one call. It will be automatically be changed to False before
@@ -826,7 +829,7 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
         if not isinstance(ignore_root, str):
             raise ValueError("ignore requires ignore_root")
         else:
-            ig_path = os.path.join(ignore_root, ".gitignore")
+            ig_path = join_if_exists(ignore_root, [".gitignore", ".grepignore"])
     sub = os.path.split(path)[1]
     # Do not ignore if "" even if .git, so let sub  ""--isdir("")==False
     if os.path.isdir(path):
@@ -966,7 +969,8 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
     # as the file at that depth and therefore such a .gitignore should
     # *not* affect any file at that level.
     tryIgnore = os.path.join(path, ".gitignore")
-    if gitignore and os.path.isfile(tryIgnore):
+    tryIgnore = join_if_exists(path, [".gitignore", ".grepignore"])
+    if gitignore and (tryIgnore is not None):
         echo1('* reading "{}"'.format(tryIgnore))
         ignore = []
         trace_ignore_files = {}
@@ -1326,7 +1330,7 @@ def main():
         echo0(" --include-all")
         echo0("  # and add --no-ignore to search in"
               " .git directories and in files listed in"
-              " .gitignore files")
+              " .gitignore or .grepignore files")
     delta = datetime.now() - start_dt
     echo0("read_count: {}".format(results['read_count']))
     echo0("match_count: {}".format(results['match_count']))

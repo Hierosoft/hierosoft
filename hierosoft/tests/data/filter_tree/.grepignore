@@ -1,0 +1,11 @@
+*.bin
+/filtered_only_abs_not_deeper_one
+# ^ if not ending in slash, it should filter both files and folders
+# ^ but if starting in slash OR has slash in middle, it should filter
+#   relative to the .gititnore file (or .grepignore in this software)
+#   and not deeper directories nor files.
+filter_rel_but_only_dir/
+# ^ if ending in slash, only
+
+!/deep/deeper/deepest/filter_rel_but_only_dir
+# ^ test an exclusion from filtering (include it)

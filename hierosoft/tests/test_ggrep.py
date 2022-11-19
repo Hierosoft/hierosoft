@@ -1,15 +1,24 @@
 # -*- coding: utf-8 -*-
 import unittest
 import sys
+import os
 
 from hierosoft import (
+    echo0,
     set_verbosity,
 )
 
 from hierosoft.ggrep import (
     is_like,
     is_like_any,
+    filter_tree,
 )
+
+MY_DIR = os.path.dirname(os.path.realpath(__file__))
+# MODULE_DIR = os.path.dirname(MY_DIR)
+TEST_DATA_DIR = os.path.join(MY_DIR, "data")
+
+assert os.path.isdir(TEST_DATA_DIR)
 
 class TestGrepStringMethods(unittest.TestCase):
 
@@ -122,7 +131,36 @@ class TestGrepStringMethods(unittest.TestCase):
         try:
             self.assertEqual(is_like_any(None, "/home/1/abab"), False)
         except TypeError as ex:
-            self.assertTrue(str(ex) in ["object of type 'NoneType' has no len()", "'NoneType' object is not subscriptable"])
+            self.assertTrue(str(ex) in ["object of type 'NoneType' has no len()",
+                                        "'NoneType' object is not subscriptable"])
             got_the_right_error = True
         self.assertEqual(got_the_right_error, True)
+
+    def test_filter(self):
+        test_filter_tree_path = os.path.join(TEST_DATA_DIR, "filter_tree")
+        found_not_filtered_file = False
+        found_exclusion = True
+        exclusion = os.path.join("deep", "deeper", "deepest",
+                                 "filter_rel_but_only_dir")
+        for path in filter_tree(test_filter_tree_path):
+            echo0('* filter_tree yielded "{}"'.format(path))
+            assert not path.endswith(".bin")
+            if "filtered_only_abs_not_deeper_one" in path:
+                only_this_deeper_one_should_be_kept = os.path.join(
+                    "deeper",
+                    "filtered_only_abs_not_deeper_one",
+                )
+                echo0('  - only_this_deeper_one_should_be_kept="{}"'
+                      ''.format(only_this_deeper_one_should_be_kept))
+                assert only_this_deeper_one_should_be_kept in path
+            if "filter_rel_but_only_dir" in path:
+                if exclusion in path:
+                    found_exclusion = True
+                else:
+                    assert os.path.isfile(path)
+                    found_not_filtered_file = True
+        assert found_not_filtered_file
+        assert found_exclusion
+
+
 
