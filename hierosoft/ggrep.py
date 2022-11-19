@@ -255,8 +255,6 @@ def _wild_increment(haystack_c, needle_c):
         return 1
     return -1
 
-# region same as nopackage
-
 
 def contains(haystack, needle, allow_blank=False, quiet=False):
     '''
@@ -338,8 +336,6 @@ def contains_any(haystack, needles, allow_blank=False, quiet=False,
             return True
     return False
 
-
-# endregion same as nopackage
 
 def is_abs_path(path):
     if platform.system() == "Windows":
