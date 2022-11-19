@@ -882,8 +882,8 @@ def main():
                 else:
                     key = arg[2:]
 
-    show_update_window(options)
+    return show_update_window(options)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
