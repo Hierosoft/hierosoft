@@ -34,24 +34,29 @@ if os.path.isfile("readme.md"):
 
 setuptools.setup(
     name='hierosoft-update',
-    version='0.3.0',
+    version='0.5.0',
     description=description,
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
-        ('License :: OSI Approved ::'
-         ' GNU General Public License v3 or later (GPLv3+)'),
+        ('License :: OSI Approved :: MIT License'), # See also: license=
         'Operating System :: POSIX :: Linux',
+        'Operating System :: Microsoft :: Windows'
+        'Operating System :: MacOS :: MacOS X'
         'Topic :: System :: Systems Administration',
+        'Topic :: System :: Installation/Setup',
+        'Topic :: System :: Logging',
+        'Topic :: System :: Software Distribution',
+        'Topic :: Text Processing :: General',
     ],
     keywords=('python system management IT tools linux installation'
               ' package selection preloading preinstall'),
     url="https://github.com/Hierosoft/hierosoft",
     author="Jake Gustafson",
     author_email='7557867+poikilos@users.noreply.github.com',
-    license='GPLv3+',
+    license='MIT License',  # See also: license classifier above.
     # packages=setuptools.find_packages(),
     packages=['hierosoft'],
     include_package_data=True,  # look for MANIFEST.in
@@ -67,6 +72,8 @@ setuptools.setup(
         'console_scripts': [
             'hierosoft=hierosoft.gui_tk:main',
             'ggrep=hierosoft.ggrep:main',
+            'checkpath=hierosoft.checkpath:main',
+            'checkversion=hierosoft.checkversion:main',
         ],
     },
     install_requires=install_requires,
