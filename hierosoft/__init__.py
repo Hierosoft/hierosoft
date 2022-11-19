@@ -8,6 +8,7 @@ import platform
 if sys.version_info.major >= 3:
     # from subprocess import run as sp_run
     from subprocess import CompletedProcess
+    from subprocess import run as sp_run
 else:
     # This class is not in Python 2, so create a substitute.
     class CompletedProcess:
@@ -27,6 +28,7 @@ else:
                 raise err
             return self.returncode
 
+    # subprocess.run doesn't exist in Python 2, so create a substitute.
     def sp_run(*popenargs, **kwargs):
         '''
         CC BY-SA 4.0
@@ -60,81 +62,19 @@ else:
                                 stderr=errs)
     subprocess.run = sp_run
 
-verbosity_levels = [False, True, 0, 1, 2, 3]
-
-verbosity = 0
-for argI in range(1, len(sys.argv)):
-    arg = sys.argv[argI]
-    if arg.startswith("--"):
-        if arg == "--verbose":
-            verbosity = 1
-        elif arg == "--debug":
-            verbosity = 2
-
-
-def write0(arg):
-    sys.stderr.write(arg)
-    sys.stderr.flush()
-    return True
-
-
-def write1(arg):
-    if verbosity < 1:
-        return False
-    sys.stderr.write(arg)
-    sys.stderr.flush()
-    return True
-
-
-def write2(arg):
-    if verbosity < 2:
-        return False
-    sys.stderr.write(arg)
-    sys.stderr.flush()
-    return True
-
-
-def echo0(*args, **kwargs):  # formerly prerr
-    print(*args, file=sys.stderr, **kwargs)
-    return True
-
-
-def echo1(*args, **kwargs):  # formerly debug
-    if verbosity < 1:
-        return False
-    print(*args, file=sys.stderr, **kwargs)
-    return True
-
-
-def echo2(*args, **kwargs):  # formerly extra
-    if verbosity < 2:
-        return False
-    print(*args, file=sys.stderr, **kwargs)
-    return True
-
-
-def echo3(*args, **kwargs):
-    if verbosity < 3:
-        return False
-    print(*args, file=sys.stderr, **kwargs)
-    return True
-
-
-def get_verbosity():
-    return verbosity
-
-
-def set_verbosity(verbosity_level):
-    global verbosity
-    if verbosity_level not in verbosity_levels:
-        vMsg = verbosity_levels
-        if isinstance(vMsg, str):
-            vMsg = '"{}"'.format(vMsg)
-        raise ValueError(
-            "verbosity_levels must be one of {} not {}."
-            "".format(verbosity_levels, vMsg)
-        )
-    verbosity = verbosity_level
+from hierosoft.reporting import (
+    echo0,
+    echo1,
+    echo2,
+    echo3,
+    write0,
+    write1,
+    write2,
+    write3,
+    set_verbosity,
+    get_verbosity,
+    # verbosity,
+)
 
 SHORTCUT_EXT = "desktop"
 HOME = None  # formerly profile
@@ -600,23 +540,49 @@ def is_installed(programs_path, dest_id, flag_names):
     return (path is not None)
 
 
-# from https://github.com/poikilos/DigitalMusicMC
-# and https://github.com/poikilos/blnk
-def which(cmd):
+def is_exe(path):
+    # Jay, & Mar77i. (2017, November 10). Path-Test if executable exists in
+    #     Python? [Answer]. Stack Overflow.
+    #     https://stackoverflow.com/questions/377017/
+    #     test-if-executable-exists-in-python
+    return os.path.isfile(path) and os.access(path, os.X_OK)
+
+
+def which(program_name, more_paths=[]):
+    '''
+    Get the full path to a given executable. If a full path is provided,
+    return it if executable. Otherwise, if there isn't an executable one
+    the PATH, return None, or return one that exists but isn't
+    executable.
+    '''
+    # from https://github.com/poikilos/DigitalMusicMC
+    if os.path.split(program_name)[0] and is_exe(program_name):
+        return program_name
+
     paths_str = os.environ.get('PATH')
     if paths_str is None:
-        echo1("Warning: There is no PATH variable, so returning {}"
-              "".format(cmd))
-        return cmd
+        echo0("Warning: There is no PATH variable, so returning {}"
+              "".format(program_name))
+        return program_name
     paths = paths_str.split(os.path.pathsep)
-    for path in paths:
-        echo1("looking in {}".format(path))
-        tryPath = os.path.join(path, cmd)
-        if os.path.isfile(tryPath):
-            return tryPath
+    fallback_path = None
+    for path in (paths + more_paths):
+        echo1("[hierosoft which] looking in {}".format(path))
+        try_path = os.path.join(path, program_name)
+        is_exe(try_path):
+            return try_path
+        elif os.path.isfile(try_path):
+            echo0('[hierosoft which] Warning: "{}" exists'
+                  ' but is not executable.'.format())
+            fallback_path = try_path
         else:
-            echo1("There is no {}".format(tryPath))
-    return None
+            echo1("[hierosoft which] There is no {}".format(try_path))
+    result = None
+    if fallback_path is not None:
+        echo0('[hierosoft which] Warning: "{}" will be returned'
+              ' but is not executable.'.format())
+        result = fallback_path
+    return result
 
 
 if __name__ == "__main__":
