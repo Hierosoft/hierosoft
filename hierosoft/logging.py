@@ -1,3 +1,5 @@
+import sys
+import traceback
 
 verbosity_levels = [False, True, 0, 1, 2, 3]
 
@@ -31,6 +33,7 @@ def write2(arg):
     sys.stderr.write(arg)
     sys.stderr.flush()
     return True
+
 
 def write3(arg):
     if verbosity < 3:
@@ -81,3 +84,19 @@ def set_verbosity(verbosity_level):
             "".format(verbosity_levels, vMsg)
         )
     verbosity = verbosity_level
+
+
+def get_traceback(indent=""):
+    ex_type, ex, tb = sys.exc_info()
+    msg = "{}{} {}:\n".format(indent, ex_type, ex)
+    msg += traceback.format_exc()
+    del tb
+    return msg
+
+
+def view_traceback(indent=""):
+    ex_type, ex, tb = sys.exc_info()
+    print("{}{} {}: ".format(indent, ex_type, ex), file=sys.stderr)
+    traceback.print_tb(tb)
+    del tb
+    print("", file=sys.stderr)

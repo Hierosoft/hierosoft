@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Move moreplatform/__init__.py code to hierosoft/__init__.py which affects:
   - /home/owner/git/blnk/blnk/__init__.py
 
+## [git] - 2022-11-19
+### Added
+- move `view_traceback` and `get_traceback` to logging from blnk.
+
+
+### Changed
+- move `echo?`, `write?`, and `*_verbosity` to logging.
+
 ## [git] - 2022-11-18
 ### Added
 - move ggrep.py from pycodetool to hierosoft/ which affects:
