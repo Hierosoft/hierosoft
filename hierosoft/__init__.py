@@ -553,17 +553,22 @@ def which(program_name, more_paths=[]):
     Get the full path to a given executable. If a full path is provided,
     return it if executable. Otherwise, if there isn't an executable one
     the PATH, return None, or return one that exists but isn't
-    executable.
+    executable (using program_name as the preferred path if it is a full
+    path even if not executable).
     '''
     # from https://github.com/poikilos/DigitalMusicMC
+    preferred_path = None
     if os.path.split(program_name)[0] and is_exe(program_name):
         return program_name
+    elif os.path.isfile(program_name):
+        preferred_path = program_name
 
     paths_str = os.environ.get('PATH')
     if paths_str is None:
         echo0("Warning: There is no PATH variable, so returning {}"
               "".format(program_name))
         return program_name
+
     paths = paths_str.split(os.path.pathsep)
     fallback_path = None
     for path in (paths + more_paths):
@@ -573,14 +578,19 @@ def which(program_name, more_paths=[]):
             return try_path
         elif os.path.isfile(try_path):
             echo0('[hierosoft which] Warning: "{}" exists'
-                  ' but is not executable.'.format())
+                  ' but is not executable.'.format(try_path))
             fallback_path = try_path
         else:
             echo1("[hierosoft which] There is no {}".format(try_path))
     result = None
-    if fallback_path is not None:
+    if preferred_path is not None:
         echo0('[hierosoft which] Warning: "{}" will be returned'
-              ' but is not executable.'.format())
+              ' since given as program_name="{}" but is not executable.'
+              ''.format(preferred_path, program_name))
+        result = fallback_path
+    elif fallback_path is not None:
+        echo0('[hierosoft which] Warning: "{}" will be returned'
+              ' but is not executable.'.format(fallback_path))
         result = fallback_path
     return result
 
