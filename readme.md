@@ -2,6 +2,35 @@
 
 Solve Python distribution with a one-click install solution!
 
+Integrate Python programs with the system in various ways:
+- Request an assigned directory where files can be placed such as for
+  icons (pixmaps), shortcuts, or cache.
+  - `hierosoft.get_unique_path`
+    - Has an "allow_cloud" option to detect a Nextcloud or ownCloud
+      directory containing a "profile" directory (for the
+      "Configs:Unique" option)
+- Create a desktop shortcut in a way that works in any operating system.
+  - `from hierosoft.moreplatform import make_shortcut`
+- Get more metadata such as for images.
+  - `hierosoft.moremeta`
+- Simulate grep but get a data structure instead.
+  - `hierosoft.ggrep`
+- Simulate netcat but get callbacks during the upload.
+  - `from hierosoft.moreweb import netcat`
+- See nonexistent paths that may be safe to remove from the
+  environment's PATH variable.
+  - `hierosoft.checkpath`
+- See if your repo's latest tag matches the version stored in your repo.
+  - `hierosoft.checkversion`
+- Process URL requests in a Python 3 way regardless of the Python
+  version.
+  - `hierosoft.moreweb`
+
+Example projects using this module:
+- <https://github.com/poikilos/blendernightly>
+- <https://github.com/poikilos/world_clock>
+
+
 ## Core features
 Hierosoft Update is the Python manager and virtualenv manager module
 to download or run a Python program such as an updated copy of:
