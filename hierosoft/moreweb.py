@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 import os
 import platform
+import time
 
 if sys.version_info.major >= 3:
     import urllib.request
@@ -64,6 +65,116 @@ def name_from_url(url):
     if slash_i >= 0:
         filename = url[slash_i+1:]
     return filename
+
+
+import socket
+
+
+def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
+            evt=None):
+    '''
+    Send bytes gradually to show progress
+    (rather than calling sock.sendall). See
+    <https://stackoverflow.com/a/34252690/4541104>.
+
+    Keyword arguments:
+    flags -- See the socket.sendall documentation on python.org.
+    count -- Leave this at 0. It will be counted automatically.
+        otherwise, it will be added to the callback's count.
+    cb_progress -- This function will be called if the number of
+        bytes uploaded increases.
+    cb_done -- This function will be called when the transfer is
+        complete.
+    evt -- The event. This is necessary if you want to send additional
+        keys back to the callbacks such as 'url' (recommended for
+        compatibility with download callback code).
+    '''
+    ret = sock.send(data, flags)
+    if ret > 0:
+        count += ret
+        if evt is None:
+            evt = {'loaded':count}
+        else:
+            evt['loaded'] = count
+        cb_progress(evt)
+        return sendall(sock, data[ret:], flags, count=count,
+                       cb_progress=cb_progress, cb_done=cb_done,
+                       evt=evt)
+    else:
+        if evt is None:
+            evt = {'loaded':count}
+        else:
+            evt['loaded'] = count
+        cb_done(evt)
+        return None
+
+
+if sys.version_info.major >= 3:
+    # See <https://stackoverflow.com/a/27767560/4541104>:
+    def netcat(host, port, content, cb_progress=None, cb_done=None):
+        '''
+        Send binary data to a port.
+
+        Sequential arguments:
+        hostname -- The hostname or IP address.
+        port -- The port number as an integer.
+        content -- The binary data.
+        '''
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, int(port)))
+        if not isinstance(content, bytes):
+            content = content.encode()
+        # s.sendall(content)
+        url = host
+        if port is not None:
+            url += ":{}".format(port)
+        evt = {'url':url}
+        sendall(s, content, cb_progress=cb_progress, cb_done=cb_done,
+                evt=evt)
+        # ^ sendall keeps calling s.send until all data is sent or there
+        #   is an exception (See
+        #   <https://stackoverflow.com/a/34252690/4541104>).
+        time.sleep(0.5)
+        # sleep may or may help. See tripleee's
+        # comment on <https://stackoverflow.com/a/27767560/4541104>.
+        s.shutdown(socket.SHUT_WR)
+        sys.stdout.write("Response:")
+        while True:
+            data = s.recv(4096)
+            if not data:
+                break
+            print(repr(data))
+        print("Connection closed.")
+        s.close()
+else:
+    def netcat(hostname, port, content, cb_progress=None, cb_done=None):
+        '''
+        For documentation, see the earlier Python 3 netcat function.
+        '''
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((hostname, int(port)))
+        # s.sendall(content)
+        url = host
+        if port is not None:
+            url += ":{}".format(port)
+        evt = {'url':url}
+        sendall(s, content, cb_progress=cb_progress, cb_done=cb_done,
+                evt=evt)
+        # ^ sendall keeps calling s.send until all data is sent or there
+        #   is an exception (See
+        #   <https://stackoverflow.com/a/34252690/4541104>).
+        time.sleep(0.5)
+        # sleep may or may not help. See tripleee's
+        # comment on <https://stackoverflow.com/a/27767560/4541104>.
+        s.shutdown(socket.SHUT_WR)
+        sys.stdout.write("Response:")
+        while 1:
+            data = s.recv(1024)
+            if len(data) == 0:
+                break
+            print(repr(data))
+        print("Connection closed.")
+        s.close()
 
 
 # create a subclass and override the handler methods
