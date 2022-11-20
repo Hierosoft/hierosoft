@@ -614,6 +614,31 @@ def which(program_name, more_paths=[]):
     return result
 
 
+def get_pyval(name, py_path):
+    line_n = 0
+    with open(py_path, 'r') as f:
+        for rawL in f:
+            line_n += 1  # counting starts at 1
+            line = rawL.strip()
+            parts = line.split("=")
+            for i in range(len(parts)):
+                parts[i] = parts[i].strip()
+            if len(parts) < 2:
+                continue
+            if parts[0] == name:
+                quoted_value = parts[1]
+                quote = quoted_value[0]
+                ender_i = quoted_value.find(quote, 1)
+                while ((ender_i > -1) and (quoted_value[ender_i-1] == "\\")):
+                    # If preceded by escape char, look further ahead.
+                    ender_i = quoted_value.find(quote, ender_i)
+                if ender_i < 0:
+                    echo0('{}:{}: SyntaxError: There was no ending {}'
+                          ''.format(py_path, line_n, quote))
+                    continue
+                return quoted_value[1:ender_i]
+
+
 if __name__ == "__main__":
     print("You must import this module and call get_meta() to use it"
           "--maybe you meant to run update.pyw")
