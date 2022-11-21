@@ -432,6 +432,28 @@ def replace_vars(path):
     return path
 
 
+trues = ["on", "true", "yes", "1"]
+
+
+def is_truthy(v):
+    if v is None:
+        return False
+    elif v is True:
+        return True
+    elif v is False:
+        return False
+    elif isinstance(v, str):
+        if v.lower() in trues:
+            return True
+    elif isinstance(v, int):
+        if v != 0:
+            return True
+    elif isinstance(v, float):
+        if v != 0:
+            return True
+    return False
+
+
 def run_and_get_lists(cmd_parts, collect_stderr=True):
     '''
     Returns:
