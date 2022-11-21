@@ -10,8 +10,17 @@ if sys.version_info.major >= 3:
     from subprocess import CompletedProcess
     from subprocess import run as sp_run
 else:
-    # This class is not in Python 2, so create a substitute.
+    FileNotFoundError = IOError
+    ModuleNotFoundError = ImportError
+    NotADirectoryError = OSError
+    # ^ such as:
+    #   "NotADirectoryError: [Errno 20] Not a directory: '...'" where
+    #   "..." is a file and the call is os.listdir.
+
     class CompletedProcess:
+        '''
+        This is a Python 2 substitute for the Python 3 class.
+        '''
         _custom_impl = True
 
         def __init__(self, args, returncode, stdout=None, stderr=None):
