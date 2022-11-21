@@ -454,6 +454,18 @@ def is_truthy(v):
     return False
 
 
+def s2or3(s):
+    '''
+    Make sure the string is compatible with the Python version.
+    '''
+    if sys.version_info.major < 3:
+        if type(s).__name__ == "unicode":
+            # ^ such as a string returned by json.load*
+            #   using Python 2
+            return str(s)
+    return s
+
+
 def run_and_get_lists(cmd_parts, collect_stderr=True):
     '''
     Returns:
