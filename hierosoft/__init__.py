@@ -618,6 +618,8 @@ def is_exe(path):
     return os.path.isfile(path) and os.access(path, os.X_OK)
 
 
+WIN_EXECUTABLE_DOT_EXTS = [".exe", ".ps1", ".bat", ".com"]
+
 def which(program_name, more_paths=[]):
     '''
     Get the full path to a given executable. If a full path is provided,
@@ -625,43 +627,56 @@ def which(program_name, more_paths=[]):
     the PATH, return None, or return one that exists but isn't
     executable (using program_name as the preferred path if it is a full
     path even if not executable).
+
+    Sequential arguments:
+    program_name -- This can leave off the potential file extensions and
+        on Windows each known file extension will be checked (for the
+        complete list that will be checked, see the
+        WIN_EXECUTABLE_DOT_EXTS constant in the module's
+        __init__.py.
     '''
     # from https://github.com/poikilos/DigitalMusicMC
     preferred_path = None
-    if os.path.split(program_name)[0] and is_exe(program_name):
-        return program_name
-    elif os.path.isfile(program_name):
-        preferred_path = program_name
+    filenames = [program_name]
+    if platform.system() == "Windows":
+        if os.path.splitext(program_name)[1] == "":
+            for dot_ext in WIN_EXECUTABLE_DOT_EXTS:
+                filenames.append(program_name+dot_ext)
+    for filename in filenames:
+        if os.path.split(filename)[0] and is_exe(filename):
+            return filename
+        elif os.path.isfile(filename):
+            preferred_path = filename
 
-    paths_str = os.environ.get('PATH')
-    if paths_str is None:
-        echo0("Warning: There is no PATH variable, so returning {}"
-              "".format(program_name))
-        return program_name
+        paths_str = os.environ.get('PATH')
+        if paths_str is None:
+            echo0("Warning: There is no PATH variable, so returning {}"
+                  "".format(filename))
+            return filename
 
-    paths = paths_str.split(os.path.pathsep)
-    fallback_path = None
-    for path in (paths + more_paths):
-        echo1("[hierosoft which] looking in {}".format(path))
-        try_path = os.path.join(path, program_name)
-        if is_exe(try_path):
-            return try_path
-        elif os.path.isfile(try_path):
-            echo0('[hierosoft which] Warning: "{}" exists'
-                  ' but is not executable.'.format(try_path))
-            fallback_path = try_path
-        else:
-            echo1("[hierosoft which] There is no {}".format(try_path))
-    result = None
-    if preferred_path is not None:
-        echo0('[hierosoft which] Warning: "{}" will be returned'
-              ' since given as program_name="{}" but is not executable.'
-              ''.format(preferred_path, program_name))
-        result = fallback_path
-    elif fallback_path is not None:
-        echo0('[hierosoft which] Warning: "{}" will be returned'
-              ' but is not executable.'.format(fallback_path))
-        result = fallback_path
+        paths = paths_str.split(os.path.pathsep)
+        fallback_path = None
+        for path in (paths + more_paths):
+            echo1("[hierosoft which] looking in {}".format(path))
+            try_path = os.path.join(path, filename)
+            if is_exe(try_path):
+                return try_path
+            elif os.path.isfile(try_path):
+                echo0('[hierosoft which] Warning: "{}" exists'
+                      ' but is not executable.'.format(try_path))
+                fallback_path = try_path
+            else:
+                echo1("[hierosoft which] There is no {}".format(try_path))
+        result = None
+        if preferred_path is not None:
+            echo0('[hierosoft which] Warning: "{}" will be returned'
+                  ' since given as filename="{}" but is not executable.'
+                  ''.format(preferred_path, filename))
+            result = fallback_path
+        elif fallback_path is not None:
+            echo0('[hierosoft which] Warning: "{}" will be returned'
+                  ' but is not executable.'.format(fallback_path))
+            result = fallback_path
     return result
 
 
