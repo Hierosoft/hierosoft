@@ -158,7 +158,11 @@ def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
     evt -- The event. This is necessary if you want to send additional
         keys back to the callbacks such as 'url'. It is recommended for
         compatibility with download callback code, since the download
-        method is coded parallel to this one.
+        method is coded parallel to this one. It can also have special
+        keys such as:
+        - total_size -- If not None, the callbacks will not only
+          receive the number of bytes written ('loaded') but also
+          'ratio' based on this denominator.
     '''
     if evt is None:
         evt = {}
@@ -175,12 +179,16 @@ def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
     if ret > 0:
         count += ret
         evt['loaded'] = count
+        if evt.get('total_size') is not None:
+            evt['ratio'] = float(evt['loaded']) / float(evt['total_size'])
         cb_progress(evt)
         return sendall(sock, data[ret:], flags, count=count,
                        cb_progress=cb_progress, cb_done=cb_done,
                        evt=evt)
     else:
         evt['loaded'] = count
+        if evt.get('total_size') is not None:
+            evt['ratio'] = float(evt['loaded']) / float(evt['total_size'])
         evt['status'] = STATUS_DONE
         # ^ STATUS_DONE may be checked by caller such as the netcat
         #   netcat function in hierosoft, so set
@@ -192,7 +200,7 @@ def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
 if sys.version_info.major >= 3:
     # See <https://stackoverflow.com/a/27767560/4541104>:
     def netcat(host, port, content, cb_progress=None, cb_done=None,
-               evt=None, chunk_size=None):
+               evt=None, chunk_size=None, path=None):
         '''
         For documentation, see sys_netcat.
         '''
@@ -248,9 +256,11 @@ if sys.version_info.major >= 3:
             print(repr(data))
         echo0("Connection closed.")
         s.close()
+        evt['status'] = STATUS_DONE
+        cb_done(evt)
 else:
     def netcat(hostname, port, content, cb_progress=None, cb_done=None,
-               evt=None, chunk_size=None):
+               evt=None, chunk_size=None, path=None):
         '''
         For documentation, see sys_netcat.
         '''
@@ -295,9 +305,11 @@ else:
             print(repr(data))
         echo0("Connection closed.")
         s.close()
+        evt['status'] = STATUS_DONE
+        cb_done(evt)
 
 def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
-               chunk_size=1024, evt=None):
+               chunk_size=1024, evt=None, path=None):
     '''
     Send binary data to a port. The sys_netcat function (and not other
     netcat functions) uses the system's netcat shell command. The netcat
@@ -318,8 +330,13 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
     evt -- This optional event dictionary provides static data other
         than the keys that this function generates. Whatever data
         this function generates will either overwrite or appear
-        alongside your custom event keys.
+        alongside your custom event keys. It can also have special keys
+        such as:
+        - total_size --  If this is not None, this byte count will be
+          used to set evt['ratio'] for cb_progress and cb_done calls.
     chunk_size -- This size of a chunk will be sent through netcat.
+    path -- Provide the path to the file that is equivalent to the
+        content, for logging purposes only.
     '''
     # This function is based on run_and_get_lists from "__init__.py"
     # except:
@@ -334,7 +351,7 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
             " to the binary file is required."
         )
     '''
-    cmd_parts = ['nc', '-N', hostname, str(port)]
+    cmd_parts = ["nc", "-N", hostname, str(port)]
     '''
     def cb_progress_if(arg, callback=cb_progress):
         if callback is not None:
@@ -354,24 +371,48 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
 
     # Regarding stdin, see
     #   <https://stackoverflow.com/a/11831111/4541104>
+    cmd = shlex.join(cmd_parts)
+    if path is not None:
+        cmd += ' < "{}"'.format(path)
+    echo0(cmd)  # Such as "nc -N 10.0.0.1 50123"
     sp = subprocess.Popen(
         cmd_parts,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdin=subprocess.PIPE,
+        shell=True,
     )
+    # shell: Without shell=True in this case, the sp.stdin.write seems
+    #   to work even though:
+    #   - it doesn't (shows progress and no error).
+    #   - sp.poll() is None (which indicates it is still open)
     if evt is None:
         evt = {}
     evt['loaded'] = 0
     offset = 0
+
+    first_out = sp.poll()
+    if first_out is not None:
+        raise RuntimeError(
+            'The process exited early: {}'.format(first_out)
+        )
+
     this_chunk_size = chunk_size
     while offset < len(content):
         if len(content) - offset < this_chunk_size:
             this_chunk_size = len(content) - offset
         evt['loaded'] = offset
+        if evt.get('total_size') is not None:
+            evt['ratio'] = float(evt['loaded']) / float(evt['total_size'])
         cb_progress(evt)
         sp.stdin.write(content[offset:offset+this_chunk_size])
+        # ^ raises "[Errno 32] Broken pipe" if no connection
         offset += this_chunk_size
+
+    sp.wait()
+    sp.stdin.close()  # nc will see that as EOF
+    # (See <https://stackoverflow.com/a/13482169/4541104>).
+
     evt['loaded'] = offset
     evt['status'] = 'loaded all {}'.format(offset)
     cb_progress(evt)
@@ -645,6 +686,79 @@ class DownloadPageParser(HTMLParser):
         return commit_s
 
 
+def download(stream, url, cb_progress=None, cb_done=None,
+             chunk_size=16*1024, evt=None, path=None):
+    '''
+    Sequential arguments:
+    stream -- This is assumed to be an open stream (or any other
+        class) on which *binary* "write" can be called, for writing
+        binary data directly from the internet address. If it is
+        a file stream, open with the 'wb' mode.
+    url -- The internet address to read.
+
+    Keyword arguments:
+    cb_progress -- The callback (function) that receives the amount
+        of data read so far. It must receive an event in the form of
+        a dictionary as the only argument.
+    cb_done -- The callback (function) that is called when the
+        download has completed. It must receive an event in the form
+        of a dictionary as the only argument.
+    chunk_size -- The chunk size for reading data from the URL.
+    evt -- Provide a dictionary with additional keys that will be
+        returned along with the event dict to callbacks. It can also
+        have special keys such as:
+        - total_size -- If not None, the callbacks will not only
+          receive the number of bytes written ('loaded') but also
+          'ratio' based on this denominator.
+    path -- Provide the path to the file that is equivalent to the
+        content, for logging purposes only.
+    '''
+
+    '''
+    if total_bytes is not None:
+        echo0("Warning: total_bytes is deprecated in the download"
+              " method. Set evt['total_size'] instead.")
+        evt['total_size'] = total_size
+    '''
+
+    if evt is None:
+        evt = {}
+
+    if cb_progress is None:
+        def cb_progress(evt):
+            echo0('[sendall inline cb_progress] {}'.format(evt))
+
+    if cb_done is None:
+        def cb_done(evt):
+            echo0('[sendall inline cb_done] {}'.format(evt))
+
+    evt['loaded'] = 0
+    evt['url'] = url
+    try:
+        response = request.urlopen(url)
+    except HTTPError as ex:
+        evt['error'] = str(ex)
+        cb_done(evt)
+        return
+    # ^ raises urllib.error.HTTPError (or Python 2 HTTPError)
+    #   in case of "HTTP Error 404: Not Found"
+    # evt['total'] is not implemented (would be from contentlength
+    # aka content-length)
+    # with open(file_path, 'wb') as f:
+    while True:
+        chunk = response.read(chunk_size)
+        if not chunk:
+            break
+        evt['loaded'] += chunk_size
+        if evt.get('total_size') is not None:
+            evt['ratio'] = float(evt['loaded']) / float(evt['total_size'])
+        cb_progress(evt)
+        stream.write(chunk)
+    evt['status'] = STATUS_DONE
+    # if evt.get('status') != STATUS_DONE:
+    #     evt['status'] = "failed"
+    cb_done(evt)
+
 class DownloadManager:
     '''
     Download a file and optionally scrape a web page. All of the
@@ -716,64 +830,17 @@ class DownloadManager:
         return self.parser.urls
 
     def download(self, stream, url, cb_progress=None, cb_done=None,
-                 chunk_len=16*1024, total_bytes=None):
+                 chunk_size=16*1024, evt=None, path=None):
         '''
-        Sequential arguments:
-        stream -- This is assumed to be an open stream (or any other
-            class) on which *binary* "write" can be called, for writing
-            binary data directly from the internet address. If it is
-            a file stream, open with the 'wb' mode.
-        url -- The internet address to read.
-
-        Keyword arguments:
-        cb_progress -- The callback (function) that receives the amount
-            of data read so far. It must receive an event in the form of
-            a dictionary as the only argument.
-        cb_done -- The callback (function) that is called when the
-            download has completed. It must receive an event in the form
-            of a dictionary as the only argument.
-        chunk_len -- The chunk size for reading data from the URL.
-        total_bytes -- If not None, the callbacks will not only receive
-            the number of bytes written ('loaded') but also 'ratio'
-            based on this denominator.
+        For documentation see the download function rather than the
+        DownloadManager download method.
         '''
-        if cb_progress is None:
-            def cb_progress(evt):
-                echo0('[sendall inline cb_progress] {}'.format(evt))
-
-        if cb_done is None:
-            def cb_done(evt):
-                echo0('[sendall inline cb_done] {}'.format(evt))
-
-        self.total_bytes = total_bytes
         self.url = url
-        # based on code from blendernightly with permission from Jake Gustafson
-        evt = {}
-        evt['loaded'] = 0
-        evt['url'] = self.url
-        try:
-            response = request.urlopen(self.url)
-        except HTTPError as ex:
-            evt['error'] = str(ex)
-            cb_done(evt)
-            return
-        # ^ raises urllib.error.HTTPError (or Python 2 HTTPError)
-        #   in case of "HTTP Error 404: Not Found"
-        # evt['total'] is not implemented (would be from contentlength
-        # aka content-length)
-        # with open(file_path, 'wb') as f:
-        while True:
-            chunk = response.read(chunk_len)
-            if not chunk:
-                break
-            evt['loaded'] += chunk_len
-            if self.total_bytes is not None:
-                evt['ratio'] = float(evt['loaded']) / float(self.total_bytes)
-            cb_progress(evt)
-            stream.write(chunk)
-        if evt.get('status') != STATUS_DONE:
-            evt['status'] = "failed"
-        cb_done(evt)
+        if evt is None:
+            evt = {}
+        self.total_size = evt.get('total_size')
+        return download(stream, url, cb_progress=cb_progress, cb_done=cb_done,
+                        chunk_size=chunk_size, evt=evt, path=path)
 
     def get_downloads_path(self):
         return os.path.join(self.profile_path, "Downloads")
