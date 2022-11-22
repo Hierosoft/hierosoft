@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''
 Get more metadata than built-in packages, and further process output
 from tinytag (for music files) and PIL.ExifTags (such as for photos) to
