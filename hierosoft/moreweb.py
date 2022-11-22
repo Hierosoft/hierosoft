@@ -375,13 +375,26 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
     if path is not None:
         cmd += ' < "{}"'.format(path)
     echo0(cmd)  # Such as "nc -N 10.0.0.1 50123"
-    sp = subprocess.Popen(
-        cmd_parts,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=subprocess.PIPE,
-        shell=True,
-    )
+    collect_stderr = True
+    shell = True
+    if shell:
+        cmd_arg = shlex.join(cmd_parts)
+    else:
+        cmd_arg = cmd_parts
+    if collect_stderr:
+        sp = subprocess.Popen(
+            cmd_arg,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            shell=shell,
+        )
+    else:
+        sp = subprocess.Popen(
+            cmd_arg,
+            stdin=subprocess.PIPE,
+            shell=shell,
+        )
     # shell: Without shell=True in this case, the sp.stdin.write seems
     #   to work even though:
     #   - it doesn't (shows progress and no error).
@@ -398,6 +411,7 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
         )
 
     this_chunk_size = chunk_size
+    # this_chunk_size = len(content)
     while offset < len(content):
         if len(content) - offset < this_chunk_size:
             this_chunk_size = len(content) - offset
@@ -409,7 +423,7 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
         # ^ raises "[Errno 32] Broken pipe" if no connection
         offset += this_chunk_size
 
-    sp.wait()
+    # sp.wait()  # seems to wait forever. communicate should be enough.
     sp.stdin.close()  # nc will see that as EOF
     # (See <https://stackoverflow.com/a/13482169/4541104>).
 
@@ -435,16 +449,21 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
                 line = line[:bI-1] + line[bI+1:]
                 # -1 to execute the backspace not just remove it
             errs.append(line.rstrip("\n\r"))
-    # MUST finish to get returncode
-    # (See <https://stackoverflow.com/a/16770371>):
-    more_out, more_err = sp.communicate()
-    if len(more_out.strip()) > 0:
-        echo0("[sys_netcat] got extra stdout: {}".format(more_out))
-        outs += more_out.split("\n")
-    if len(more_err.strip()) > 0:
-        echo0("[sys_netcat] got extra stderr: {}".format(more_err))
-        errs += more_err.split("\n")
+    flush_more = False
+    # ^ False since this causes "ValueError: flush of closed file"
+    #   after running netcat code further up.
+    if flush_more:
+        # MUST finish to get returncode
+        # (See <https://stackoverflow.com/a/16770371>):
+        more_out, more_err = sp.communicate()
+        if len(more_out.strip()) > 0:
+            echo0("[sys_netcat] got extra stdout: {}".format(more_out))
+            outs += more_out.split("\n")
+        if len(more_err.strip()) > 0:
+            echo0("[sys_netcat] got extra stderr: {}".format(more_err))
+            errs += more_err.split("\n")
 
+    err = ""
     for line in errs:
         if len(line.strip()) == 0:
             continue
