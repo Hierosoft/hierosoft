@@ -478,6 +478,8 @@ def s2or3(s):
             # ^ such as a string returned by json.load*
             #   using Python 2
             return str(s)
+    if type(s).__name__ == "bytes":
+        return s.decode()
     return s
 
 
