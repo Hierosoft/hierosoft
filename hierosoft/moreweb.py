@@ -197,116 +197,75 @@ def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
         return None
 
 
-if sys.version_info.major >= 3:
-    # See <https://stackoverflow.com/a/27767560/4541104>:
-    def netcat(host, port, content, cb_progress=None, cb_done=None,
-               evt=None, chunk_size=None, path=None):
-        '''
-        For documentation, see sys_netcat.
-        '''
-        if chunk_size is not None:
-            echo0("Warning: chunk_size is not implemented"
-                  " in the Python 3 netcat function in hierosoft.")
+# See <https://stackoverflow.com/a/27767560/4541104>:
+def netcat(host, port, content, cb_progress=None, cb_done=None,
+           evt=None, chunk_size=None, path=None):
+    '''
+    For documentation, see sys_netcat.
+    '''
+    if chunk_size is not None:
+        echo0("Warning: chunk_size is not implemented"
+              " in the Python netcat function in hierosoft"
+              " except for receiving a response.")
+        chunk_size = int(chunk_size)
+    else:
+        chunk_size = 4096  # was 1024 in Python 2 example.
+    if cb_progress is None:
+        def cb_progress(evt):
+            echo0('[netcat python3 inline cb_progress] {}'.format(evt))
 
-        if cb_progress is None:
-            def cb_progress(evt):
-                echo0('[netcat python3 inline cb_progress] {}'.format(evt))
+    if cb_done is None:
+        def cb_done(evt):
+            echo0('[netcat python3 inline cb_done] {}'.format(evt))
 
-        if cb_done is None:
-            def cb_done(evt):
-                echo0('[netcat python3 inline cb_done] {}'.format(evt))
+    if evt is None:
+        evt = {}
+    evt['loaded'] = 0
 
-        if evt is None:
-            evt = {}
-        evt['loaded'] = 0
+    url = host
+    if port is not None:
+        url += ":{}".format(port)
+    evt['url'] = url
 
-        url = host
-        if port is not None:
-            url += ":{}".format(port)
-        evt['url'] = url
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    if evt.get('timeout') is not None:
+        s.settimeout(int(evt['timeout']))
+        evt['status'] = "connecting (timeout={})...".format(evt['timeout'])
+    else:
         evt['status'] = "connecting..."
-        cb_progress(evt)
-        s.connect((host, int(port)))
+    cb_progress(evt)
+    s.connect((host, int(port)))
+    if sys.version_info.major >= 3:
         if not isinstance(content, bytes):
             content = content.encode()
-        # s.sendall(content)
-        url = host
-        if port is not None:
-            url += ":{}".format(port)
-        evt['url'] = url
-        sendall(s, content, cb_progress=cb_progress, cb_done=cb_done, evt=evt)
-        # ^ sendall keeps calling s.send until all data is sent or there
-        #   is an exception (See
-        #   <https://stackoverflow.com/a/34252690/4541104>).
-        evt['status'] = "waiting to shutdown socket..."
-        cb_progress(evt)
-        time.sleep(0.5)
-        # sleep may or may help. See tripleee's
-        # comment on <https://stackoverflow.com/a/27767560/4541104>.
-        evt['status'] = "shutdown socket..."
-        cb_progress(evt)
-        s.shutdown(socket.SHUT_WR)
-        sys.stdout.write("Response:")
-        while True:
-            data = s.recv(4096)
+    # s.sendall(content)
+    sendall(s, content, cb_progress=cb_progress, cb_done=cb_done, evt=evt)
+    # ^ sendall keeps calling s.send until all data is sent or there
+    #   is an exception (See
+    #   <https://stackoverflow.com/a/34252690/4541104>).
+    evt['status'] = "waiting to shutdown socket..."
+    cb_progress(evt)
+    time.sleep(0.5)
+    # sleep may or may not help. See tripleee's
+    # comment on <https://stackoverflow.com/a/27767560/4541104>.
+    evt['status'] = "shutdown socket..."
+    cb_progress(evt)
+    s.shutdown(socket.SHUT_WR)
+    sys.stdout.write("Response:")
+    while True:
+        data = s.recv(chunk_size)
+        if sys.version_info.major >= 3:
             if not data:
                 break
-            print(repr(data))
-        echo0("Connection closed.")
-        s.close()
-        evt['status'] = STATUS_DONE
-        cb_done(evt)
-else:
-    def netcat(hostname, port, content, cb_progress=None, cb_done=None,
-               evt=None, chunk_size=None, path=None):
-        '''
-        For documentation, see sys_netcat.
-        '''
-        if chunk_size is not None:
-            echo0("Warning: chunk_size is not implemented"
-                  " in the Python 2 netcat function in hierosoft.")
-
-        if cb_progress is None:
-            def cb_progress(evt):
-                echo0('[netcat python3 inline cb_progress] {}'.format(evt))
-
-        if cb_done is None:
-            def cb_done(evt):
-                echo0('[netcat python3 inline cb_done] {}'.format(evt))
-
-        if evt is None:
-            evt = {}
-        evt['loaded'] = 0
-
-        url = host
-        if port is not None:
-            url += ":{}".format(port)
-        evt['url'] = url
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((hostname, int(port)))
-        # s.sendall(content)
-
-        sendall(s, content, cb_progress=cb_progress, cb_done=cb_done, evt=evt)
-        # ^ sendall keeps calling s.send until all data is sent or there
-        #   is an exception (See
-        #   <https://stackoverflow.com/a/34252690/4541104>).
-        time.sleep(0.5)
-        # sleep may or may not help. See tripleee's
-        # comment on <https://stackoverflow.com/a/27767560/4541104>.
-        s.shutdown(socket.SHUT_WR)
-        sys.stdout.write("Response:")
-        while 1:
-            data = s.recv(1024)
+        else:
             if len(data) == 0:
                 break
-            print(repr(data))
-        echo0("Connection closed.")
-        s.close()
-        evt['status'] = STATUS_DONE
-        cb_done(evt)
+        print(repr(data))
+    echo0("Connection closed.")
+    s.close()
+    evt['status'] = STATUS_DONE
+    cb_done(evt)
 
 def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
                chunk_size=1024, evt=None, path=None):
@@ -334,6 +293,8 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
         such as:
         - total_size --  If this is not None, this byte count will be
           used to set evt['ratio'] for cb_progress and cb_done calls.
+        - timeout -- Set the timeout in seconds for the connection
+          (only applies to netcat function, not sys_netcat function).
     chunk_size -- This size of a chunk will be sent through netcat.
     path -- Provide the path to the file that is equivalent to the
         content, for logging purposes only.
