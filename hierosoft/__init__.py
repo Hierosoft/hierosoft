@@ -5,11 +5,7 @@ import os
 import subprocess
 import platform
 
-if sys.version_info.major >= 3:
-    # from subprocess import run as sp_run
-    from subprocess import CompletedProcess
-    from subprocess import run as sp_run
-else:
+if sys.version_info.major < 3:
     FileNotFoundError = IOError
     ModuleNotFoundError = ImportError
     NotADirectoryError = OSError
@@ -17,6 +13,16 @@ else:
     #   "NotADirectoryError: [Errno 20] Not a directory: '...'" where
     #   "..." is a file and the call is os.listdir.
 
+# The polyfills below are used in other file(s) in the module.
+
+if sys.version_info.major >= 3:
+    # from subprocess import run as sp_run
+
+    # Globals used:
+    # import subprocess
+    from subprocess import CompletedProcess
+    from subprocess import run as sp_run
+else:
     class CompletedProcess:
         '''
         This is a Python 2 substitute for the Python 3 class.

@@ -4,6 +4,9 @@ import sys
 import os
 import platform
 import time
+import socket
+import subprocess
+import shlex
 
 if sys.version_info.major >= 3:
     import urllib.request
@@ -24,6 +27,69 @@ else:
     from urllib import quote_plus as urllib_quote_plus
     from urllib import urlencode
 
+# The polyfills below are used in other file(s) in the module.
+
+if sys.version_info.major >= 3:
+    # from subprocess import run as sp_run
+
+    # Globals used:
+    # import subprocess
+    from subprocess import CompletedProcess
+    from subprocess import run as sp_run
+else:
+    class CompletedProcess:
+        '''
+        This is a Python 2 substitute for the Python 3 class.
+        '''
+        _custom_impl = True
+
+        def __init__(self, args, returncode, stdout=None, stderr=None):
+            self.args = args
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+        def check_returncode(self):
+            if self.returncode != 0:
+                err = subprocess.CalledProcessError(self.returncode,
+                                                    self.args,
+                                                    output=self.stdout)
+                raise err
+            return self.returncode
+
+    # subprocess.run doesn't exist in Python 2, so create a substitute.
+    def sp_run(*popenargs, **kwargs):
+        '''
+        CC BY-SA 4.0
+        by Martijn Pieters
+        https://stackoverflow.com/a/40590445
+        and Poikilos
+        '''
+        this_input = kwargs.pop("input", None)
+        check = kwargs.pop("handle", False)
+
+        if this_input is not None:
+            if 'stdin' in kwargs:
+                raise ValueError('stdin and input arguments may not '
+                                 'both be used.')
+            kwargs['stdin'] = subprocess.PIPE
+
+        process = subprocess.Popen(*popenargs, **kwargs)
+        try:
+            outs, errs = process.communicate(this_input)
+        except Exception as ex:
+            process.kill()
+            process.wait()
+            raise ex
+        returncode = process.poll()
+        # print("check: {}".format(check))
+        # print("returncode: {}".format(returncode))
+        if check and returncode:
+            raise subprocess.CalledProcessError(returncode, popenargs,
+                                                output=outs)
+        return CompletedProcess(popenargs, returncode, stdout=outs,
+                                stderr=errs)
+    subprocess.run = sp_run
 '''
 # url parsing example:
 url = "https://example.com?message=hi%20there"
@@ -67,7 +133,7 @@ def name_from_url(url):
     return filename
 
 
-import socket
+STATUS_DONE = "done"
 
 
 def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
@@ -76,6 +142,10 @@ def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
     Send bytes gradually to show progress
     (rather than calling sock.sendall). See
     <https://stackoverflow.com/a/34252690/4541104>.
+
+    Globals used:
+    import socket
+    STATUS_DONE = "done"
 
     Keyword arguments:
     flags -- See the socket.sendall documentation on python.org.
@@ -86,41 +156,70 @@ def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
     cb_done -- This function will be called when the transfer is
         complete.
     evt -- The event. This is necessary if you want to send additional
-        keys back to the callbacks such as 'url' (recommended for
-        compatibility with download callback code).
+        keys back to the callbacks such as 'url'. It is recommended for
+        compatibility with download callback code, since the download
+        method is coded parallel to this one.
     '''
+    if evt is None:
+        evt = {}
+
+    if cb_progress is None:
+        def cb_progress(evt):
+            echo0('[sendall inline cb_progress] {}'.format(evt))
+
+    if cb_done is None:
+        def cb_done(evt):
+            echo0('[sendall inline cb_done] {}'.format(evt))
+
     ret = sock.send(data, flags)
     if ret > 0:
         count += ret
-        if evt is None:
-            evt = {'loaded':count}
-        else:
-            evt['loaded'] = count
+        evt['loaded'] = count
         cb_progress(evt)
         return sendall(sock, data[ret:], flags, count=count,
                        cb_progress=cb_progress, cb_done=cb_done,
                        evt=evt)
     else:
-        if evt is None:
-            evt = {'loaded':count}
-        else:
-            evt['loaded'] = count
+        evt['loaded'] = count
+        evt['status'] = STATUS_DONE
+        # ^ STATUS_DONE may be checked by caller such as the netcat
+        #   netcat function in hierosoft, so set
+        #   even if cb_done was None
         cb_done(evt)
         return None
 
 
 if sys.version_info.major >= 3:
     # See <https://stackoverflow.com/a/27767560/4541104>:
-    def netcat(host, port, content, cb_progress=None, cb_done=None):
+    def netcat(host, port, content, cb_progress=None, cb_done=None,
+               evt=None, chunk_size=None):
         '''
-        Send binary data to a port.
+        For documentation, see sys_netcat.
+        '''
+        if chunk_size is not None:
+            echo0("Warning: chunk_size is not implemented"
+                  " in the Python 3 netcat function in hierosoft.")
 
-        Sequential arguments:
-        hostname -- The hostname or IP address.
-        port -- The port number as an integer.
-        content -- The binary data.
-        '''
+        if cb_progress is None:
+            def cb_progress(evt):
+                echo0('[netcat python3 inline cb_progress] {}'.format(evt))
+
+        if cb_done is None:
+            def cb_done(evt):
+                echo0('[netcat python3 inline cb_done] {}'.format(evt))
+
+        if evt is None:
+            evt = {}
+        evt['loaded'] = 0
+
+        url = host
+        if port is not None:
+            url += ":{}".format(port)
+        evt['url'] = url
+
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        evt['status'] = "connecting..."
+        cb_progress(evt)
         s.connect((host, int(port)))
         if not isinstance(content, bytes):
             content = content.encode()
@@ -128,15 +227,18 @@ if sys.version_info.major >= 3:
         url = host
         if port is not None:
             url += ":{}".format(port)
-        evt = {'url':url}
-        sendall(s, content, cb_progress=cb_progress, cb_done=cb_done,
-                evt=evt)
+        evt['url'] = url
+        sendall(s, content, cb_progress=cb_progress, cb_done=cb_done, evt=evt)
         # ^ sendall keeps calling s.send until all data is sent or there
         #   is an exception (See
         #   <https://stackoverflow.com/a/34252690/4541104>).
+        evt['status'] = "waiting to shutdown socket..."
+        cb_progress(evt)
         time.sleep(0.5)
         # sleep may or may help. See tripleee's
         # comment on <https://stackoverflow.com/a/27767560/4541104>.
+        evt['status'] = "shutdown socket..."
+        cb_progress(evt)
         s.shutdown(socket.SHUT_WR)
         sys.stdout.write("Response:")
         while True:
@@ -144,22 +246,40 @@ if sys.version_info.major >= 3:
             if not data:
                 break
             print(repr(data))
-        print("Connection closed.")
+        echo0("Connection closed.")
         s.close()
 else:
-    def netcat(hostname, port, content, cb_progress=None, cb_done=None):
+    def netcat(hostname, port, content, cb_progress=None, cb_done=None,
+               evt=None, chunk_size=None):
         '''
-        For documentation, see the earlier Python 3 netcat function.
+        For documentation, see sys_netcat.
         '''
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((hostname, int(port)))
-        # s.sendall(content)
+        if chunk_size is not None:
+            echo0("Warning: chunk_size is not implemented"
+                  " in the Python 2 netcat function in hierosoft.")
+
+        if cb_progress is None:
+            def cb_progress(evt):
+                echo0('[netcat python3 inline cb_progress] {}'.format(evt))
+
+        if cb_done is None:
+            def cb_done(evt):
+                echo0('[netcat python3 inline cb_done] {}'.format(evt))
+
+        if evt is None:
+            evt = {}
+        evt['loaded'] = 0
+
         url = host
         if port is not None:
             url += ":{}".format(port)
-        evt = {'url':url}
-        sendall(s, content, cb_progress=cb_progress, cb_done=cb_done,
-                evt=evt)
+        evt['url'] = url
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((hostname, int(port)))
+        # s.sendall(content)
+
+        sendall(s, content, cb_progress=cb_progress, cb_done=cb_done, evt=evt)
         # ^ sendall keeps calling s.send until all data is sent or there
         #   is an exception (See
         #   <https://stackoverflow.com/a/34252690/4541104>).
@@ -173,8 +293,131 @@ else:
             if len(data) == 0:
                 break
             print(repr(data))
-        print("Connection closed.")
+        echo0("Connection closed.")
         s.close()
+
+def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
+               chunk_size=1024, evt=None):
+    '''
+    Send binary data to a port. The sys_netcat function (and not other
+    netcat functions) uses the system's netcat shell command. The netcat
+    functions and sys_netcat function emulate the following except
+    accept data (bytes object) instead of a path:
+
+    nc -N $hostname $port < $BIN_FILE_PATH
+
+    Sequential arguments:
+    hostname -- The hostname or IP address.
+    port -- The port number as an integer.
+    content -- The binary data.
+    cb_progress -- This function will be called with an event
+        dictionary as a param whenever status is able to be updated.
+    cb_done -- This function will be called if the completion or
+        failure code is reached, along with setting the status to
+        STATUS_DONE or a different message if failed.
+    evt -- This optional event dictionary provides static data other
+        than the keys that this function generates. Whatever data
+        this function generates will either overwrite or appear
+        alongside your custom event keys.
+    chunk_size -- This size of a chunk will be sent through netcat.
+    '''
+    # This function is based on run_and_get_lists from "__init__.py"
+    # except:
+    # - generates its own cmd_parts and doesn't use collect_stderr.
+    # - Writes to stdin
+    # - Has special code for handling netcat (the nc command).
+
+    '''
+    if path is None:
+        raise ValueError(
+            "In the system version of the netcat function, the path"
+            " to the binary file is required."
+        )
+    '''
+    cmd_parts = ['nc', '-N', hostname, str(port)]
+    '''
+    def cb_progress_if(arg, callback=cb_progress):
+        if callback is not None:
+            callback(arg)
+
+    def cb_done_if(arg, callback=cb_done):
+        if callback is not None:
+            callback(arg)
+    '''
+    outs = []
+    errs = []
+    # Regarding stdout, See
+    #   <https://stackoverflow.com/a/7468726/4541104>
+    #   "This approach is preferable to the accepted answer as it allows
+    #   one to read through the output as the sub process produces it."
+    #   -Hoons Jul 21 '16 at 23:19
+
+    # Regarding stdin, see
+    #   <https://stackoverflow.com/a/11831111/4541104>
+    sp = subprocess.Popen(
+        cmd_parts,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.PIPE,
+    )
+    if evt is None:
+        evt = {}
+    evt['loaded'] = 0
+    offset = 0
+    this_chunk_size = chunk_size
+    while offset < len(content):
+        if len(content) - offset < this_chunk_size:
+            this_chunk_size = len(content) - offset
+        evt['loaded'] = offset
+        cb_progress(evt)
+        sp.stdin.write(content[offset:offset+this_chunk_size])
+        offset += this_chunk_size
+    evt['loaded'] = offset
+    evt['status'] = 'loaded all {}'.format(offset)
+    cb_progress(evt)
+
+    if sp.stdout is not None:
+        for rawL in sp.stdout:
+            line = rawL.decode()
+            # TODO: is .decode('UTF-8') ever necessary?
+            outs.append(line.rstrip("\n\r"))
+    if sp.stderr is not None:
+        for rawL in sp.stderr:
+            line = rawL.decode()
+            while True:
+                bI = line.find("\b")
+                if bI < 0:
+                    break
+                elif bI == 0:
+                    echo0("WARNING: Removing a backspace from the"
+                          " start of \"{}\".".format(line))
+                line = line[:bI-1] + line[bI+1:]
+                # -1 to execute the backspace not just remove it
+            errs.append(line.rstrip("\n\r"))
+    # MUST finish to get returncode
+    # (See <https://stackoverflow.com/a/16770371>):
+    more_out, more_err = sp.communicate()
+    if len(more_out.strip()) > 0:
+        echo0("[sys_netcat] got extra stdout: {}".format(more_out))
+        outs += more_out.split("\n")
+    if len(more_err.strip()) > 0:
+        echo0("[sys_netcat] got extra stderr: {}".format(more_err))
+        errs += more_err.split("\n")
+
+    for line in errs:
+        if len(line.strip()) == 0:
+            continue
+        err += line
+
+    if sp.returncode != 0:
+        if len(err) > 0:
+            evt['status'] = err
+        else:
+            evt['status'] = "'{}' failed.".format(shlex.join(cmd_parts))
+    else:
+        evt['status'] = STATUS_DONE
+    cb_done(evt)
+    err = ""
 
 
 # create a subclass and override the handler methods
@@ -217,11 +460,11 @@ class DownloadPageParser(HTMLParser):
         #     super(DownloadPageParser, self).__init__()
         if sys.version_info.major >= 3:
             super().__init__()
-            # print("Used python3 super syntax")
+            # echo2("Used python3 super syntax")
         else:
             # python2
             HTMLParser.__init__(self)
-            # print("Used python2 super syntax")
+            # echo2("Used python2 super syntax")
         self.options = {}
         self.set_options(options)
 
@@ -250,14 +493,14 @@ class DownloadPageParser(HTMLParser):
 
     def handle_decl(self, decl):
         self.urls = []
-        print("CLEARED dl list since found document decl: " + decl)
+        echo0("CLEARED dl list since found document decl: " + decl)
 
     def handle_starttag(self, tag, attrs):
         must_contain = self.get_option('must_contain')
         if tag.lower() == "html":
             self.urls = []
-            print("CLEARED dl list since found <html...")
-            # print('Links:  # with "{}"'.format(must_contain))
+            echo0("CLEARED dl list since found <html...")
+            # echo0('Links:  # with "{}"'.format(must_contain))
         echo2(" " * len(self.tag_stack) + "push: " + str(tag))
         self.tag_stack.append(tag)
         # attrs is an array of (name, value) tuples:
@@ -465,7 +708,7 @@ class DownloadManager:
         # python2 way: `urllib.urlopen(html_url)`
         response = request.urlopen(html_url)
         dat = response.read()
-        # print("GOT:" + dat)
+        # echo0("GOT:" + dat)
         # Decode dat to avoid error on Python 3:
         #   htmlparser self.rawdata  = self.rawdata + data
         #   TypeError: must be str not bytes
@@ -494,6 +737,14 @@ class DownloadManager:
             the number of bytes written ('loaded') but also 'ratio'
             based on this denominator.
         '''
+        if cb_progress is None:
+            def cb_progress(evt):
+                echo0('[sendall inline cb_progress] {}'.format(evt))
+
+        if cb_done is None:
+            def cb_done(evt):
+                echo0('[sendall inline cb_done] {}'.format(evt))
+
         self.total_bytes = total_bytes
         self.url = url
         # based on code from blendernightly with permission from Jake Gustafson
@@ -504,8 +755,7 @@ class DownloadManager:
             response = request.urlopen(self.url)
         except HTTPError as ex:
             evt['error'] = str(ex)
-            if cb_done is not None:
-                cb_done(evt)
+            cb_done(evt)
             return
         # ^ raises urllib.error.HTTPError (or Python 2 HTTPError)
         #   in case of "HTTP Error 404: Not Found"
@@ -519,11 +769,11 @@ class DownloadManager:
             evt['loaded'] += chunk_len
             if self.total_bytes is not None:
                 evt['ratio'] = float(evt['loaded']) / float(self.total_bytes)
-            if cb_progress is not None:
-                cb_progress(evt)
+            cb_progress(evt)
             stream.write(chunk)
-        if cb_done is not None:
-            cb_done(evt)
+        if evt.get('status') != STATUS_DONE:
+            evt['status'] = "failed"
+        cb_done(evt)
 
     def get_downloads_path(self):
         return os.path.join(self.profile_path, "Downloads")
@@ -534,8 +784,8 @@ class DownloadManager:
     def absolute_url(self, rel_href):
         route_i = rel_href.find("//")
         html_url = self.options.get('html_url')
-        print("REL: " + rel_href)
-        print("HTML: " + html_url)
+        echo0("REL: " + rel_href)
+        echo0("HTML: " + html_url)
         relL = rel_href.lower()
         if relL.startswith("https://") or relL.startswith("http://"):
             return rel_href
@@ -555,7 +805,7 @@ class DownloadManager:
                     slash2 = rel_href.find("/", start)
             if slash2 > -1:
                 first_word = rel_href[start:slash2]
-                # print("FIRST_WORD: " + first_word)
+                # echo1("FIRST_WORD: " + first_word)
                 redundant_flags.append(first_word)
                 redundant_flags.append(first_word + "/")
 
@@ -566,7 +816,7 @@ class DownloadManager:
                 if html_url[-len(flag):] == flag:
                     # assume is route (not real directory) & remove:
                     rel_href = rel_href[route_i+len(flag):]
-                    print("NEW_REL: " + rel_href)
+                    echo0("NEW_REL: " + rel_href)
         if (html_url[-1] == "/") and (rel_href[0] == "/"):
             start = 1
             if rel_href[1] == "/":
@@ -576,4 +826,4 @@ class DownloadManager:
 
 
 if __name__ == "__main__":
-    print("You must import this module and call get_meta() to use it")
+    echo0("You must import this module and call get_meta() to use it")
