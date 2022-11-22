@@ -94,13 +94,29 @@ def get_traceback(indent=""):
     del tb
     return msg
 
+def view_traceback(indent="", min_indent=None):
+    '''
+    Write the traceback to stderr.
 
-def view_traceback(indent=""):
-    ex_type, ex, tb = sys.exc_info()
-    print("{}{} {}: ".format(indent, ex_type, ex), file=sys.stderr)
-    traceback.print_tb(tb)
-    del tb
-    print("", file=sys.stderr)
+    Keyword arguments:
+    indent each line of output this much.
+
+    Globals used:
+    import traceback
+
+    Deprecations:
+    min_indent keyword argument
+    '''
+    if min_indent is not None:
+        raise ValueError("min_indent is deprecated. Use indent.")
+    # # echo0(min_indent+str(ex_type))
+    # # echo0(min_indent+str(ex))
+    # echo0("{}{} {}: ".format(indent, ex_type, ex))
+    # traceback.print_tb(tb)
+    echo0(get_traceback(indent=indent))
+    # del tb
+    echo0("")
+
 
 
 # syntax_error_fmt = "{path}:{row}:{column}: {message}"

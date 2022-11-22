@@ -16,7 +16,6 @@ Options:
 from __future__ import print_function
 import sys
 import os
-import traceback
 import shutil
 import threading
 import tarfile
@@ -45,6 +44,10 @@ from hierosoft import (
     echo1,
     echo2,
 )
+
+# from hierosoft.logging import (
+#     view_traceback,
+# )
 from hierosoft.hplatform import (
     make_shortcut,
 )
@@ -58,13 +61,6 @@ from hierosoft.ggrep import (
 )
 
 # formerly part of blendernightly update.pyw:
-
-def view_traceback(min_indent="  "):
-    ex_type, ex, tb = sys.exc_info()
-    echo0(min_indent+str(ex_type))
-    echo0(min_indent+str(ex))
-    traceback.print_tb(tb)
-    del tb
 
 
 # TODO: use classes
