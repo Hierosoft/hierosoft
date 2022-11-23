@@ -3,6 +3,15 @@ import unittest
 import sys
 import os
 
+
+my_dir = os.path.dirname(os.path.abspath(__file__))
+module_dir = os.path.dirname(my_dir)
+repo_dir = os.path.dirname(module_dir)
+
+if __name__ == "__main__":
+    sys.path.insert(0, repo_dir)
+
+
 from hierosoft import (
     echo0,
     set_verbosity,
@@ -25,7 +34,7 @@ class TestAlgorithms(unittest.TestCase):
                 'id': 100
             },
             {
-                'name': 'Jo',
+                'name': 'Bill',
                 'id': 101
             },
             {
@@ -46,4 +55,11 @@ class TestAlgorithms(unittest.TestCase):
         self.assertEqual(l[i]['id'], 103)
 
 
+
+if __name__ == "__main__":
+    testcase = TestAlgorithms()
+    for name in dir(testcase):
+        if name.startswith("test"):
+            fn = getattr(testcase, name)
+            fn()  # Look at def test_* for the code if tracebacks start here
 
