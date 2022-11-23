@@ -483,6 +483,32 @@ def s2or3(s):
     return s
 
 
+def no_enclosures(s, openers=["(", "[", "{"], closers=[")", "]", "}"]):
+    if len(openers) != len(closers):
+        raise ValueError(
+            "The openers and closers must be paired in order"
+            " but len(openers)={} and len(closers)={}"
+            "".format(len(openers), len(closers))
+        )
+    if len(s) < 2:
+        return s
+    for i in range(len(openers)):
+        if s.startswith(openers[i]) and s.endswith(closers[i]):
+            return s[1:-1]
+    return s
+
+
+def find_by_value(items, key, value):
+    '''
+    Find an index in a list of dicts using the key and value.
+    '''
+    for i in range(len(items)):
+        if items[i].get(key) == value:
+            return i
+    return -1
+
+
+
 def run_and_get_lists(cmd_parts, collect_stderr=True):
     '''
     Returns:
