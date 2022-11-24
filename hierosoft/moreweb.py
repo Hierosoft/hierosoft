@@ -198,18 +198,14 @@ def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
 
 
 # See <https://stackoverflow.com/a/27767560/4541104>:
+# chunk_size was 1024 in Python 2 example, and 4096 in the Python 3
+# example.
 def netcat(host, port, content, cb_progress=None, cb_done=None,
-           evt=None, chunk_size=None, path=None):
+           evt=None, chunk_size=1024, path=None):
     '''
     For documentation, see sys_netcat.
     '''
-    if chunk_size is not None:
-        echo0("Warning: chunk_size is not implemented"
-              " in the Python netcat function in hierosoft"
-              " except for receiving a response.")
-        chunk_size = int(chunk_size)
-    else:
-        chunk_size = 4096  # was 1024 in Python 2 example.
+    chunk_size = int(chunk_size)
     if cb_progress is None:
         def cb_progress(evt):
             echo0('[netcat python3 inline cb_progress] {}'.format(evt))
@@ -229,9 +225,11 @@ def netcat(host, port, content, cb_progress=None, cb_done=None,
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    if evt.get('timeout') is not None:
-        s.settimeout(int(evt['timeout']))
-        evt['status'] = "connecting (timeout={})...".format(evt['timeout'])
+    if evt.get('connection_timeout') is not None:
+        s.settimeout(int(evt['connection_timeout']))
+        evt['status'] = (
+            'connecting (timeout="{}")...'.format(evt['connection_timeout'])
+        )
     else:
         evt['status'] = "connecting..."
     cb_progress(evt)
@@ -271,9 +269,10 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
                chunk_size=1024, evt=None, path=None):
     '''
     Send binary data to a port. The sys_netcat function (and not other
-    netcat functions) uses the system's netcat shell command. The netcat
-    functions and sys_netcat function emulate the following except
-    accept data (bytes object) instead of a path:
+    netcat functions) uses the system's netcat shell command (generally
+    not available on Windows). The netcat functions and sys_netcat
+    function emulate the following except accept data (bytes object)
+    instead of a path:
 
     nc -N $hostname $port < $BIN_FILE_PATH
 
@@ -293,8 +292,9 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
         such as:
         - total_size --  If this is not None, this byte count will be
           used to set evt['ratio'] for cb_progress and cb_done calls.
-        - timeout -- Set the timeout in seconds for the connection
-          (only applies to netcat function, not sys_netcat function).
+        - connection_timeout -- Set the timeout in seconds for the
+          connection (only applies to netcat function, not sys_netcat
+          function).
     chunk_size -- This size of a chunk will be sent through netcat.
     path -- Provide the path to the file that is equivalent to the
         content, for logging purposes only.
@@ -738,6 +738,7 @@ def download(stream, url, cb_progress=None, cb_done=None,
     # if evt.get('status') != STATUS_DONE:
     #     evt['status'] = "failed"
     cb_done(evt)
+
 
 class DownloadManager:
     '''
