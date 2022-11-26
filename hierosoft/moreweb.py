@@ -11,7 +11,10 @@ import shlex
 if sys.version_info.major >= 3:
     import urllib.request
     request = urllib.request
-    from urllib.error import HTTPError
+    from urllib.error import (
+        HTTPError,
+        URLError,
+    )
     from html.parser import HTMLParser
     from urllib.parse import urlparse, parse_qs
     from urllib.parse import quote as urllib_quote
@@ -20,7 +23,10 @@ if sys.version_info.major >= 3:
 else:
     import urllib2 as urllib
     request = urllib
-    from urllib2 import HTTPError
+    from urllib2 import (
+        HTTPError,
+        URLError,
+    )
     from HTMLParser import HTMLParser
     from urlparse import urlparse, parse_qs
     from urllib import quote as urllib_quote
@@ -696,6 +702,12 @@ def download(stream, url, cb_progress=None, cb_done=None,
           'ratio' based on this denominator.
     path -- Provide the path to the file that is equivalent to the
         content, for logging purposes only.
+
+    Raises
+    urllib.error.URLError -- (or on Python 2, urllib2.URLError)
+        (access either using `from hierosoft.moreweb import URLError`)
+        if there is no connection to the host. The Exception is
+        raised by the Python request module.
     '''
 
     '''
@@ -724,7 +736,14 @@ def download(stream, url, cb_progress=None, cb_done=None,
         evt['error'] = str(ex)
         cb_done(evt)
         return
-    # ^ raises urllib.error.HTTPError (or Python 2 HTTPError)
+    except URLError as ex:
+        evt['error'] = str(ex)
+        cb_done(evt)
+        return
+    # ^ raises urllib.error.URLError (or Python 2 urllib2.URLError)
+    #   if not connected to the internet
+    #   ("urllib.error.URLError: <urlopen error [Errno 11001] getaddrinfo failed")
+    # ^ raises urllib.error.HTTPError (or Python 2 urllib2.HTTPError)
     #   in case of "HTTP Error 404: Not Found"
     # evt['total'] is not implemented (would be from contentlength
     # aka content-length)
