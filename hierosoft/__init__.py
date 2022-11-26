@@ -127,10 +127,12 @@ else:
     if platform.system() == "Darwin":
         SHORTCUT_EXT = "command"
         # See also <https://github.com/poikilos/world_clock>
+
         SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
         Library = os.path.join(HOME, "Library")
         APPDATA = os.path.join(Library, "Application Support")
         LocalAppData = os.path.join(Library, "Application Support")
+        CACHES = os.path.join(Library, "Caches")
         LOGS = os.path.join(HOME, "Library", "Logs")
         PROFILES = "/Users"
         temporaryFiles = os.environ.get("TMPDIR")
