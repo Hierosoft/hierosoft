@@ -238,6 +238,10 @@ def netcat(host, port, content, cb_progress=None, cb_done=None,
         if not isinstance(content, bytes):
             content = content.encode()
     # s.sendall(content)
+
+    if evt.get('send_timeout') is not None:
+        s.settimeout(int(evt['send_timeout']))
+
     sendall(s, content, cb_progress=cb_progress, cb_done=cb_done, evt=evt)
     # ^ sendall keeps calling s.send until all data is sent or there
     #   is an exception (See
