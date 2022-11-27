@@ -510,6 +510,19 @@ def find_by_value(items, key, value):
     return -1
 
 
+def number_to_place(num):
+    '''
+    Convert a number such as 1 to a string such as 1st.
+    '''
+    num_s = str(num)
+    if num_s.endswith("1") and (num != 11):
+        return num_s + "st"
+    elif num_s.endswith("2") and (num != 12):
+        return num_s + "nd"
+    elif num_s.endswith("3") and (num != 13):
+        return num_s + "rd"
+    return num_s + "th"
+
 
 def run_and_get_lists(cmd_parts, collect_stderr=True):
     '''
