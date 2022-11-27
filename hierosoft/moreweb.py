@@ -8,6 +8,11 @@ import socket
 import subprocess
 import shlex
 
+if sys.version_info.major < 3:
+    # FileNotFoundError = IOError
+    ModuleNotFoundError = ImportError
+    # NotADirectoryError = OSError
+
 if sys.version_info.major >= 3:
     import urllib.request
     request = urllib.request
@@ -15,7 +20,26 @@ if sys.version_info.major >= 3:
         HTTPError,
         URLError,
     )
-    from html.parser import HTMLParser
+
+    try:
+        from html.parser import HTMLParser
+    except ModuleNotFoundError as ex:
+        import html
+        print("Error: html.parser: {}".format(ex), file=sys.stderr)
+        # TODO: Because of this PyInstaller issue, consider switching
+        #   to lxml, and if necessary, "fall back in lxml's BS
+        #   soupparser if the default parser doesn't work."
+        #   -<https://stackoverflow.com/a/72100/4541104>
+        print("- html.__file__="+html.__file__, file=sys.stderr)
+        # ^ find the source of the error
+        #   "ModuleNotFoundError: No module named 'html.parser'"
+        #   as per <https://stackoverflow.com/questions/28876791/
+        #   importerror-no-module-named-html-parser-html-is-not-a-
+        #   package-python3>
+        print("- using a blank HTMLParser for now"
+              " (not compatible with DownloadPageParser)", file=sys.stderr)
+        class HTMLParser:
+            pass
     from urllib.parse import urlparse, parse_qs
     from urllib.parse import quote as urllib_quote
     from urllib.parse import quote_plus as urllib_quote_plus

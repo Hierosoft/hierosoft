@@ -30,29 +30,38 @@ def echo0(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-if os.path.isfile(os.path.join(nearbyRepo, MODULE_NAME, "__init__.py")):
-    sys.path.insert(0, nearbyRepo)
-    echo0("[{}] using nearby {}".format(CALLER_NAME, nearbyRepo))
-elif os.path.isdir(tryModule):
-    sys.path.insert(0, tryRepo)
-    echo0("[{}] using git {}".format(CALLER_NAME, tryRepo))
-else:
-    pass
-    # use the one in the python path (or fail)
-    # print("There is no {}".format(os.path.join(thisRepo, MODULE_NAME)))
-
-import hierosoft
+if sys.version_info.major < 3:
+    # FileNotFoundError = IOError
+    ModuleNotFoundError = ImportError
 
 try:
     import hierosoft
-except ImportError as ex:
-    echo0("sys.path={}".format(sys.path))
-    echo0(str(ex))
-    echo0('"{}" is part of {}. You must install the repo:'
-          ''.format(CALLER_NAME, REPO_NAME))
-    echo0("# Clone it then:")
-    echo0("python3 -m pip install {}".format(MODULE_NAME))
-    echo0('# or just put it in a directory near here such as via:')
-    echo0('  git clone {}/{}/{}'
-          ' "{}"'.format(GIT_SERVER, REPO_USER, REPO_NAME, nearbyRepo))
-    sys.exit(1)
+    # Don't mess with the path at all if it already works.
+    echo0("[{}] using sys.path's {}".format(CALLER_NAME, hierosoft.__file__))
+except ModuleNotFoundError:
+    if os.path.isfile(os.path.join(nearbyRepo, MODULE_NAME, "__init__.py")):
+        sys.path.insert(0, nearbyRepo)
+        echo0("[{}] using nearby {}".format(CALLER_NAME, nearbyRepo))
+    elif os.path.isdir(tryModule):
+        sys.path.insert(0, tryRepo)
+        echo0("[{}] using git {}".format(CALLER_NAME, tryRepo))
+    else:
+        pass
+        # use the one in the python path (or fail)
+        # print("There is no {}".format(os.path.join(thisRepo, MODULE_NAME)))
+
+    import hierosoft
+
+    try:
+        import hierosoft
+    except ImportError as ex:
+        echo0("sys.path={}".format(sys.path))
+        echo0(str(ex))
+        echo0('"{}" is part of {}. You must install the repo:'
+              ''.format(CALLER_NAME, REPO_NAME))
+        echo0("# Clone it then:")
+        echo0("python3 -m pip install {}".format(MODULE_NAME))
+        echo0('# or just put it in a directory near here such as via:')
+        echo0('  git clone {}/{}/{}'
+              ' "{}"'.format(GIT_SERVER, REPO_USER, REPO_NAME, nearbyRepo))
+        sys.exit(1)
