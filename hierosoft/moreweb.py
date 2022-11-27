@@ -154,7 +154,64 @@ from hierosoft import (
     LOCALAPPDATA,
     APPDATA,
     SHORTCUT_EXT,
+    number_to_place,
 )
+
+def valid_ip_address(value, allow_broadcast=False, allow_netmask=False):
+    '''
+    This function checks to ensure that a value is a properly formatted
+    IPv4 address (not a hostname nor IPv6 address, nor malformed).
+
+    Sequential arguments:
+    value -- A number which may nor may not be an IP address, but should
+        be checked whether it is.
+    allow_broadcast -- Set to True to allow the address to end with
+        255.
+
+    Returns:
+    None if good, otherwise an error string describing what is wrong
+        with the value.
+    '''
+    parts = value.split(".")
+    if len(parts) != 4:
+        return "There were {} dots but should be 3.".format(value.count("."))
+    for i in range(len(parts)):
+        part = parts[i]
+        if len(part) != len(part.strip()):
+            return "The IP address shouldn't contain spaces."
+        if len(part) == 0:
+            if i == 0:
+                return "The part before the 1st dot is blank."
+            else:
+                return (
+                    "The part after the {} dot is blank."
+                    "".format(number_to_place(i))
+                )
+        if not part.isdigit():
+            return (
+                "The {} part is not a number."
+                "".format(number_to_place(i+1))
+            )
+        part_num = int(part)
+        if ((i == 0) and (part_num==255)):
+            if not allow_netmask:
+                return (
+                    "The {} number cannot be {}."
+                    "".format(number_to_place(i+1), part_num)
+                )
+        if ((i == 3) and (part_num==0)):
+            if not allow_netmask:
+                return (
+                    "The {} number cannot be {}."
+                    "".format(number_to_place(i+1), part_num)
+                )
+        if ((i == 3) and (part_num==255)):
+            if not allow_broadcast:
+                return (
+                    "The {} number cannot be {}."
+                    "".format(number_to_place(i+1), part_num)
+                )
+    return None
 
 
 def name_from_url(url):

@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+'''
+This submodule provides logging features such as for handling verbosity
+and representation of data in human-readable form.
+
+This module can't import hierosoft or it would be a circular dependency
+(It would cause an incomplete module error and stop the program).
+'''
 from __future__ import print_function
 import sys
 import traceback
