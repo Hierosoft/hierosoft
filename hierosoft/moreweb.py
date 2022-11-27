@@ -23,6 +23,7 @@ if sys.version_info.major >= 3:
 
     try:
         from html.parser import HTMLParser
+        print("HTMLParser imported.", file=sys.stderr)
     except ModuleNotFoundError as ex:
         import html
         print("Error: html.parser: {}".format(ex), file=sys.stderr)
@@ -52,6 +53,7 @@ else:
         URLError,
     )
     from HTMLParser import HTMLParser
+    print("HTMLParser imported.", file=sys.stderr)
     from urlparse import urlparse, parse_qs
     from urllib import quote as urllib_quote
     from urllib import quote_plus as urllib_quote_plus
