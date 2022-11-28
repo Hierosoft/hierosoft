@@ -21,26 +21,59 @@ if sys.version_info.major >= 3:
         URLError,
     )
 
+    html_is_missing_a_submodule = False
     try:
         from html.parser import HTMLParser
-        print("HTMLParser imported.", file=sys.stderr)
     except ModuleNotFoundError as ex:
+        html_is_missing_a_submodule = True
+    if html_is_missing_a_submodule:
+        import html
+        # ^ Doesn't fix issue #3, but provides tracing info below.
+        print("", file=sys.stderr)
+        raise ModuleNotFoundError(
+            "The html module is incomplete: " + html.__file__
+            + "\nIf using PyInstaller, you must add the following to"
+            " your main py file (the file that is the first argument"
+            " of the Analysis call in your spec file): "
+            "\nimport html.parser\nimport html.entities"
+        )
+        # INFO: Adding 'parser' and 'entities' to __all__ in
+        #   html/__init__.py did not solve the issue.
+
+        '''
         import html
         print("Error: html.parser: {}".format(ex), file=sys.stderr)
         # TODO: Because of this PyInstaller issue, consider switching
         #   to lxml, and if necessary, "fall back in lxml's BS
         #   soupparser if the default parser doesn't work."
         #   -<https://stackoverflow.com/a/72100/4541104>
+        print("- sys.path:", file=sys.stderr)
+        for path in sys.path:
+            print("  * {}".format(path), file=sys.stderr)
+            if os.path.isdir(path):
+                for sub in os.listdir(path):
+                    sub_path = os.path.join(path, sub)
+                    print("    * {}".format(sub_path))
+
+        del path
         print("- html.__file__="+html.__file__, file=sys.stderr)
         # ^ find the source of the error
         #   "ModuleNotFoundError: No module named 'html.parser'"
         #   as per <https://stackoverflow.com/questions/28876791/
         #   importerror-no-module-named-html-parser-html-is-not-a-
         #   package-python3>
+        print("  contains:", file=sys.stderr)
+        for item in dir(html):
+            print("  * {}".format(item))
+            # ^ Even in the error condition (Issue #3), this is
+            #   demonstrably the correct version of the html module
+            #   (it has the same members).
+        print("END", file=sys.stderr)
         print("- using a blank HTMLParser for now"
               " (not compatible with DownloadPageParser)", file=sys.stderr)
         class HTMLParser:
             pass
+        '''
     from urllib.parse import urlparse, parse_qs
     from urllib.parse import quote as urllib_quote
     from urllib.parse import quote_plus as urllib_quote_plus
