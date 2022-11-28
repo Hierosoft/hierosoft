@@ -101,10 +101,11 @@ replacements = None
 USER = None  # formerly username
 PROFILES = None  # formerly profiles
 LOGS = None  # formerly logsDir
-CACHES = None  # None on Windows, so use LocalAppData/luid/cache in that case!
+CACHES = None
 PIXMAPS = None
 PREFIX = os.environ.get('PREFIX')
 SHARE = None  # formerly share
+# For the rationales behind the values see get_unique_path documentation
 if platform.system() == "Windows":
     SHORTCUT_EXT = "bat"
     USER = os.environ.get("USERNAME")
@@ -113,17 +114,19 @@ if platform.system() == "Windows":
     APPDATA = os.path.join(_data_parent_, "Roaming")
     LOCALAPPDATA = os.path.join(_data_parent_, "Local")
     del _data_parent_
-    SHARE = LOCALAPPDATA  # TODO: Consider whether this is best.
+    SHARE = LOCALAPPDATA  # It is synonymous
     SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
     PROFILES = os.environ.get("PROFILESFOLDER")
     temporaryFiles = os.path.join(LOCALAPPDATA, "Temp")
     if PREFIX is None:
         PREFIX = LOCALAPPDATA
     PIXMAPS = PREFIX
+    CACHES = os.path.join(LOCALAPPDATA, "cache")
 else:
     USER = os.environ.get("USER")
     HOME = os.environ.get("HOME")
-    LOCALAPPDATA = os.path.join(HOME, ".config")
+    LOCALAPPDATA = os.path.join(HOME, ".local", "share")
+    SHARE = LOCALAPPDATA  # synonymous; generally written on install
     if platform.system() == "Darwin":
         SHORTCUT_EXT = "command"
         # See also <https://github.com/poikilos/world_clock>
@@ -131,15 +134,40 @@ else:
         SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
         Library = os.path.join(HOME, "Library")
         APPDATA = os.path.join(Library, "Application Support")
-        LocalAppData = os.path.join(Library, "Application Support")
+        # LOCALAPPDATA = APPDATA
+        '''
+        ^ According to <https://forum.unity.com/threads/
+          solved-special-folder-path-in-mac.23686/#post-157339>.
+          There are also the following:
+          ~/Library/Preferences/<[appname]>/ [edit using NSUserDefaults]
+          ~/Library/<application name>/
+          and those and Application Support without ~ making 3 in the
+          root directory according to
+          <https://apple.stackexchange.com/a/28930> and according to
+          McLawrence' comment if the app is from the app store it will
+          be in ~/Library/Containers/<application name>/
+          According to the File System Programming guide cited above,
+          <https://developer.apple.com/library/archive/documentation/
+          FileManagement/Conceptual/FileSystemProgrammingGuide/
+          MacOSXDirectories/MacOSXDirectories.html>, the files
+          required for the app to run should be in something like:
+          ~/Library/Application Support/com.example.MyApp/
+          caches should be in:
+          ~/Library/Caches/com.example.MyApp
+        '''
         CACHES = os.path.join(Library, "Caches")
         LOGS = os.path.join(HOME, "Library", "Logs")
+        # ^ Ensure it is ok to be written manually & unstructured since
+        #   <https://developer.apple.com/library/archive/documentation/
+        #   FileManagement/Conceptual/FileSystemProgrammingGuide/
+        #   MacOSXDirectories/MacOSXDirectories.html> says,
+        #   ". . . Users can also view these logs using the
+        #   Console app."
         PROFILES = "/Users"
         temporaryFiles = os.environ.get("TMPDIR")
         if PREFIX is None:
             PREFIX = Library   # TODO: Consider whether this is best.
-        SHARE = LocalAppData  # os.path.join(PREFIX, "share")
-        # TODO: ^ Consider whether this is the best location for SHARE.
+        SHARE = LOCALAPPDATA  # synonymous
     else:
         if PREFIX is None:
             PREFIX = os.path.join(HOME, ".local")
@@ -147,7 +175,7 @@ else:
         SHARE = os.path.join(PREFIX, "share")
         SHORTCUTS_DIR = os.path.join(SHARE, "applications")
         APPDATA = os.path.join(HOME, ".config")
-        LocalAppData = os.path.join(HOME, ".config")
+        # LOCALAPPDATA = APPDATA
         LOGS = os.path.join(HOME, ".var", "log")
         PROFILES = "/home"
         temporaryFiles = "/tmp"
@@ -303,7 +331,7 @@ non_cloud_warning_shown = False
 # See substitutions for ones implemented as a dictionary or ones not from CLR.
 
 
-def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=False):
+def get_unique_path(luid, key, extension=".conf", allow_cloud=False):
     '''
     Get a unique path for your program within a special folder. This
     function exists since in some cases, the extension of the file
@@ -315,9 +343,13 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
     Sequential arguments:
     luid -- a locally-unique identifier. In other words, this is a name
         that is expected to be unique and not the name of any other
-        program. It shouldn't contain spaces or capital letters.
+        program installed on the computer in the specified key's
+        special folder. The luid shouldn't contain spaces or capital
+        letters, but can be a plain text version of the program name,
+        such as com.example.MyNameApp on macOS where MyName is the
+        program's name and example.com is the domain that is indicated
+        in reverse order.
 
-    Keyword arguments:
     key -- Provide a key that is implemented here:
         'Share:Unique': Get your program's path where it may have static
             data.
@@ -330,8 +362,12 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
             within .config (but differs by platform following the
             standards of each platform such as %APPDATA%).
         'Cache:Unique': A directory in the user's cache directory such
-            as .cache/{luid}, but
-            on Windows the order is flipped to LOCALAPPDATA/{luid}/cache
+            as .cache/{luid}, {LOCALAPPDATA}/cache/{luid} on Windows
+            (such as, like on other OSs, not to interfere with the
+            install if the program is installed at
+            {LOCALAPPDATA}/{luid}).
+
+    Keyword arguments:
     allow_cloud -- Use the 'Configs:Unique' directory in the cloud,
         but only if a known cloud directory already exists (otherwise
         fall back to 'Configs:Unique' as described.
@@ -340,8 +376,8 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
     if key == 'Share:Unique':
         return os.path.join(SHARE, luid)
     elif key == 'Cache:Unique':
-        if platform.system() == "Windows":
-            return os.path.join(LocalAppData, luid, "cache")
+        # if platform.system() == "Windows":
+        #     return os.path.join(LOCALAPPDATA, luid, "cache")
         return os.path.join(CACHES, luid)
     elif key == 'Desktop:Unique':
         # TODO: Consider using https://github.com/newville/pyshortcuts
@@ -358,7 +394,7 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
         if allow_cloud:
             check_cloud()
             if CLOUD_PROFILE is not None:
-                echo0('* CLOUD_PROFILE="{}"'.format(CLOUD_PROFILE))
+                echo1('* CLOUD_PROFILE="{}"'.format(CLOUD_PROFILE))
                 cloudUniqueDir = os.path.join(CLOUD_PROFILE, luid)
                 if os.path.isdir(localUniqueDir):
                     if not non_cloud_warning_shown:
@@ -367,11 +403,14 @@ def get_unique_path(luid, key='Share:Unique', extension=".conf", allow_cloud=Fal
                               ''.format(localUniqueDir, cloudUniqueDir))
                         non_cloud_warning_shown = True
                 return cloudUniqueDir
-        echo0('* APPDATA="{}"'.format(APPDATA))
-        echo0('* localUniqueDir="{}"'.format(localUniqueDir))
+        echo1('* APPDATA="{}"'.format(APPDATA))
+        echo1('* localUniqueDir="{}"'.format(localUniqueDir))
         return localUniqueDir
     else:
-        raise NotImplementedError("key='{}'".format(key))
+        raise KeyError(
+            "[hierosoft] The key '{}' is not valid for get_unique_path."
+            "".format(key)
+        )
 
 
 def join_if_exists(parent, sub):

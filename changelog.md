@@ -3,9 +3,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Tasks
-- Move moreplatform/__init__.py code to hierosoft/__init__.py which affects:
-  - /home/owner/git/blnk/blnk/__init__.py
+
+## [git] - 2022-11-28
+### Changed
+- Require key for `get_unique_path` (Change it from a keyword argument
+  to a sequential argument to prevent accidentally sending only a key
+  and not a luid which would set luid to a key).
+### Fixed
+- Separate LOCALAPPDATA and CACHES in case the program is installed in
+  LOCALAPPDATA (Set CACHES to LOCALAPPDATA\cache on Windows).
+- Separate LOCALAPPDATA and APPDATA on non-Windows systems into
+  `~/.local/share` (synonymous with SHARE since generally written during
+  install and since CACHES is elsewere) and `~/.config`.
+- Make casing consistent when using the LOCALAPPDATA global.
 
 
 ## [git] - 2022-11-19
