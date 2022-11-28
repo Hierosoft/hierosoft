@@ -192,7 +192,7 @@ try:
         echo1('  != pwd.getpwuid(os.getuid())[0]="{}"'
               ''.format(pwd.getpwuid(os.getuid())[0]))
 except ModuleNotFoundError as ex:
-    echo1(str(ex))
+    echo1('Skipping optional dependency: '.format(ex))
 
 
 # statedCloud = "owncloud"
