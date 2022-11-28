@@ -195,7 +195,7 @@ class SimpleArgs:
             self.options[flag] = False
         sequential_count = 0
         key = None
-        for i in range(len(sys.argv)):
+        for i in range(1, len(sys.argv)):
             arg = sys.argv[i]
             if key is not None:
                 converter = self.types.get(key)
@@ -247,6 +247,7 @@ class SimpleArgs:
                     self.options[key] = arg
                 del converter
                 key = None  # We already know the key by order & used it.
+                sequential_count += 1
             else:
                 self.usage()
                 if len(self.sequential_keys) > 0:
