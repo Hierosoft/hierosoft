@@ -207,7 +207,7 @@ for tryCloudName in CLOUD_DIR_NAMES:
     if os.path.isdir(tryCloudPath):
         myCloudName = tryCloudName
         myCloudPath = tryCloudPath
-        print('* detected "{}"'.format(myCloudPath))
+        echo1('* detected "{}"'.format(myCloudPath))
         break
 
 # NOTE: PATH isn't necessary to split with os.pathsep (such as ":", not
