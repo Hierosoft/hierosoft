@@ -418,17 +418,25 @@ def join_if_exists(parent, sub):
     Join an existing sub(s), otherwise return none.
 
     Sequential arguments:
-    parent -- The parent directory possibly containing sub(s).
+    parent -- The parent directory possibly containing sub(s). If it is
+        not a string, it is assumed to be an iterable and each element
+        will be tried as a path string that may contain sub.
     sub -- A path or multiple paths (assumed to be iterable if not str).
     '''
+    if isinstance(parent, str):
+        parents = [parent]
+    else:
+        parents = parent
+
     if isinstance(sub, str):
         subs = [sub]
     else:
         subs = sub
-    for sub in subs:
-        try_path = os.path.join(parent, sub)
-        if os.path.exists(try_path):
-            return try_path
+    for parent in parents:
+        for sub in subs:
+            try_path = os.path.join(parent, sub)
+            if os.path.exists(try_path):
+                return try_path
     return None
 
 
