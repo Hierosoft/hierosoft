@@ -314,7 +314,9 @@ def check_cloud(cloud_path=None, cloud_name=None):
             substitutions['%CLOUD%'] = myCloudPath
             substitutions['$CLOUD'] = myCloudPath
         # Set the HOME path if it exists:
-        tryCloudProfileDir = os.path.join(myCloudPath, "profile") # LITERAL PROFILE
+        tryCloudProfileDir = os.path.join(myCloudPath, "profile")
+        # ^ Yes, LITERALLY a subdir named "profile",
+        #   not profile variable.
         if os.path.isdir(tryCloudProfileDir):
             CLOUD_PROFILE = tryCloudProfileDir
         else:
@@ -532,7 +534,20 @@ def s2or3(s):
     return s
 
 
-def no_enclosures(s, openers=["(", "[", "{"], closers=[")", "]", "}"]):
+def no_enclosures(
+        s,
+        openers=["(", "[", "{", '"', "'"],
+        closers=[")", "]", "}", '"', "'"]
+        ):
+    '''
+    Remove the enclosures from a string. For example, change
+    "(12-22-2022)" to "12-22-2022".
+
+    Keyword arguments:
+    openers -- The delimiters that start the scope such as "(" or '"'.
+    closers -- The delimiters that end the scope such as ")" or '"'.
+        Each item must be paired with the same index in openers.
+    '''
     if len(openers) != len(closers):
         raise ValueError(
             "The openers and closers must be paired in order"
@@ -707,6 +722,7 @@ def is_exe(path):
 
 
 WIN_EXECUTABLE_DOT_EXTS = [".exe", ".ps1", ".bat", ".com"]
+
 
 def which(program_name, more_paths=[]):
     '''
