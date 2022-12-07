@@ -35,7 +35,6 @@ def get_diff_lines(before_path, after_path, strip=True):
             for i in range(len(lines_of_files[file_i])):
                 lines_of_files[file_i][i] = lines_of_files[file_i][i].strip()
 
-
     other_i = 0
     for file_i in range(len(lines_of_files)):
         counted = []
