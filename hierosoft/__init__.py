@@ -198,10 +198,16 @@ if HOME != os.path.expanduser('~'):
 
 USER_DIR_NAME = os.path.split(HOME)[1]
 # ^ may differ from os.getlogin() getpass.getuser()
-if USER_DIR_NAME != os.getlogin():
-    echo1("Verbose warning:")
-    echo1('  USER_DIR_NAME="{}"'.format(USER_DIR_NAME))
-    echo1('  != os.getlogin()="{}"'.format(os.getlogin()))
+try:
+    if USER_DIR_NAME != os.getlogin():
+        echo1("Verbose warning:")
+        echo1('  USER_DIR_NAME="{}"'.format(USER_DIR_NAME))
+        echo1('  != os.getlogin()="{}"'.format(os.getlogin()))
+except OSError:
+    # os.getlogin() causes:
+    # "OSError: [Errno 6] No such device or address"
+    # Such as on Python 3.10.6 on Linux Mint 21
+    pass
 
 try:
     import getpass  # optional
