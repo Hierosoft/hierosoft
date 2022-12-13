@@ -17,7 +17,7 @@ if os.path.isfile("requirements.txt"):
             if len(line) < 1:
                 continue
             install_requires.append(line)
-
+print("install_requires={}".format(install_requires), file=sys.stderr)
 description = (
     "This is the splash screen which ensures Python and any other"
     " requirements are installed then updates and runs the launcher."
