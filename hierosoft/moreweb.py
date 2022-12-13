@@ -5,6 +5,12 @@ import os
 import platform
 import time
 import socket
+import psutil
+from socket import (
+    getaddrinfo,
+    gethostname,
+)
+import ipaddress
 import subprocess
 import shlex
 
@@ -161,6 +167,7 @@ from hierosoft import (
     number_to_place,
 )
 
+
 def valid_ip_address(value, allow_broadcast=False, allow_netmask=False):
     '''
     This function checks to ensure that a value is a properly formatted
@@ -197,24 +204,26 @@ def valid_ip_address(value, allow_broadcast=False, allow_netmask=False):
                 "".format(number_to_place(i+1))
             )
         part_num = int(part)
-        if ((i == 0) and (part_num==255)):
+        if ((i == 0) and (part_num == 255)):
             if not allow_netmask:
                 return (
                     "The {} number cannot be {}."
                     "".format(number_to_place(i+1), part_num)
                 )
-        if ((i == 3) and (part_num==0)):
+        if ((i == 3) and (part_num == 0)):
             if not allow_netmask:
                 return (
                     "The {} number cannot be {}."
                     "".format(number_to_place(i+1), part_num)
                 )
-        if ((i == 3) and (part_num==255)):
+        if ((i == 3) and (part_num == 255)):
             if not allow_broadcast:
                 return (
                     "The {} number cannot be {}."
                     "".format(number_to_place(i+1), part_num)
                 )
+        if (part_num > 255) or (part_num < 0):
+            return "Each part of the address must be 0 to 255."
     return None
 
 
@@ -227,6 +236,83 @@ def name_from_url(url):
 
 
 STATUS_DONE = "done"
+
+
+def get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
+    '''
+    Get the IP address(es) of the local machine (the computer running
+    the program).
+    '''
+    # import psutil  # works on Windows, macOS, and GNU/Linux systems.
+    # Based on <https://stackoverflow.com/a/73559817/4541104>.
+    af_inet = socket.AF_INET
+    if ip_addr_proto == "ipv6":
+        af_inet = socket.AF_INET6
+    elif ip_addr_proto == "both":
+        af_inet = 0
+
+    results = []
+    for interface, interface_addrs in psutil.net_if_addrs().items():
+        if interface_addrs is None:
+            echo1("There are no addresses on interface {}".format(interface))
+            continue
+        for snicaddr in interface_addrs:
+            if snicaddr.family == af_inet:
+                if ignore_local_ips:
+                    if snicaddr.address.split(".")[0] == "127":
+                        continue
+                # results.append(snicaddr.addressinterface_addrs)
+                # ^ AttributeError
+                results.append(snicaddr.address)
+    return results
+
+
+def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
+    '''
+    UNUSABLE: Gets only local on linux.
+
+    By default, this method only returns non-local IPv4 addresses
+    To return IPv6 only, call get_ip('ipv6')
+    To return both IPv4 and IPv6, call get_ip('both')
+    To return local IPs, call get_ip(None, False)
+    Can combine options like so get_ip('both', False)
+    '''
+    # Based on <https://stackoverflow.com/a/64530508/4541104>.
+
+    # See also ways using Python modules from PyPi:
+    # - import netifaces: <https://stackoverflow.com/a/66534468/4541104>
+    # - import psutil: <https://stackoverflow.com/a/73559817/4541104>
+
+    af_inet = socket.AF_INET  # 2
+    if ip_addr_proto == "ipv6":
+        af_inet = socket.AF_INET6  # 30
+    elif ip_addr_proto == "both":
+        af_inet = 0
+    hostname = gethostname()
+    echo0("hostname={}".format(hostname))
+    # system_ip_list = getaddrinfo(hostname, None, af_inet, 1, 0)
+    system_ip_list = getaddrinfo(hostname, None, family=af_inet,
+                                 proto=socket.IPPROTO_TCP)
+    # ^ getaddrinfo(host, port, family=0, type=0, proto=0, flags=0)
+    ip_list = []
+
+    echo0("system_ip_list:")
+    for ip in system_ip_list:
+        echo0("- ip={}".format(ip))
+        ip = ip[4][0]
+
+        try:
+            ipaddress.ip_address(str(ip))
+            ip_address_valid = True
+        except ValueError:
+            ip_address_valid = False
+        else:
+            if ipaddress.ip_address(ip).is_loopback and ignore_local_ips or ipaddress.ip_address(ip).is_link_local and ignore_local_ips:
+                pass
+            elif ip_address_valid:
+                ip_list.append(ip)
+
+    return ip_list
 
 
 def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
@@ -361,6 +447,7 @@ def netcat(host, port, content, cb_progress=None, cb_done=None,
     s.close()
     evt['status'] = STATUS_DONE
     cb_done(evt)
+
 
 def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
                chunk_size=1024, evt=None, path=None):
