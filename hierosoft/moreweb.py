@@ -238,10 +238,15 @@ def name_from_url(url):
 STATUS_DONE = "done"
 
 
-def get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
+def get_ips(ip_addr_proto="ipv4", ignore_local=True, ignore_unassigned=True):
     '''
     Get the IP address(es) of the local machine (the computer running
     the program).
+
+    Keyword arguments:
+    ignore_local -- Ignore 127.* addresses (localhost).
+    ignore_unassigned -- Ignore 169.* addresses (missing DHCP server or
+        disconnected from the network).
     '''
     # import psutil  # works on Windows, macOS, and GNU/Linux systems.
     # Based on <https://stackoverflow.com/a/73559817/4541104>.
@@ -258,8 +263,12 @@ def get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
             continue
         for snicaddr in interface_addrs:
             if snicaddr.family == af_inet:
-                if ignore_local_ips:
-                    if snicaddr.address.split(".")[0] == "127":
+                octet0 = snicaddr.address.split(".")[0]
+                if ignore_local:
+                    if octet0 == "127":
+                        continue
+                if ignore_unassigned:
+                    if octet0 == "169":
                         continue
                 # results.append(snicaddr.addressinterface_addrs)
                 # ^ AttributeError
@@ -267,7 +276,7 @@ def get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
     return results
 
 
-def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
+def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local=True):
     '''
     UNUSABLE: Gets only local on linux.
 
@@ -307,7 +316,9 @@ def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
         except ValueError:
             ip_address_valid = False
         else:
-            if ipaddress.ip_address(ip).is_loopback and ignore_local_ips or ipaddress.ip_address(ip).is_link_local and ignore_local_ips:
+            no_local = ignore_local
+            if ((ipaddress.ip_address(ip).is_loopback and no_local)
+                    or (ipaddress.ip_address(ip).is_link_local and no_local)):
                 pass
             elif ip_address_valid:
                 ip_list.append(ip)
