@@ -236,6 +236,7 @@ def name_from_url(url):
 
 
 STATUS_DONE = "done"
+STATUS_RESPONSE = "response"
 
 
 def get_ips(ip_addr_proto="ipv4", ignore_local=True, ignore_unassigned=True):
@@ -432,7 +433,13 @@ def netcat(host, port, content, cb_progress=None, cb_done=None,
     if evt.get('send_timeout') is not None:
         s.settimeout(int(evt['send_timeout']))
 
-    sendall(s, content, cb_progress=cb_progress, cb_done=cb_done, evt=evt)
+    sendall(
+        s,
+        content,
+        cb_progress=cb_progress,
+        cb_done=cb_done,  # cb_done is called twice, with STATUS_DONE and below
+        evt=evt,
+    )
     # ^ sendall keeps calling s.send until all data is sent or there
     #   is an exception (See
     #   <https://stackoverflow.com/a/34252690/4541104>).
@@ -456,8 +463,10 @@ def netcat(host, port, content, cb_progress=None, cb_done=None,
         print(repr(data))
     echo0("Connection closed.")
     s.close()
-    evt['status'] = STATUS_DONE
+    evt['status'] = STATUS_RESPONSE
     cb_done(evt)
+    # cb_done is called twice, above with STATUS_DONE and again with
+    # STATUS_RESPONSE.
 
 
 def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
