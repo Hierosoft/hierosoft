@@ -911,6 +911,7 @@ def download(stream, url, cb_progress=None, cb_done=None,
               " method. Set evt['total_size'] instead.")
         evt['total_size'] = total_size
     '''
+    echo0("* downloading {}".format(url))
 
     if evt is None:
         evt = {}
@@ -951,6 +952,7 @@ def download(stream, url, cb_progress=None, cb_done=None,
         if evt.get('total_size') is not None:
             evt['ratio'] = float(evt['loaded']) / float(evt['total_size'])
         cb_progress(evt)
+        # echo0("* writing")
         stream.write(chunk)
     evt['status'] = STATUS_DONE
     # if evt.get('status') != STATUS_DONE:
@@ -1070,6 +1072,7 @@ class DownloadManager:
                 'path': path,
             },
         )
+        echo0("* starting download thread...")
         self.download_thread.start()
         return True
 
