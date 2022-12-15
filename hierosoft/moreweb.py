@@ -13,6 +13,7 @@ from socket import (
 import ipaddress
 import subprocess
 import shlex
+import threading
 
 if sys.version_info.major < 3:
     # FileNotFoundError = IOError
@@ -993,6 +994,7 @@ class DownloadManager:
         self.localappdata_path = LOCALAPPDATA
         self.appdata_path = APPDATA
         self.parser = None
+        self.download_thread = None
 
     def set_options(self, options):
         if self.parser is None:
@@ -1027,8 +1029,9 @@ class DownloadManager:
         self.parser.feed(dat.decode("UTF-8"))
         return self.parser.urls
 
-    def download(self, stream, url, cb_progress=None, cb_done=None,
-                 chunk_size=16*1024, evt=None, path=None):
+    def download_and_wait(self, stream, url, cb_progress=None,
+                          cb_done=None, chunk_size=16*1024, evt=None,
+                          path=None):
         '''
         For documentation see the download function rather than the
         DownloadManager download method.
@@ -1039,6 +1042,36 @@ class DownloadManager:
         self.total_size = evt.get('total_size')
         return download(stream, url, cb_progress=cb_progress, cb_done=cb_done,
                         chunk_size=chunk_size, evt=evt, path=path)
+
+    def download(self, stream, url, cb_progress=None,
+                 cb_done=None, chunk_size=16*1024, evt=None,
+                 path=None):
+        '''
+        For documentation see the download function rather than the
+        DownloadManager download method.
+        '''
+        self.url = url
+        if evt is None:
+            evt = {}
+        self.total_size = evt.get('total_size')
+
+
+        if self.download_thread is not None:
+            echo0("download_thread is already running for {}".format(self.host))
+            return False
+        self.download_thread = threading.Thread(
+            target=download,
+            args=(stream, url,),
+            kwargs={
+                'cb_progress': cb_progress,
+                'cb_done': cb_done,
+                'evt': evt,
+                'chunk_size': chunk_size,
+                'path': path,
+            },
+        )
+        self.download_thread.start()
+        return True
 
     def get_downloads_path(self):
         return os.path.join(self.profile_path, "Downloads")
