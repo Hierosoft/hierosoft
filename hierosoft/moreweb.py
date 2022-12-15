@@ -13,6 +13,7 @@ from socket import (
 import ipaddress
 import subprocess
 import shlex
+import threading
 
 if sys.version_info.major < 3:
     # FileNotFoundError = IOError
@@ -236,6 +237,95 @@ def name_from_url(url):
 
 
 STATUS_DONE = "done"
+STATUS_RESPONSE = "response"
+
+
+def get_ips(ip_addr_proto="ipv4", ignore_local=True, ignore_unassigned=True):
+    '''
+    Get the IP address(es) of the local machine (the computer running
+    the program).
+
+    Keyword arguments:
+    ignore_local -- Ignore 127.* addresses (localhost).
+    ignore_unassigned -- Ignore 169.* addresses (missing DHCP server or
+        disconnected from the network).
+    '''
+    # import psutil  # works on Windows, macOS, and GNU/Linux systems.
+    # Based on <https://stackoverflow.com/a/73559817/4541104>.
+    af_inet = socket.AF_INET
+    if ip_addr_proto == "ipv6":
+        af_inet = socket.AF_INET6
+    elif ip_addr_proto == "both":
+        af_inet = 0
+
+    results = []
+    for interface, interface_addrs in psutil.net_if_addrs().items():
+        if interface_addrs is None:
+            echo1("There are no addresses on interface {}".format(interface))
+            continue
+        for snicaddr in interface_addrs:
+            if snicaddr.family == af_inet:
+                octet0 = snicaddr.address.split(".")[0]
+                if ignore_local:
+                    if octet0 == "127":
+                        continue
+                if ignore_unassigned:
+                    if octet0 == "169":
+                        continue
+                # results.append(snicaddr.addressinterface_addrs)
+                # ^ AttributeError
+                results.append(snicaddr.address)
+    return results
+
+
+def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local=True):
+    '''
+    UNUSABLE: Gets only local on linux.
+
+    By default, this method only returns non-local IPv4 addresses
+    To return IPv6 only, call get_ip('ipv6')
+    To return both IPv4 and IPv6, call get_ip('both')
+    To return local IPs, call get_ip(None, False)
+    Can combine options like so get_ip('both', False)
+    '''
+    # Based on <https://stackoverflow.com/a/64530508/4541104>.
+
+    # See also ways using Python modules from PyPi:
+    # - import netifaces: <https://stackoverflow.com/a/66534468/4541104>
+    # - import psutil: <https://stackoverflow.com/a/73559817/4541104>
+
+    af_inet = socket.AF_INET  # 2
+    if ip_addr_proto == "ipv6":
+        af_inet = socket.AF_INET6  # 30
+    elif ip_addr_proto == "both":
+        af_inet = 0
+    hostname = gethostname()
+    echo0("hostname={}".format(hostname))
+    # system_ip_list = getaddrinfo(hostname, None, af_inet, 1, 0)
+    system_ip_list = getaddrinfo(hostname, None, family=af_inet,
+                                 proto=socket.IPPROTO_TCP)
+    # ^ getaddrinfo(host, port, family=0, type=0, proto=0, flags=0)
+    ip_list = []
+
+    echo0("system_ip_list:")
+    for ip in system_ip_list:
+        echo0("- ip={}".format(ip))
+        ip = ip[4][0]
+
+        try:
+            ipaddress.ip_address(str(ip))
+            ip_address_valid = True
+        except ValueError:
+            ip_address_valid = False
+        else:
+            no_local = ignore_local
+            if ((ipaddress.ip_address(ip).is_loopback and no_local)
+                    or (ipaddress.ip_address(ip).is_link_local and no_local)):
+                pass
+            elif ip_address_valid:
+                ip_list.append(ip)
+
+    return ip_list
 
 
 def get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
@@ -421,7 +511,13 @@ def netcat(host, port, content, cb_progress=None, cb_done=None,
     if evt.get('send_timeout') is not None:
         s.settimeout(int(evt['send_timeout']))
 
-    sendall(s, content, cb_progress=cb_progress, cb_done=cb_done, evt=evt)
+    sendall(
+        s,
+        content,
+        cb_progress=cb_progress,
+        cb_done=cb_done,  # cb_done is called twice, with STATUS_DONE and below
+        evt=evt,
+    )
     # ^ sendall keeps calling s.send until all data is sent or there
     #   is an exception (See
     #   <https://stackoverflow.com/a/34252690/4541104>).
@@ -445,8 +541,11 @@ def netcat(host, port, content, cb_progress=None, cb_done=None,
         print(repr(data))
     echo0("Connection closed.")
     s.close()
-    evt['status'] = STATUS_DONE
+    evt['status'] = STATUS_RESPONSE
     cb_done(evt)
+    # cb_done is called twice, above with STATUS_DONE and again with
+    # STATUS_RESPONSE.
+
 
 
 def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
@@ -890,6 +989,7 @@ def download(stream, url, cb_progress=None, cb_done=None,
               " method. Set evt['total_size'] instead.")
         evt['total_size'] = total_size
     '''
+    echo0("* downloading {}".format(url))
 
     if evt is None:
         evt = {}
@@ -930,6 +1030,7 @@ def download(stream, url, cb_progress=None, cb_done=None,
         if evt.get('total_size') is not None:
             evt['ratio'] = float(evt['loaded']) / float(evt['total_size'])
         cb_progress(evt)
+        # echo0("* writing")
         stream.write(chunk)
     evt['status'] = STATUS_DONE
     # if evt.get('status') != STATUS_DONE:
@@ -973,6 +1074,7 @@ class DownloadManager:
         self.localappdata_path = LOCALAPPDATA
         self.appdata_path = APPDATA
         self.parser = None
+        self.download_thread = None
 
     def set_options(self, options):
         if self.parser is None:
@@ -1007,8 +1109,9 @@ class DownloadManager:
         self.parser.feed(dat.decode("UTF-8"))
         return self.parser.urls
 
-    def download(self, stream, url, cb_progress=None, cb_done=None,
-                 chunk_size=16*1024, evt=None, path=None):
+    def download_and_wait(self, stream, url, cb_progress=None,
+                          cb_done=None, chunk_size=16*1024, evt=None,
+                          path=None):
         '''
         For documentation see the download function rather than the
         DownloadManager download method.
@@ -1019,6 +1122,37 @@ class DownloadManager:
         self.total_size = evt.get('total_size')
         return download(stream, url, cb_progress=cb_progress, cb_done=cb_done,
                         chunk_size=chunk_size, evt=evt, path=path)
+
+    def download(self, stream, url, cb_progress=None,
+                 cb_done=None, chunk_size=16*1024, evt=None,
+                 path=None):
+        '''
+        For documentation see the download function rather than the
+        DownloadManager download method.
+        '''
+        self.url = url
+        if evt is None:
+            evt = {}
+        self.total_size = evt.get('total_size')
+
+
+        if self.download_thread is not None:
+            echo0("download_thread is already running for {}".format(self.host))
+            return False
+        self.download_thread = threading.Thread(
+            target=download,
+            args=(stream, url,),
+            kwargs={
+                'cb_progress': cb_progress,
+                'cb_done': cb_done,
+                'evt': evt,
+                'chunk_size': chunk_size,
+                'path': path,
+            },
+        )
+        echo0("* starting download thread...")
+        self.download_thread.start()
+        return True
 
     def get_downloads_path(self):
         return os.path.join(self.profile_path, "Downloads")
