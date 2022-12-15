@@ -21,6 +21,8 @@ import threading
 import tarfile
 import zipfile
 import platform
+import copy
+import time
 
 if sys.version_info.major >= 3:  # try:
     from tkinter import messagebox
@@ -48,12 +50,17 @@ from hierosoft import (
 # from hierosoft.logging import (
 #     view_traceback,
 # )
-from hierosoft.hplatform import (
+from hierosoft.moreplatform import (
     make_shortcut,
 )
-from hierosoft.hweb import (
+from hierosoft.moreweb import (
     DownloadManager,
     name_from_url,
+    STATUS_DONE,
+)
+
+from hierosoft.logging import (
+    view_traceback,
 )
 
 from hierosoft.ggrep import (
@@ -111,6 +118,29 @@ class MainApplication(tk.Frame):
         self.set_entries()
 
     def __init__(self, parent, options, *args, **kwargs):
+        # region for d_done
+        # This region exists since the d_done code now contains the
+        #   download code that was formerly synchronous and occurred
+        #   after the synchronous download function ended.
+        # TODO: Move this whole region to the event?
+        self.download_done = False
+        self.archive_path = None
+        self.enable_install = None
+        self.remove_download = None
+        self.bn_path = None
+        self.archives_path = None
+        self.versions_path = None
+        self.installed_path = None  # TODO: track in meta instead?
+        self.action = None
+        self.uninstall = None  # TODO: move this to the event
+        self.meta = None
+        self.update_past_verb = None
+        self.update_present_verb = None
+        self.action_present_verb = None
+        # region for d_done
+        self.events = []
+
+
         tk.Frame.__init__(self, parent, *args, **kwargs)
         self.root = parent
 
@@ -180,6 +210,41 @@ class MainApplication(tk.Frame):
                                          variable=self.del_arc_var)
         # self.del_arc_cb.pack()  # not implemented
 
+    def _process_events(self):
+        '''
+        Process each event dictionary in self.events and use the command
+        to determine what to do. This occurs on the main thread such as
+        in case the main thread is a GUI, which threads may not be
+        able to access in some frameworks. Instead, threads should
+        append events to self.events, and the main thread should poll
+        the outcome of calls by calling this and checking for some state
+        such as one that "d_done" (or the _d_done event) sets.
+
+        Before adding an event to self.events, making a deepcopy is
+        recommended (especially before adding 'command' where
+        applicable).
+        '''
+        done_events = []
+        while len(self.events) > 0:
+            event = self.events[0]
+            echo2("* processing {}".format(event))
+            command = event.get('command')
+            del self.events[0]
+            if command is None:
+                echo0("Error: command is one for event={}".format(event))
+                continue
+            elif command == "d_progress":
+                self._d_progress(event)
+                done_events.append(event)
+            elif command == "d_done":
+                self._d_done(event)
+                done_events.append(event)
+            else:
+                echo0("Error: command '{}' is unknown for event={}"
+                      "".format(command, event))
+
+        return done_events
+
     def push_label(self, s):
         new_label = tk.Label(self.root, text=s)
         new_label.pack()
@@ -187,6 +252,15 @@ class MainApplication(tk.Frame):
         self.root.update()
 
     def d_progress(self, evt):
+        '''
+        This doesn't have to run on the main thread (so don't access the
+        GUI directly here).
+        '''
+        event = copy.deepcopy(evt)
+        event['command'] = "d_progress"
+        self.events.append(event)
+
+    def _d_progress(self, evt):
         if evt['loaded'] - self.shown_progress > 1000000:
             self.shown_progress = evt['loaded']
             self.pbar['value'] = evt['loaded']
@@ -194,17 +268,12 @@ class MainApplication(tk.Frame):
             # evt['total'] is not implemented
             self.count_label.config(text="downloading..." +
                                     str(int(evt['loaded']/1024/1024)) + "MB..")
+        if evt.get('status') == STATUS_DONE:
+            echo0("Warning: Got {} for progress,"
+                  " so progress was used but being redirected to _d_done."
+                  "".format(STATUS_DONE))
+            return self._d_done(self, evt)
         self.root.update()
-
-    def d_done(self, evt):
-        err = evt.get('error')
-        if err is None:
-            print("Download finished!")
-        else:
-            print("Download stopped due to: {}".format(err))
-        self.pbar['value'] = 0
-        self.root.update()
-
 
     def uninstall_click(self, meta):
         print("* uninstalling {}".format(meta))
@@ -221,31 +290,34 @@ class MainApplication(tk.Frame):
 
 
     def d_click(self, meta, uninstall=False, remove_download=False):
-        update_past_verb = "Updated"
-        update_present_verb = "Updating"
-        action_present_verb = "Installing"
-        action = "install"
-        enable_install = True
+        self.meta = meta
+        self.remove_download = remove_download
+        self.uninstall = uninstall
+        self.update_past_verb = "Updated"
+        self.update_present_verb = "Updating"
+        self.action_present_verb = "Installing"
+        self.action = "install"
+        self.enable_install = True
         if uninstall:
-            enable_install = False
-            update_past_verb = "Removed"
-            update_present_verb = "Removing"
-            action_present_verb = "Uninstalling"
-            action = "uninstall"
+            self.enable_install = False
+            self.update_past_verb = "Removed"
+            self.update_present_verb = "Removing"
+            self.action_present_verb = "Uninstalling"
+            self.action = "uninstall"
         if remove_download:
-            enable_install = False
+            self.enable_install = False
         for btn in self.dl_buttons:
             btn.config(state=tk.DISABLED)
         self.refresh_btn.config(state=tk.DISABLED)
-        btn = meta.get('button')
+        self.download_clicked_btn = meta.get('button')
         uninstall_btn = meta.get("uninstall_button")
         if not uninstall:
-            if btn is not None:
-                btn.pack_forget()
+            if self.download_clicked_btn is not None:
+                self.download_clicked_btn.pack_forget()
         else:
             if remove_download:
-                if btn is not None:
-                    btn.pack_forget()
+                if self.download_clicked_btn is not None:
+                    self.download_clicked_btn.pack_forget()
             if uninstall_btn is not None:
                 uninstall_btn.pack_forget()
 
@@ -254,7 +326,7 @@ class MainApplication(tk.Frame):
         print("")
         for label in self.msg_labels:
             label.pack_forget()
-        print(action_present_verb + ":")
+        print(self.action_present_verb + ":")
         print("  version: " + meta['version'])
         print("  commit: " + meta['commit'])
         self.pbar['maximum'] = 200*1024*1024  # TODO: get actual MB count
@@ -271,36 +343,85 @@ class MainApplication(tk.Frame):
         # print("new_filename: " + self.mgr.parser.id_from_url(url))
         dl_name = meta.get('filename')  # name_from_url(url)
         user_downloads_path = self.mgr.get_downloads_path()
-        bn_path = os.path.join(user_downloads_path, "blendernightly")
-        archives_path = os.path.join(bn_path, "archives")
-        if not os.path.isdir(archives_path):
-            print("  creating: " + archives_path)
-            os.makedirs(archives_path)
-        versions_path = os.path.join(bn_path, "versions")
-        installed_path = os.path.join(versions_path, dest_id)
-        print("  {}: {}".format(action, installed_path))  # /2.??-<commit>
-        archive_path = None
+        self.bn_path = os.path.join(user_downloads_path, "blendernightly")
+        self.archives_path = os.path.join(self.bn_path, "archives")
+        if not os.path.isdir(self.archives_path):
+            print("  creating: " + self.archives_path)
+            os.makedirs(self.archives_path)
+        self.versions_path = os.path.join(self.bn_path, "versions")
+        self.installed_path = os.path.join(self.versions_path, dest_id)
+        print("action={}: {}".format(self.action, self.installed_path))  # /2.??-<commit>
+        self.archive_path = None
         if dl_name is not None:
-            archive_path = os.path.join(archives_path, dl_name)
-        if enable_install:
+            self.archive_path = os.path.join(self.archives_path, dl_name)
+        if self.enable_install:
+            found_count = 0
+            total_count = 0
             for flag_name in self.bin_names:
-                flag_path = os.path.join(installed_path, flag_name)
+                total_count += 1
+                flag_path = os.path.join(self.installed_path, flag_name)
                 if os.path.isfile(flag_path):
+                    found_count += 1
                     msg = "Already installed " + meta['id'] + "."
                     print("  already_installed: true")
+                    self.push_label(msg)
                     self.count_label.config(text=msg)
                     for btn in self.dl_buttons:
                         btn.config(state=tk.NORMAL)
                     self.refresh_btn.config(state=tk.NORMAL)
                     self.root.update()
                     return
+            print("* done checking for {} binaries".format(total_count))
 
-            if not os.path.isfile(archive_path):
-                # abs_url should never be None if file already exists
-                print("  - downloading: " + abs_url)
-                self.mgr.download(archive_path, abs_url,
+            if os.path.isfile(self.archive_path):
+                self.push_label("Warning: Resuming with existing archive")
+                self.push_label(self.archive_path)
+                echo0('* archive_path="{}": {} is already done'
+                      ''.format(self.archive_path, self.action))
+                self._d_done({'status': STATUS_DONE})
+                return
+
+            # abs_url should never be None if file already exists
+            print("  - downloading: " + abs_url)
+            with open(self.archive_path, 'wb') as f:
+                self.download_done = False
+                self.mgr.download(f, abs_url,
                                   cb_progress=self.d_progress,
                                   cb_done=self.d_done)
+                while not self.download_done:
+                    # Keep the file open until the download completes
+                    #   or fails.
+                    # TODO: timeout
+                    time.sleep(.25)
+                    self._process_events()
+        else:
+            echo0("enable_install={}".format(self.enable_install))
+
+    def d_done(self, evt):
+        '''
+        This doesn't have to run on the main thread (so don't access the
+        GUI directly here).
+        '''
+        self.download_done = True
+        event = copy.deepcopy(evt)
+        event['command'] = "d_progress"
+        self.events.append(event)
+
+    def _d_done(self, evt):
+        meta = self.meta
+        archive_path = self.archive_path
+        if self.download_done:
+            echo0("Warning: download is already done.")
+        self.download_done = True
+        err = evt.get('error')
+        if err is None:
+            print("Download finished!")
+        else:
+            print("Download stopped due to: {}".format(err))
+            return
+        self.pbar['value'] = 0
+        # self.root.update()
+
         tar = None
         ext = None
         fmt = None
@@ -321,7 +442,7 @@ class MainApplication(tk.Frame):
                        archive_path + "'")
                 self.push_label("unknown format " + ext)
                 print(msg)
-        if enable_install:
+        if self.enable_install:
             if fmt is not None:
                 # try:
                 if fmt != "zip":
@@ -341,7 +462,7 @@ class MainApplication(tk.Frame):
             echo0(msg)
             self.push_label("Deleted bad download.")
             self.push_label("Download again.")
-        if remove_download:
+        if self.remove_download:
             msg = "  - deleting downloaded '" + archive_path + "'..."
             print(msg)
             os.remove(archive_path)
@@ -351,15 +472,15 @@ class MainApplication(tk.Frame):
                 print(msg)
 
         if tar is None:
-            if enable_install:
+            if self.enable_install:
                 for btn in self.dl_buttons:
                     btn.config(state=tk.NORMAL)
                 self.refresh_btn.config(state=tk.NORMAL)
                 return
         else:
             print("  fmt: " + fmt)
-        tmp_path = os.path.join(bn_path, "tmp")
-        if enable_install:
+        tmp_path = os.path.join(self.bn_path, "tmp")
+        if self.enable_install:
             if not os.path.isdir(tmp_path):
                 print("* created {}".format(tmp_path))
                 os.makedirs(tmp_path)
@@ -369,9 +490,9 @@ class MainApplication(tk.Frame):
             # tar.extractfile(i)
         ok = False
         try:
-            # if uninstall:
+            # if self.uninstall:
             #     msg = "examining archive..."
-            if enable_install:
+            if self.enable_install:
                 msg = "extracting..."
                 self.count_label.config(text=msg)
                 self.root.update()
@@ -388,7 +509,7 @@ class MainApplication(tk.Frame):
                 tar.close()
                 tar = None
         ext_path = tmp_path  # changes to sub if archive has only 1 dir
-        if enable_install:
+        if self.enable_install:
             msg = "checking tmp..."
             self.count_label.config(text=msg)
             self.root.update()
@@ -416,9 +537,9 @@ class MainApplication(tk.Frame):
                 tar.close()
                 tar = None
 
-        if enable_install:
+        if self.enable_install:
             msg = "moving from tmp..."
-            # if uninstall:
+            # if self.uninstall:
             #     msg = "examining extracted tmp..."
             self.count_label.config(text=msg)
             self.root.update()
@@ -428,83 +549,84 @@ class MainApplication(tk.Frame):
         remove_tmp = False
         if not ok:
             remove_tmp = True
-        if os.path.isdir(installed_path):
+        if os.path.isdir(self.installed_path):
             # msg = "Already installed " + meta['id'] + "."
             meta['installed_bin'] = hierosoft.get_installed_bin(
-                versions_path,
+                self.versions_path,
                 meta['id'],
                 self.bin_names,
             )
-            if enable_install:
+            if self.enable_install:
                 if make_shortcut(meta, "blender", self.mgr, push_label=self.push_label,
-                                 uninstall=uninstall):
+                                 uninstall=self.uninstall):
                     msg = ("  - {} the old desktop shortcut"
-                           "".format(update_past_verb))
+                           "".format(self.update_past_verb))
                 else:
                     msg = ("  - {} the old desktop shortcut failed."
-                           "".format(update_present_verb))
+                           "".format(self.update_present_verb))
                 self.count_label.config(text=msg)
                 self.root.update()
                 remove_tmp = True
             else:
                 make_shortcut(meta, "blender", self.mgr, push_label=self.push_label,
-                              uninstall=uninstall)
+                              uninstall=self.uninstall)
         if remove_tmp:
             if os.path.isdir(tmp_path):
                 print("  - deleting temporary '" + tmp_path + "'...")
                 shutil.rmtree(tmp_path)
         if ok:
             try:
-                if enable_install:
+                if self.enable_install:
                     print("  - moving {} to {}".format(ext_path,
-                                                       installed_path))
-                    shutil.move(ext_path, installed_path)
+                                                       self.installed_path))
+                    shutil.move(ext_path, self.installed_path)
                 else:
                     if os.path.isdir(ext_path):
                         print("* WARNING: removing {}".format(ext_path))
                         shutil.rmtree(ext_path)
-                    if os.path.isdir(installed_path):
+                    if os.path.isdir(self.installed_path):
                         print("* uninstalling {}".format(ext_path))
-                        shutil.rmtree(installed_path)
-                self.count_label.config(text=action+" is complete.")
-                print("* {} is complete".format(action))
-                if enable_install:
-                    if btn is not None:
-                        btn.pack_forget()
+                        shutil.rmtree(self.installed_path)
+                self.count_label.config(text=self.action+" is complete.")
+                print("* {} is complete".format(self.action))
+                if self.enable_install:
+                    if self.download_clicked_btn is not None:
+                        self.download_clicked_btn.pack_forget()
+                        self.download_clicked_btn = None
                 else:
                     if uninstall_btn is not None:
                         uninstall_btn.pack_forget()
 
                 self.root.update()
                 meta['installed_bin'] = hierosoft.get_installed_bin(
-                    versions_path,
+                    self.versions_path,
                     meta['id'],
                     self.bin_names,
                 )
-                if enable_install:
+                if self.enable_install:
                     if make_shortcut(meta, "blender", self.mgr,
                                      push_label=self.push_label,
-                                     uninstall=uninstall):
+                                     uninstall=self.uninstall):
                         msg = ("{} the desktop shortcut"
-                               "".format(update_past_verb))
+                               "".format(self.update_past_verb))
                     else:
                         msg = ("{} the desktop shortcut failed."
-                               "".format(update_present_verb))
+                               "".format(self.update_present_verb))
                 else:
                     make_shortcut(meta, "blender", self.mgr,
                                   push_label=self.push_label,
-                                  uninstall=uninstall)
+                                  uninstall=self.uninstall)
             except:
-                msg = action + " could not finish moving"
-                if uninstall:
-                    msg = action + " could not finish deleting"
+                msg = self.action + " could not finish moving"
+                if self.uninstall:
+                    msg = self.action + " could not finish deleting"
                 self.push_label(msg)
                 self.count_label.config(text="Installation failed.")
                 self.root.update()
                 self.push_label("to " + meta['id'])
                 print("  from (extracted) '" + ext_path + "'")
                 print(msg)
-                print("  to '" + installed_path + "'")
+                print("  to '" + self.installed_path + "'")
                 view_traceback()
         else:
             if archive_path is not None:
@@ -518,6 +640,7 @@ class MainApplication(tk.Frame):
             btn.config(state=tk.NORMAL)
         self.refresh_btn.config(state=tk.NORMAL)
         self.root.update()
+        self.meta = None
 
     def set_entries(self):
         if self.mgr.parser is None:
@@ -607,8 +730,8 @@ class MainApplication(tk.Frame):
         print("  matched " + str(len(self.p_urls)) + " " + p_msg + "url(s)")
 
         user_downloads_path = self.mgr.get_downloads_path()
-        bn_path = os.path.join(user_downloads_path, "blendernightly")
-        archives_path = os.path.join(bn_path, "archives")
+        self.bn_path = os.path.join(user_downloads_path, "blendernightly")
+        self.archives_path = os.path.join(self.bn_path, "archives")
 
         metas = []
         if isinstance(self.only_a, list):
@@ -628,21 +751,21 @@ class MainApplication(tk.Frame):
                 metas.append(meta)
                 try_dl_path = os.path.join(self.mgr.get_downloads_path(),
                                            meta['filename'])
-                dst_dl_path = os.path.join(archives_path,
+                dst_dl_path = os.path.join(self.archives_path,
                                            meta['filename'])
                 if (os.path.isfile(try_dl_path) and
                         not os.path.isfile(dst_dl_path)):
                     shutil.move(try_dl_path, dst_dl_path)
                     msg = ("collected old download '" + meta['filename'] +
-                           "' from Downloads to '" + archives_path + "'")
+                           "' from Downloads to '" + self.archives_path + "'")
                     print(msg)
                     self.push_label("collected old download:")
                     self.push_label(meta['id'])
 
-        if not os.path.isdir(archives_path):
-            print("  creating: " + archives_path)
-            os.makedirs(archives_path)
-        versions_path = os.path.join(bn_path, "versions")
+        if not os.path.isdir(self.archives_path):
+            print("  creating: " + self.archives_path)
+            os.makedirs(self.archives_path)
+        self.versions_path = os.path.join(self.bn_path, "versions")
 
         # get already-downloaded versions and see if they are installed
         # (in case certain downloaded builds are no longer available)
@@ -651,22 +774,22 @@ class MainApplication(tk.Frame):
         dl_but_not_inst_count = 0
         print("  existing_downloads: ")  # /2.??-<commit>
         added_ids = []
-        for dl_name in hierosoft.get_file_names(archives_path):
-            archive_path = os.path.join(archives_path, dl_name)
+        for dl_name in hierosoft.get_file_names(self.archives_path):
+            archive_path = os.path.join(self.archives_path, dl_name)
             dest_id = self.mgr.parser.id_from_url(dl_name, remove_ext=True)
             meta = {}
             dl_metas.append(meta)
             added_ids.append(dest_id)
-            installed_path = os.path.join(versions_path, dest_id)
+            self.installed_path = os.path.join(self.versions_path, dest_id)
             meta['downloaded'] = True
             # meta['url'] = None
             meta['filename'] = dl_name
             meta['id'] = dest_id
             meta['version'] = self.mgr.parser.blender_tag_from_url(dl_name)
             meta['commit'] = self.mgr.parser.blender_commit_from_url(dl_name)
-            print("  - (archive) '" + installed_path + "'")
+            print("  - (archive) '" + self.installed_path + "'")
             bin_path = hierosoft.get_installed_bin(
-                versions_path,
+                self.versions_path,
                 meta['id'],
                 self.bin_names,
             )
@@ -674,11 +797,11 @@ class MainApplication(tk.Frame):
                 meta['installed_bin'] = bin_path
             else:
                 dl_but_not_inst_count += 1
-        if versions_path is None:
+        if self.versions_path is None:
             raise RuntimeError("versions_path is None.")
 
-        for installed_name in hierosoft.get_subdir_names(versions_path):
-            installed_path = os.path.join(versions_path, installed_name)
+        for installed_name in hierosoft.get_subdir_names(self.versions_path):
+            self.installed_path = os.path.join(self.versions_path, installed_name)
             dest_id = installed_name
             if dest_id in added_ids:
                 continue
@@ -686,7 +809,7 @@ class MainApplication(tk.Frame):
             inst_metas.append(meta)
             # ^ formerly self.mgr.parser.id_from_name(installed_name)
             meta['downloaded'] = True
-            meta['install_path'] = installed_path
+            meta['install_path'] = self.installed_path
             meta['id'] = dest_id
             name_parts = dest_id.split("-")
             meta['version'] = name_parts[0]
@@ -696,9 +819,9 @@ class MainApplication(tk.Frame):
             else:
                 print("INFO: There is no commit hash in the directory name"
                       " \"{}\"".format(dest_id))
-            print("  - (installed) '" + installed_path + "'")
+            print("  - (installed) '" + self.installed_path + "'")
             bin_path = hierosoft.get_installed_bin(
-                versions_path,
+                self.versions_path,
                 meta['id'],
                 self.bin_names,
             )
@@ -736,7 +859,7 @@ class MainApplication(tk.Frame):
             )
             meta['uninstall_button'] = uninstall_button
             bin_path = hierosoft.get_installed_bin(
-                versions_path,
+                self.versions_path,
                 meta['id'],
                 self.bin_names,
             )
@@ -757,7 +880,7 @@ class MainApplication(tk.Frame):
                             "".format(url_installed_count))
         else:
             echo0("no available downloads are installed into {} yet."
-                  "".format(versions_path))
+                  "".format(self.versions_path))
         if dl_but_not_inst_count > 0:
             self.push_label("Downloaded but not installed ({}):"
                             "".format(dl_but_not_inst_count))
@@ -847,7 +970,7 @@ def show_update_window(options):
         echo0("FATAL ERROR: Cannot use tkinter from terminal")
         return 1
     option_keys = MainApplication.get_option_keys()
-    for key, value in option_keys.items():
+    for key in option_keys:
         if key not in option_keys:
             raise ValueError("{} is not a valid option.".format(key))
     app = MainApplication(root, options)
