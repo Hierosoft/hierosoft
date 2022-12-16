@@ -328,36 +328,7 @@ def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local=True):
     return ip_list
 
 
-def get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
-    '''
-    Get the IP address(es) of the local machine (the computer running
-    the program).
-    '''
-    # import psutil  # works on Windows, macOS, and GNU/Linux systems.
-    # Based on <https://stackoverflow.com/a/73559817/4541104>.
-    af_inet = socket.AF_INET
-    if ip_addr_proto == "ipv6":
-        af_inet = socket.AF_INET6
-    elif ip_addr_proto == "both":
-        af_inet = 0
-
-    results = []
-    for interface, interface_addrs in psutil.net_if_addrs().items():
-        if interface_addrs is None:
-            echo1("There are no addresses on interface {}".format(interface))
-            continue
-        for snicaddr in interface_addrs:
-            if snicaddr.family == af_inet:
-                if ignore_local_ips:
-                    if snicaddr.address.split(".")[0] == "127":
-                        continue
-                # results.append(snicaddr.addressinterface_addrs)
-                # ^ AttributeError
-                results.append(snicaddr.address)
-    return results
-
-
-def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
+def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local=True):
     '''
     UNUSABLE: Gets only local on linux.
 
@@ -397,7 +368,7 @@ def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local_ips=True):
         except ValueError:
             ip_address_valid = False
         else:
-            if ipaddress.ip_address(ip).is_loopback and ignore_local_ips or ipaddress.ip_address(ip).is_link_local and ignore_local_ips:
+            if ipaddress.ip_address(ip).is_loopback and ignore_local or ipaddress.ip_address(ip).is_link_local and ignore_local:
                 pass
             elif ip_address_valid:
                 ip_list.append(ip)
@@ -1075,6 +1046,7 @@ class DownloadManager:
         self.appdata_path = APPDATA
         self.parser = None
         self.download_thread = None
+        self.url = None
 
     def set_options(self, options):
         if self.parser is None:
@@ -1134,10 +1106,8 @@ class DownloadManager:
         if evt is None:
             evt = {}
         self.total_size = evt.get('total_size')
-
-
         if self.download_thread is not None:
-            echo0("download_thread is already running for {}".format(self.host))
+            echo0("download_thread is already running for {}".format(self.url))
             return False
         self.download_thread = threading.Thread(
             target=download,
