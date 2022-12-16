@@ -1095,6 +1095,21 @@ class DownloadManager:
         return download(stream, url, cb_progress=cb_progress, cb_done=cb_done,
                         chunk_size=chunk_size, evt=evt, path=path)
 
+    def _download(self, stream, url, cb_progress=None,
+                 cb_done=None, chunk_size=16*1024, evt=None,
+                 path=None):
+        '''
+        For documentation see download in hierosoft.moreweb.
+        '''
+        try:
+            download(stream, url, cb_progress=cb_progress,
+                     cb_done=cb_done, chunk_size=chunk_size,
+                     evt=evt, path=path)
+        except Exception as ex:
+            self.download_thread = None
+            raise
+        self.download_thread = None
+
     def download(self, stream, url, cb_progress=None,
                  cb_done=None, chunk_size=16*1024, evt=None,
                  path=None):
@@ -1109,8 +1124,9 @@ class DownloadManager:
         if self.download_thread is not None:
             echo0("download_thread is already running for {}".format(self.url))
             return False
+
         self.download_thread = threading.Thread(
-            target=download,
+            target=self._download,
             args=(stream, url,),
             kwargs={
                 'cb_progress': cb_progress,
