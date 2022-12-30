@@ -1,3 +1,4 @@
 include hierosoft/*.py
+include hierosoft/assets/data/*
 include license.txt
 include readme.md
