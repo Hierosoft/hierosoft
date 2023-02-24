@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+
 # by [Sz'](https://stackoverflow.com/users/2278704/sz)
 # <https://stackoverflow.com/a/60604183>
 # Mar 9, 2020 at 15:56
@@ -20,6 +21,7 @@ def crc16_buypass(data: bytes):
         reg &= 0xFFFF
         # reflect out
     return reg ^ xor_out
+
 
 # answered May 1, 2019 at 8:16 by user11436151
 # edited Feb 26, 2020 at 13:45 by Matphy
@@ -44,6 +46,7 @@ def crc16_modbus(data : bytearray, offset=0, length=None):
                 crc = int(crc / 2)
     return crc & 0xFFFF
 
+
 def crc16_ccit_false(data : bytearray, offset=0, length=None):
     '''
     Python implementation of CRC-16/CCITT-FALSE
@@ -66,3 +69,20 @@ def crc16_ccit_false(data : bytearray, offset=0, length=None):
             else:
                 crc = crc << 1
     return crc & 0xFFFF
+
+
+def endswith_bytes(haystack, needle):
+    '''
+    Check if a bytearray ends with another bytearray (needle).
+
+    This function exists to avoid exceptions when the length differs
+    but to raise exceptions when the type differs. For example, if
+    needle is accidentally an integer (such as the result of
+    subscripting a bytearray) then the "len" function will raise an
+    exception. If len was not called, the "==" case would never occur
+    because bytearray haystack[-1] is never needle if needle is a
+    bytearray because a subscripted bytearray results in an int!
+    '''
+    if len(haystack) < len(needle):
+        return False
+    return haystack[-len(needle):] == needle
