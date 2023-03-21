@@ -74,6 +74,9 @@ def crc16_ccit_false(data : bytearray, offset=0, length=None):
 def endswith_bytes(haystack, needle):
     '''
     Check if a bytearray ends with another bytearray (needle).
+    Alternatively, either haystack or needle can be bytes (A "bytes"
+    object and "bytearray" object can be accurately compared as a whole
+    or as a slice to the other type).
 
     This function exists to avoid exceptions when the length differs
     but to raise exceptions when the type differs. For example, if
