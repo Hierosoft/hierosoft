@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-
+import binascii
 # by [Sz'](https://stackoverflow.com/users/2278704/sz)
 # <https://stackoverflow.com/a/60604183>
 # Mar 9, 2020 at 15:56
@@ -69,6 +69,26 @@ def crc16_ccit_false(data : bytearray, offset=0, length=None):
             else:
                 crc = crc << 1
     return crc & 0xFFFF
+
+
+def to_hex(bytestring, delimiter=""):
+    '''
+    Represent the binary as an ASCII string of hexadecimal characters.
+    in Python 3.5+, this isn't necessary a you can do:
+    bytestring.hex(" "). Therefore, this function is only for
+    backward compatibility.
+
+    Sequential arguments:
+    binary -- A "bytes" or "bytearray" object.
+
+    Keyword arguments:
+    delimiter -- Place this between each byte (each hex pair).
+    '''
+    # import binascii
+    if (delimiter is not None) and (len(delimiter) > 0):
+        return " ".join(["{:02x}".format(x) for x in bytestring])
+
+    return binascii.hexlify(bytestring).decode('utf-8')  # no delimiter
 
 
 def endswith_bytes(haystack, needle):
