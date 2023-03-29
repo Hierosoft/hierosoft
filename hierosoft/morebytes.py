@@ -91,6 +91,17 @@ def to_hex(bytestring, delimiter=""):
     return binascii.hexlify(bytestring).decode('utf-8')  # no delimiter
 
 
+def split_words(value):
+    '''
+    Split a 32-bit integer into two 16-bit values (but each in int
+    form).
+
+    Returns:
+    A tuple of (HIWORD, LOWORD).
+    '''
+    return (value >> 16, value % 65536)
+
+
 def endswith_bytes(haystack, needle):
     '''
     Check if a bytearray ends with another bytearray (needle).
