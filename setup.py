@@ -33,7 +33,7 @@ if os.path.isfile("readme.md"):
         long_description = fh.read()
 
 setuptools.setup(
-    name='hierosoft-update',
+    name='hierosoft',
     version='0.5.0',
     description=description,
     long_description=long_description,
