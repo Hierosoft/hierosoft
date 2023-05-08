@@ -104,7 +104,7 @@ class MainForm(tk.Frame):
         '''
         ls_cmd = ["/usr/bin/ls", "/home/owner/git/amcaw"]
         # cmd = py_cmd
-        cmd = ls_cmd
+        # cmd = ls_cmd
         echo0("[_set_startup_program] Running: {}".format(shlex.join(cmd)))
         title = cmd[0]
         if ("python" in title) and (len(cmd) > 1):
