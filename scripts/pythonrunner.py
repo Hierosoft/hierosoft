@@ -127,7 +127,7 @@ class MainForm(tk.Frame):
         return True
 
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     mainform = MainForm(root)
     run_parts = []
@@ -143,3 +143,6 @@ if __name__ == "__main__":
     echo0("mainloop is starting.")
     root.mainloop()
     echo0("mainloop is over.")
+
+if __name__ == "__main__":
+    sys.exit(main())
