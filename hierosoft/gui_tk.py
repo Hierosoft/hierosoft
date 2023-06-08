@@ -27,6 +27,8 @@ import time
 if sys.version_info.major >= 3:  # try:
     from tkinter import messagebox
     from tkinter import filedialog
+    from tkinter import simpledialog
+    # ^ such as name = simpledialog.askstring('Name', 'What is your name?')
     import tkinter as tk
     import tkinter.font as tkFont
     from tkinter import ttk
@@ -35,6 +37,7 @@ else:  # except ImportError:
     # Python 2
     import tkMessageBox as messagebox
     import tkFileDialog as filedialog
+    import tkSimpleDialog as simpledialog
     import Tkinter as tk
     import tkFont
     import ttk
