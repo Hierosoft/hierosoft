@@ -12,6 +12,24 @@ from hierosoft import (
     CACHES,
 )
 
+# TODO: if shlex is used, do:
+"""
+if sys.version_info.major > 3 and sys.version_info.minor > 8:
+    shlex_join = shlex.join
+else:
+    def shlex_join(parts):
+        result = ""
+        sep = ""
+        for part in parts:
+            result += sep
+            sep = " "
+            if (" " in part) or ('"' in part):
+                result += '"%s"' % part.replace('"', '\\"')
+            else:
+                result += part
+        return result
+    shlex.join = shlex_join
+"""
 
 def make_shortcut(meta, program_name, mgr, push_label=echo0, uninstall=False):
     ret = True
