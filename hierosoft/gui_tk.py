@@ -50,7 +50,7 @@ from hierosoft import (
     echo2,
 )
 
-# from hierosoft.logging import (
+# from hierosoft.morelogging import (
 #     view_traceback,
 # )
 from hierosoft.moreplatform import (
@@ -62,7 +62,7 @@ from hierosoft.moreweb import (
     STATUS_DONE,
 )
 
-from hierosoft.logging import (
+from hierosoft.morelogging import (
     view_traceback,
 )
 
@@ -140,7 +140,7 @@ class MainApplication(tk.Frame):
         self.update_past_verb = None
         self.update_present_verb = None
         self.action_present_verb = None
-        # region for d_done
+        # endregion for d_done
         self.events = []
 
 
@@ -597,6 +597,7 @@ class MainApplication(tk.Frame):
                         self.download_clicked_btn.pack_forget()
                         self.download_clicked_btn = None
                 else:
+                    uninstall_btn = meta.get("uninstall_button")
                     if uninstall_btn is not None:
                         uninstall_btn.pack_forget()
 
@@ -670,10 +671,13 @@ class MainApplication(tk.Frame):
             self.arch_e.insert(0, arch)
 
     def refresh(self):
+        prefix = "[refresh] "
         # self.set_entries()
+        if self.mgr.parser is None:
+            raise RuntimeError("The parser was not initialized.")
         must_contain = self.mgr.parser.get_option('must_contain')
-        print("")
-        print("Downloading the html page...")
+        echo0("")
+        echo0(prefix+"Downloading the html page...")
         for label in self.msg_labels:
             label.pack_forget()
         for btn in self.dl_buttons:
@@ -948,12 +952,17 @@ class MainApplication(tk.Frame):
             self.root.geometry('400x' + str(old_bottom+expand))
 
     def start_refresh(self):
+        """Start the refresh thread that will download and parse the page.
+
+        Requires: self.mgr.parser to be set.
+        """
         # self.refresh_btn.pack_forget()
         # self.refresh_btn.config(fg='gray')
         # self.refresh()
+        prefix = "[start_refresh] "
         if self.thread1 is None:
             echo0("")
-            echo0("Starting refresh thread...")
+            echo0(prefix+"Starting refresh thread...")
             self.thread1 = threading.Thread(target=self.refresh, args=())
             self.refresh_btn.config(state=tk.DISABLED)
             self.root.update()
@@ -978,7 +987,8 @@ def show_update_window(options):
             raise ValueError("{} is not a valid option.".format(key))
     app = MainApplication(root, options)
     app.pack(side="top", fill="both", expand=True)
-    root.after(500, app.start_refresh)
+
+    root.after(500, app.start_refresh)  # requires app.mgr.parser
     root.mainloop()
     return 0
 
