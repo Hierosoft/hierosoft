@@ -77,7 +77,7 @@ else:
                                 stderr=errs)
     subprocess.run = sp_run
 
-from hierosoft.logging import (
+from hierosoft.morelogging import (
     echo0,
     echo1,
     echo2,
@@ -90,6 +90,46 @@ from hierosoft.logging import (
     get_verbosity,
     # verbosity,
 )
+
+MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
+ASSETS_DIR = os.path.join(MODULE_DIR, "assets")
+assets_dirs = [ASSETS_DIR]
+
+
+def resource_add_path(path):
+    """Add a new directory for resource_find.
+
+    Mimic Kivy's behavior.
+
+    Args:
+        path (string): The directory to try (successful
+            runs of resource_find will try this path).
+    """
+    assets_dirs.append(path)
+
+
+def resource_find(filename, use_cache=False):
+    """Find a file in known asset directories.
+
+    Mimic Kivy's behavior.
+
+    To add a new asset directory, call resource_add_path
+    first.
+
+    Args:
+        path (string): The file or path to find.
+        use_cache (boolean): Reserved for future use
+            (present to mimic Kivy's behavior).
+
+    Returns:
+        The full path, or None if not found.
+    """
+    for asset_dir in assets_dirs:
+        try_path = os.path.join(asset_dir, filename)
+        if os.path.exists(try_path):
+            return try_path
+    return None
+
 
 SHORTCUT_EXT = "desktop"
 HOME = None  # formerly profile
