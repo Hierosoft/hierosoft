@@ -10,6 +10,203 @@ from __future__ import print_function
 import sys
 import traceback
 
+CRITICAL = 50
+ERROR = 40
+WARNING = 30
+INFO = 20
+DEBUG = 10
+NOTSET = 0
+
+if sys.version_info.major >= 3:
+    import logging
+    from logging import (
+        Formatter,
+        Logger,
+        Handler,
+        getLogger,
+    )
+else:
+    FORMAT_STYLES = ['%', '{', '$']
+    class Formatter:
+        def __init__(self, fmt=None, datefmt=None, style='%',
+                     validate=True, defaults=None):
+                     # validate=True, *, defaults=None):  what? (upstream code)
+            if fmt is None:
+                fmt = '%(message)s'
+            self.fmt = fmt
+            if style not in FORMAT_STYLES:
+                raise ValueError("style was %s but should be one in %s"
+                                 % (style, FORMAT_STYLES))
+            self.style = style
+            self.t = None
+            if style == "$":
+                import string
+                self.t = string.Template(fmt)
+            # region attributes in upstream not implemented here yet
+            self.datefmt = datefmt
+            self.validate = validate
+            self.defaults = defaults
+            # endregion attributes in upstream not implemented here yet
+
+        def format(self, message):
+            if self.style == "%":
+                return self.fmt % {'message': message}
+            elif self.style == "{":
+                return self.fmt.format(message=message)
+            elif self.style == "$":
+                # such as "Error: $message in some method"
+                return self.t.substitute(message=message)
+            else:
+                raise ValueError("style was %s but should be one in %s"
+                                 % (style, FORMAT_STYLES))
+    default_formatter = Formatter()
+    class Logger:
+        def __init__(self, name):
+            self.name = name
+            self.level = 30
+            # region attributes in upstream not implemented here yet
+            # (via logger = logging.getLogger(); dir(logger)
+            #   in Python 3.11 on Windows)
+            # self._cache = None
+            self._log = sys.stderr
+            self.disabled = False
+            # self.filter
+            # self.filters
+            self.handlers = []
+            # self.hasHandlers
+            # self.manager
+            # self.parent
+            # self.propogate = True
+            # ^ if propogate, pass events to higher level handlers too
+            # self.root
+            # endregion attributes in upstream not implemented here yet
+
+        # region methods in upstream not implemented here yet
+        # def addFilter(self, ):
+        # def addHandler(self, ):
+        # def callHandlers(self, ):
+        # def findCaller(self, ):
+        # def getChild(self, ):
+        # def log(self, ):
+        # def makeRecord(self, ):
+        # def removeFilter(self, ):
+        # def removeHandler(self, ):
+        # endregion methods in upstream not implemented here yet
+
+        def isEnabledFor(self, level):
+            return False if level < self.level else True
+
+        def handle(self, record):
+            # TODO: make a record class??
+            for handler in self.handlers:
+                handler.format(record)
+                handler.emit(record)
+            # TODO: check own formatter instead of code below
+            print(default_formatter.format(record), file=self._log)
+
+        def getEffectiveLevel(self):
+            if self.level >= CRITICAL:
+                return CRITICAL
+            if self.level >= ERROR:
+                return ERROR
+            if self.level >= WARNING:
+                return WARNING
+            if self.level >= INFO:
+                return INFO
+            if self.level >= DEBUG:
+                return DEBUG
+            return NOTSET
+
+        def critical(self, msg):
+            if CRITICAL < self.level:
+                return
+            prefix = "" if self.name is None else "[%s] " % self.name
+            self._log.write("%s\n" % msg)
+            self._log.flush()
+
+        def debug(self, msg):
+            if DEBUG < self.level:
+                return
+            prefix = "" if self.name is None else "[%s] " % self.name
+            self._log.write("%s\n" % msg)
+            self._log.flush()
+
+        def error(self, msg):
+            if ERROR < self.level:
+                return
+            prefix = "" if self.name is None else "[%s] " % self.name
+            self._log.write("%s\n" % msg)
+            self._log.flush()
+
+        def exception(self, ex):
+            # if ERROR < self.level:
+            #     return
+            prefix = "" if self.name is None else "[%s] " % self.name
+            self._log.write("%s: %s\n" % (type(msg), msg))
+            self._log.flush()
+
+        def fatal(self, msg):
+            # if ERROR < self.level:
+            #     return
+            prefix = "" if self.name is None else "[%s] " % self.name
+            self._log.write("%s" % (msg) + "\n")
+            self._log.flush()
+
+        def info(self, msg):
+            if INFO < self.level:
+                return
+            prefix = "" if self.name is None else "[%s] " % self.name
+            self._log.write("%s" % (msg) + "\n")
+            self._log.flush()
+
+        def setLevel(self, level):
+            self.level = level
+
+        def warn(self, msg):
+            print("<stdin>:1: DeprecationWarning: The 'warn' method is deprecated, use 'warning' instead")
+            self.warning(msg)
+
+        def info(self, msg):
+            if WARNING < self.level:
+                return
+            prefix = "" if self.name is None else "[%s] " % self.name
+            self._log.write("%s" % (msg) + "\n")
+            self._log.flush()
+
+    class Handler:
+        def __init__(self, level=NOTSET):
+            raise NotImplementedError("Handler")
+    loggers = {}
+    # class logging:
+    filename = None
+    encoding = 'utf-8'
+    def getLogger(self, name=None):
+        logger = loggers.get(name)  # None is allowed (root of hierarchy)
+        if logger is not None:
+            return logger
+        return Logger(name)
+
+    def basicConfig(**kwargs):
+        global filename
+        string_keys = ['filename', 'encoding']
+        for key, value in kwags.items():
+            if key in string_keys:
+                if not isinstance(value, (str, unicode)):
+                    raise TypeError("Expected str/unicode for %s but got %s %s"
+                                    % (key, type(value).__name__, value))
+            if key == "filename":
+                filename = value
+            elif key == "encoding":
+                encoding = value
+
+
+to_log_level = {
+    3: 10,
+    2: 20,
+    1: 30,
+    0: 40,
+}
+
 verbosity_levels = [False, True, 0, 1, 2, 3]
 
 verbosity = 0

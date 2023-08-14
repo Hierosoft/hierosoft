@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 import unittest
 import sys
 import os
@@ -10,7 +11,15 @@ repo_dir = os.path.dirname(module_dir)
 if __name__ == "__main__":
     sys.path.insert(0, repo_dir)
 
-from hierosoft.logging import (
+if sys.version_info.major < 3:
+    print("[test_logging] using Python 2 shims for logging.",
+          file=sys.stderr)
+    import hierosoft.morelogging as logging
+else:
+    print("[test_logging] using Python 3 logging.",
+          file=sys.stderr)
+    import logging
+from hierosoft.morelogging import (
     echo0,
     echo1,
     echo2,
@@ -20,7 +29,16 @@ from hierosoft.logging import (
 
 
 class TestLogging(unittest.TestCase):
+    
+    def __init__(self):
+        if sys.version_info.major >=3:
+            super().__init__(self)
+        else:
+            # unittest.TestCase.__init__(self)
+            super(TestLogging, self).__init__()
+    
     def test_to_syntax_error(self):
+        
         '''
         self.assertEqual(
             to_syntax_error("no_file", None, "no_error"),
@@ -52,6 +70,19 @@ class TestLogging(unittest.TestCase):
             # TODO: Seek column if compatible w/ Geany etc. & test
         )
 
+    def test_logging(self):
+        """Test using morelogging in the same way as Python 3 logging.
+
+        This code matches upstream example code (Python 3 logging) so it
+        should not be changed. If upstream example code changes, then
+        both this and future usage should be supported.
+        """
+        logging.basicConfig(filename='example.log', encoding='utf-8',
+                            level=logging.DEBUG)
+        logging.debug('This message should go to the log file')
+        logging.info('So should this')
+        logging.warning('And this, too')
+        logging.error('And non-ASCII stuff, too, like Øresund and Malmö')
 
 if __name__ == "__main__":
     testcase = TestLogging()
