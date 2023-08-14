@@ -239,10 +239,17 @@ if HOME != os.path.expanduser('~'):
 USER_DIR_NAME = os.path.split(HOME)[1]
 # ^ may differ from os.getlogin() getpass.getuser()
 try:
-    if USER_DIR_NAME != os.getlogin():
-        echo1("Verbose warning:")
-        echo1('  USER_DIR_NAME="{}"'.format(USER_DIR_NAME))
-        echo1('  != os.getlogin()="{}"'.format(os.getlogin()))
+    # doesn't matter. USER will be used (from env) anyway.
+    if hasattr(os, "getlogin"):
+        if USER_DIR_NAME != os.getlogin():
+            echo1("Verbose warning:")
+            echo1('  USER_DIR_NAME="{}"'.format(USER_DIR_NAME))
+            echo1('  != os.getlogin()="{}"'.format(os.getlogin()))
+    else:
+        pass
+        # echo0("There is no os.getlogin (normally not present for Python 2),"
+        #       " so USER_DIR_NAME not validated: %s. Using instead."
+        #       % USER_DIR_NAME)
 except OSError:
     # os.getlogin() causes:
     # "OSError: [Errno 6] No such device or address"
