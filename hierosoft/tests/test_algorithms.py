@@ -26,7 +26,9 @@ from hierosoft import (
 # assert os.path.isdir(TEST_DATA_DIR)
 
 class TestAlgorithms(unittest.TestCase):
-
+    """Test only mixed-data (not just string/byte/bytearray) algorithms
+    For string/bytes/bytearray functions, see test_morebytes instead
+    """
     def test_find_by_value(self):
         l = [
             {
@@ -53,7 +55,6 @@ class TestAlgorithms(unittest.TestCase):
         i = find_by_value(l, 'name', 'Jo')
         self.assertEqual(i, 3)
         self.assertEqual(l[i]['id'], 103)
-
 
 
 if __name__ == "__main__":
