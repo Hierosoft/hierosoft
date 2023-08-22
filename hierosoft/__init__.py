@@ -145,6 +145,7 @@ CACHES = None
 PIXMAPS = None
 PREFIX = os.environ.get('PREFIX')
 SHARE = None  # formerly share
+USER_PROGRAMS = None
 # For the rationales behind the values see get_unique_path documentation
 if platform.system() == "Windows":
     SHORTCUT_EXT = "bat"
@@ -153,6 +154,7 @@ if platform.system() == "Windows":
     _data_parent_ = os.path.join(HOME, "AppData")
     APPDATA = os.path.join(_data_parent_, "Roaming")
     LOCALAPPDATA = os.path.join(_data_parent_, "Local")
+    USER_PROGRAMS = os.path.join(LOCALAPPDATA, "Programs")
     del _data_parent_
     SHARE = LOCALAPPDATA  # It is synonymous
     SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
@@ -166,6 +168,7 @@ else:
     USER = os.environ.get("USER")
     HOME = os.environ.get("HOME")
     LOCALAPPDATA = os.path.join(HOME, ".local", "share")
+    USER_PROGRAMS = os.path.join(HOME, ".local", "lib")
     SHARE = LOCALAPPDATA  # synonymous; generally written on install
     if platform.system() == "Darwin":
         SHORTCUT_EXT = "command"
@@ -174,6 +177,7 @@ else:
         SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
         Library = os.path.join(HOME, "Library")
         APPDATA = os.path.join(Library, "Application Support")
+        USER_PROGRAMS = os.path.join(APPDATA, "Programs")  # FIXME nonstandard
         # LOCALAPPDATA = APPDATA
         '''
         ^ According to <https://forum.unity.com/threads/
@@ -273,7 +277,7 @@ try:
         echo1('  != pwd.getpwuid(os.getuid())[0]="{}"'
               ''.format(pwd.getpwuid(os.getuid())[0]))
 except ModuleNotFoundError as ex:
-    echo1('Skipping optional dependency: '.format(ex))
+    echo1('Skipping optional dependency: {}'.format(ex))
 
 
 # statedCloud = "owncloud"
@@ -290,6 +294,7 @@ for tryCloudName in CLOUD_DIR_NAMES:
         myCloudPath = tryCloudPath
         echo1('* detected "{}"'.format(myCloudPath))
         break
+
 
 # NOTE: PATH isn't necessary to split with os.pathsep (such as ":", not
 # os.sep or os.path.sep such as "/") since sys.path is split already.
@@ -378,6 +383,7 @@ def check_cloud(cloud_path=None, cloud_name=None):
 
 
 check_cloud()
+
 
 non_cloud_warning_shown = False
 
@@ -733,7 +739,8 @@ def get_file_names(folder_path, hidden=False):
 
 def get_ext(filename):
     echo0(
-        "Warning: get_ext is deprecated. Use os.path.splitext(path)[1] instead."
+        "Warning: get_ext is deprecated."
+        " Use os.path.splitext(path)[1] instead."
     )
     ext = ""
     dot_i = filename.rfind('.')
@@ -744,21 +751,28 @@ def get_ext(filename):
 
 # program_name is same as dest_id
 def get_installed_bin(programs_path, dest_id, flag_names):
-    # found = False
-    ret = None
-    versions_path = programs_path
+    """Get an installed binary name.
+
+    Args:
+        programs_path (string): The folder containing programs
+            (or contains versions of the program for a multi-version
+            folder structure).
+
+    Returns:
+        string: The full path to the installed program, or None
+            if not installed.
+    """
+    if flag_names is None:
+        raise ValueError(
+            "You must specify known filename(s) where 1 or more"
+            " would exist in programs_path/dest_id/ if dest_id is installed"
+        )
     for flag_name in flag_names:
-        installed_path = os.path.join(versions_path, dest_id)
+        installed_path = os.path.join(programs_path, dest_id)
         flag_path = os.path.join(installed_path, flag_name)
         if os.path.isfile(flag_path):
-            # found = True
-            ret = flag_path
-            # print("    found: '" + flag_path + "'")
-            break
-        else:
-            pass
-            # print("    not_found: '" + flag_path + "'")
-    return ret
+            return
+    return None
 
 
 def is_installed(programs_path, dest_id, flag_names):
@@ -863,5 +877,6 @@ def get_pyval(name, py_path):
 
 
 if __name__ == "__main__":
+    # moreweb is the preloader
     print("You must import this module and call get_meta() to use it"
-          "--maybe you meant to run update.pyw")
+          "--maybe you meant to run update.pyw", file=sys.stderr)
