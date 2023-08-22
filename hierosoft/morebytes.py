@@ -3,14 +3,25 @@ from __future__ import print_function
 import binascii
 import os
 import sys
+import re
+from pprint import pformat
 
-def echo0(*args):
-    print(*args, file=sys.stderr)
+from hierosoft import (
+    echo0,
+    echo1,
+)
 
-# by [Sz'](https://stackoverflow.com/users/2278704/sz)
-# <https://stackoverflow.com/a/60604183>
-# Mar 9, 2020 at 15:56
+
 def crc16_buypass(data: bytes):
+    """Calculate the hash using the CRC16 BUYPASS algorithm.
+
+    by [Sz'](https://stackoverflow.com/users/2278704/sz)
+    <https://stackoverflow.com/a/60604183>
+    Mar 9, 2020 at 15:56
+
+    Returns:
+        int: An integer that can fit in a word (two bytes)
+    """
     xor_in = 0x0000  # initial value
     xor_out = 0x0000  # final XOR value
     poly = 0x8005  # generator polinom (normal form)
@@ -29,13 +40,25 @@ def crc16_buypass(data: bytes):
     return reg ^ xor_out
 
 
-# answered May 1, 2019 at 8:16 by user11436151
-# edited Feb 26, 2020 at 13:45 by Matphy
-# https://stackoverflow.com/a/55933366
-def crc16_modbus(data : bytearray, offset=0, length=None):
+def crc16_modbus(data: bytearray, offset=0, length=None):
+    """Calculate the hash using the CRC16 MODBUS algorithm.
+
+    answered May 1, 2019 at 8:16 by user11436151
+    edited Feb 26, 2020 at 13:45 by Matphy
+    https://stackoverflow.com/a/55933366
+
+    Args:
+        data (bytearray): _description_
+        offset (int, optional): _description_. Defaults to 0.
+        length (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        int: An integer that can fit in a word (two bytes)
+    """
     if length is None:
         length = len(data)
-    if data is None or offset < 0 or offset > len(data) - 1 and offset + length > len(data):
+    if ((data is None) or (offset < 0) or (offset > len(data) - 1)
+            and (offset + length > len(data))):
         return 0
     print("uzunluk=", len(data))
     print(data)
@@ -53,9 +76,9 @@ def crc16_modbus(data : bytearray, offset=0, length=None):
     return crc & 0xFFFF
 
 
-def crc16_ccit_false(data : bytearray, offset=0, length=None):
-    '''
-    Python implementation of CRC-16/CCITT-FALSE
+def crc16_ccit_false(data: bytearray, offset=0, length=None):
+    '''Python implementation of CRC-16/CCITT-FALSE
+
     (output matches CRC-16 button's CCITT-FALSE output on
     <https://crccalc.com/>).
     answered Apr 25, 2019 at 13:31
@@ -64,14 +87,15 @@ def crc16_ccit_false(data : bytearray, offset=0, length=None):
     '''
     if length is None:
         length = len(data)
-    if data is None or offset < 0 or offset > len(data)- 1 and offset+length > len(data):
+    if ((data is None) or (offset < 0) or (offset > len(data) - 1)
+            and (offset+length > len(data))):
         return 0
     crc = 0xFFFF
     for i in range(0, length):
         crc ^= data[offset + i] << 8
-        for j in range(0,8):
+        for j in range(0, 8):
             if (crc & 0x8000) > 0:
-                crc =(crc << 1) ^ 0x1021
+                crc = (crc << 1) ^ 0x1021
             else:
                 crc = crc << 1
     return crc & 0xFFFF
@@ -123,10 +147,37 @@ def endswith_bytes(haystack, needle):
     because bytearray haystack[-1] is never needle if needle is a
     bytearray because a subscripted bytearray results in an int!
     '''
+    if type(haystack) != type(needle):
+        raise TypeError(
+            "Type mismatch: %s %s %s %s"
+            % (type(haystack).__name__, haystack,
+               type(needle).__name__, needle)
+        )
+    if len(needle) < 1:
+        return ValueError("needle is blank")
     if len(haystack) < len(needle):
         return False
     return haystack[-len(needle):] == needle
 
+
+def startswith_bytes(haystack, needle):
+    """Check if str, bytes, or bytearray startswith needle
+
+    Args:
+        haystack (Union[str,bytes,bytearray]): any string
+        needle (Union[str,bytes,bytearray]): what to try to find in haystack
+    """
+    if type(haystack) != type(needle):
+        raise TypeError(
+            "Type mismatch: %s != %s (%s != %s)"
+            % (type(haystack).__name__, type(needle).__name__,
+               pformat(haystack), pformat(needle))
+        )
+    if len(needle) < 1:
+        return ValueError("needle is blank")
+    if len(haystack) < len(needle):
+        return False
+    return haystack[:len(needle)] == needle
 
 
 def find_any(haystack, needles, start=0, end=None, whitespace_also=False):
@@ -152,7 +203,8 @@ def find_any(haystack, needles, start=0, end=None, whitespace_also=False):
     return result
 
 
-def find_any_not(haystack, needles, not_whitespace_either=False, start=0, end=None):
+def find_any_not(haystack, needles, not_whitespace_either=False, start=0,
+                 end=None):
     '''
     Sequential arguments:
     haystack -- The string to search.
@@ -164,7 +216,7 @@ def find_any_not(haystack, needles, not_whitespace_either=False, start=0, end=No
     '''
     if end is None:
         end = len(haystack)
-    pos = start -1
+    pos = start - 1
     while pos < len(haystack):
         pos += 1
         if not_whitespace_either:
@@ -173,7 +225,7 @@ def find_any_not(haystack, needles, not_whitespace_either=False, start=0, end=No
                 #   bytes!
                 continue
         for needle in needles:
-            if haystack[pos:].startswith(needle):
+            if startswith_bytes(haystack[pos:], needle):
                 pos += len(needle) - 1
                 # ^ -1 since 1 will be added at start of next loop.
                 #   For example, if startswith "REM " then set index
@@ -185,14 +237,16 @@ def find_any_not(haystack, needles, not_whitespace_either=False, start=0, end=No
 
 def startswith_any(haystack, needles):
     for needle in needles:
-        if haystack.lstrip().startswith(needle):
+        if startswith_bytes(haystack.lstrip(), needle):
             return True
     return False
 
 
 def no_b(text_bytes):
+    """Remove the 3 characters b'' from encoded bytes.
+    """
     text = str(text_bytes)
-    if text.startswith("b'") and text.endswith("'"):
+    if startswith_bytes(text, "b'") and startswith_bytes(text, "'"):
         return text[2:-1]  # remove leading "b'" & trailing "'"
     return text
 
@@ -211,6 +265,8 @@ class Byter:
         padded_assignment_operator cannot have spaces in shell script
         and likely some other languages).
     '''
+    # TODO: merge this code with newer rewrite_conf (may be more
+    #   fault-tolerant)
     def __init__(self):
         self.path = None
         self.comment_marks = [b"#"]
@@ -292,7 +348,8 @@ class Byter:
         if cursor < 0:
             raise IndexError("cursor={}".format(cursor))
         if cursor >= len(self.data):
-            raise IndexError("cursor={}, len={}".format(cursor, len(self.data)))
+            raise IndexError("cursor=%s, len=%s"
+                             % (cursor, len(self.data)))
         self.cursor = cursor
 
     def seek_to_next_line(self):
@@ -329,7 +386,8 @@ class Byter:
             if not line:  # ""
                 break
             next_line_i = start_i + len(line)
-            comment_i = find_any(self.data, self.comment_marks, start=start_i, end=next_line_i)
+            comment_i = find_any(self.data, self.comment_marks, start=start_i,
+                                 end=next_line_i)
             name_i = self.data.find(name, start_i, next_line_i)
             if name_i < 0:
                 continue
@@ -348,7 +406,8 @@ class Byter:
                 #   or something else before space or
                 #   assignment_operator.
                 continue
-            endbefore_i = find_any(self.data, [b'\r', b'\n'], start=name_ender_i, end=next_line_i)
+            endbefore_i = find_any(self.data, [b'\r', b'\n'],
+                                   start=name_ender_i, end=next_line_i)
             if endbefore_i < 0:
                 endbefore_i = len(self.data)
             if ((comment_i > -1) and (comment_i < endbefore_i)):
@@ -367,7 +426,8 @@ class Byter:
                 echo0('File "{}", line {}: Warning: The name ended'
                       ' but the value did not start (near "{}")!'
                       ''.format(self.path, line_n,
-                                no_b(self.data[name_ender_i:endbefore_near_i])))
+                                no_b(self.data[name_ender_i:
+                                               endbefore_near_i])))
                 # ^ [1:] to remove "b" from "b' some text'"
                 #   a bash-style
                 slice_pair = (endbefore_i, endbefore_i)  # 0 chars
@@ -383,7 +443,6 @@ class Byter:
             # It ends at whitespace:
             slice_pair = (value_i, value_ender_i)
             break
-
 
         self.cursor = prev_cursor
         return slice_pair
@@ -424,8 +483,10 @@ class Byter:
         with open(self.path, 'wb') as outs:
             outs.write(self.data)
             self.changes = 0
-# TODO: Make sure slicer/octoprint really adds these G-code progress
-#  commands (including in Klipper if has any effect):
+
+
+# TODO: Make sure slicer/octoprint really adds the followin G-code
+#  progress commands (including in Klipper if has any effect):
 '''
 From the default config:
 
@@ -441,9 +502,518 @@ From the default config:
 prog_source:1
 '''
 
+
+QUOTE_MARKS = ('"', "'", "`")
+QUOTE_MARKS_BYTES = (b"'", b'"', b'`')
+
+
+def find_not_quoted(haystack, needle, start=None, quote_mark=None,
+                    escape_mark="\\", already_in_quote=None,
+                    allow_nested_quotes=True):
+    """Find a string respecting quotes
+
+    This function exists since regex fails at this on a misplaced quote
+    (See <https://stackoverflow.com/a/26629680/4541104>, which is
+    unusable regex due to that issue confirmed there).
+
+    Redundant with pycodetool, but here to avoid dependencies when parsing conf
+    files including desktop files.
+
+    Args:
+        haystack (string): Search in this
+        needle (string): Search for this
+        start (Optional[int]): Start looking here in haystack.
+            Remember to tet already_in_quote if searching for the
+            end quote by setting start to the index after the
+            opening quote.
+        quote_mark (Optional[list[str]]): The quote mark. Defaults to
+            QUOTE_MARKS (or QUOTE_MARKS_BYTES if haystack is bytes
+            or bytearray *and* Python>=3 is being used).
+        escape_mark (Optional[str]): Note that in some formats
+            such as CSV, the escape character for " is another
+            " before it!! Defaults to "\".
+        already_in_quote (Optional[str]): Set this if a quote is
+            already open at the start of haystack or before
+            haystack[start].
+    """
+    prefix = "[find_not_quoted] "
+    if not needle:  # Do *not* strip--Allow finding space.
+        raise ValueError("needle must be a non-blank string")
+    if not start:
+        start = 0
+        if start < 0 or start > len(haystack):
+            raise ValueError('start was %s but len of "%s" is %s'
+                             % (start, haystack, len(haystack)))
+        elif start == len(haystack):
+            # Allowed for edge cases (such as succinct code without checks)
+            echo1('Warning: start was %s but len of "%s" is %s'
+                  % (start, haystack, len(haystack)))
+            return -1
+
+    if quote_mark is not None:
+        if not isinstance(quote_mark, (bytes, bytearray, str)):
+            raise NotImplementedError(
+                "Only bytes or str are implemented, not %s"
+                % type(quote_mark).__name__
+            )
+        if ((already_in_quote is not None)
+                and (already_in_quote != quote_mark)):
+            echo0(prefix+'Warning: already_in_quote="%s" is not "%s"'
+                  % (already_in_quote, quote_mark))
+        quote_marks = [quote_mark]
+    else:
+        if (isinstance(quote_mark, (bytes, bytearray))
+                and (sys.version_info.major >= 3)):
+            quote_marks = QUOTE_MARKS_BYTES
+        else:
+            quote_marks = QUOTE_MARKS
+        if ((already_in_quote is not None)
+                and (already_in_quote not in quote_marks)):
+            echo0(prefix+'Warning: already_in_quote=%s is not from %s'
+                  % (already_in_quote, quote_marks))
+    del quote_mark
+    for _quote_mark in quote_marks:
+        if not _quote_mark:
+            raise ValueError("bad quote_mark=%s" % _quote_mark)
+    in_quote = already_in_quote
+    quote_stack = []
+    if in_quote is not None:
+        quote_stack.append(in_quote)
+    # prev_ch = None
+    # prev_ch_is_escaped = False
+    print(prefix+'started at %s: "%s"' % (start, haystack[start:]))
+    in_escape = None
+    for index in range(start, len(haystack)):
+        if in_quote is not None:
+            # already in quotes
+            if ((haystack[index:index+len(in_quote)] == in_quote)
+                    and (not in_escape)):
+                in_quote = None
+                quote_stack.pop()
+                if allow_nested_quotes:
+                    if len(quote_stack) > 0:
+                        in_quote = quote_stack[-1]
+                # Allow the endquote to be found as the
+                #   result (*not* to be found if not)
+                if not in_quote:
+                    if haystack[index:index+len(needle)] == needle:
+                        return index
+        else:
+            # not in quotes
+            for quote_mark in quote_marks:
+                if haystack[index:index+len(quote_mark)] == quote_mark:
+                    if not in_escape:
+                        # Only use unescaped quotes (if prev_ch is escape_mark
+                        #   but is escaped, it doesn't escape this char)
+                        in_quote = quote_mark
+                        quote_stack.append(in_quote)
+                        break
+            # if in_quote is not None:  # start quote
+            # If start quote is needle *or* any needle not in quotes,
+            #   detect as needle (so no further conditions are necessary):
+            if haystack[index:index+len(needle)] == needle:
+                return index
+
+        if in_escape:
+            # prev_ch_is_escaped = True
+            # encoded Python string stays escaped for entire \x00 but N/A here
+            #   (code here is just to avoid escaped escape from escaping next)
+            in_escape = None
+        else:
+            # prev_ch_is_escaped = False
+            if haystack[index:index+len(escape_mark)] == escape_mark:
+                in_escape = escape_mark
+                # This char becoming prev_ch *is real* escape, not escaped one
+                #   (so keep prev_ch_is_escaped = False)
+        # prev_ch = haystack[index]
+    return -1
+
+
+newlineBytesRE = re.compile(b"[\\r\\n]")
+newlineStrRE = re.compile(r"[\r\n]")
+
+
+def split_before_newlines(spacing_and_newline):
+    """Split the line from the newline.
+
+    Args:
+        spacing_and_newline (Union[str,bytes,bytearray]): A string ending with
+            newline or not.
+
+    Returns:
+        string: A tuple of (text, newline). If there is no
+            text, the return is ("", newline) and if there is
+            no newline, the return is (newline, "") where
+            newline is blank if ther eis no newline.
+    """
+    if isinstance(spacing_and_newline, (bytes, bytearray)):
+        newlineRE = newlineBytesRE
+    else:
+        newlineRE = newlineStrRE
+    match = newlineRE.search(spacing_and_newline)
+    if not match:
+        return (spacing_and_newline, "")
+    return (
+        spacing_and_newline[:match.span()[0]],
+        spacing_and_newline[match.span()[0]:]
+    )
+
+
+def keep_strip(value_and_spacing):
+    """Split a string into spacing, non-spacing, spacing.
+
+    Args:
+        value (Union[str,bytes,bytearray]): Any string
+
+    Returns:
+        tuple[Union[str,bytes,bytearray]]: (same type as value)
+            3-long tuple of spacing, non-spacing, and spacing
+            (spacing in between ends is left intact).
+            If value_and_spacing is only spacing, then the
+            result is (value_and_spacing, "", "")
+    """
+    left_spacing_then_value = value_and_spacing.rstrip()
+    if len(left_spacing_then_value) == 0:
+        if isinstance(value_and_spacing, (bytes, bytearray)):
+            return (value_and_spacing, b"", b"")
+        return (value_and_spacing, "", "")
+    right_spacing = value_and_spacing[
+        (len(value_and_spacing)-(len(value_and_spacing)
+                                 - len(left_spacing_then_value))):
+    ]
+    # ^ *Must* include "len(value_and_spacing)-" to account for
+    #   the edge space when no space was removed (which would
+    #   prevent slicing from end since 0 starts at beginning)
+    value = left_spacing_then_value.strip()
+    return (
+        left_spacing_then_value[:len(left_spacing_then_value)-len(value)],
+        value,
+        right_spacing,
+    )
+
+
+spaceSignSpaceStrREs = {
+    "=": re.compile(r"[^\S\r\n]*=[^\S\r\n]*"),
+    ":": re.compile(r"[^\S\r\n]*:[^\S\r\n]*"),
+}
+
+spaceSignSpaceBytesREs = {
+    b"=": re.compile(r"[^\S\r\n]*=[^\S\r\n]*".encode("utf-8")),
+    b":": re.compile(r"[^\S\r\n]*:[^\S\r\n]*".encode("utf-8")),
+}
+
+
+def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
+                        comment_mark=None, path=None, lineN=None):
+    # quote_mark=None):
+    indent, line_strip, entire_line_end = keep_strip(raw_line)
+    if len(line_strip) == 0:
+        indent, line_end = split_before_newlines(raw_line)
+        return [indent, None, None, None, None, None, line_end]
+
+    if startswith_bytes(line_strip, comment_mark):
+        post_comment_space, line_end = split_before_newlines(entire_line_end)
+        comment = line_strip + post_comment_space
+        return [indent, None, None, None, None, comment, line_end]
+    if isinstance(raw_line, (bytes, bytearray)):
+        spaceSignSpaceREs = spaceSignSpaceBytesREs
+        # still a dict at this stage
+    elif isinstance(raw_line, str):
+        spaceSignSpaceREs = spaceSignSpaceStrREs
+        # still a dict at this stage
+    else:
+        raise TypeError("Regex for %s is not implemented."
+                        % type(raw_line).__name__)
+    # See if there is precompiled regex for sign:
+    spaceOpSpace = spaceSignSpaceREs.get(sign)
+    if spaceOpSpace is None:
+        echo0("Warning: performance may be slow"
+              " due to no precompiled regex for %s"
+              % pformat(sign))
+        spaceOpSpace = re.compile(type(sign)(r"[^\S\r\n]*")
+                                  + re.escape(sign)
+                                  + type(sign)(r"[^\S\r\n]*"))
+    match = spaceOpSpace.search(line_strip)
+    if not match:
+        where = ""
+        if path is not None:
+            where = 'File "{}"'.format(path)
+            if lineN is not None:
+                where += ", line {}: ".format(lineN)
+            else:
+                where += ": "
+        raise NotImplementedError(
+            where+'The line was not understood as blank, comment,'
+            ' nor `name{}value`'
+            ''.format(sign)
+        )
+    sign_and_spacing = line_strip[match.span()[0]:match.span()[1]]
+    name = line_strip[:match.span()[0]]
+    rvalue = line_strip[match.span()[1]:]
+    # NOTE: findall would find two if there are two sign in a row,
+    #   and search only finds the first sign, so:
+    if startswith_bytes(rvalue, sign):
+        where = ""
+        if path is not None:
+            where = 'File "{}"'.format(path)
+            if lineN is not None:
+                where += ", line {}: ".format(lineN)
+            else:
+                where += ": "
+        echo0(
+            where+"Warning: extra sign directly after first '{}'"
+            ''.format(sign)
+        )
+
+    value = None
+    post_value_spacing = None
+    comment = None
+    line_end = None
+    if allow_comment_after_value:
+        comment_i = find_not_quoted(rvalue, comment_mark)
+        if comment_i > -1:
+            comment = rvalue[comment_i:]
+            rvalue = rvalue[:comment_i]
+            comment_spacing, line_end = split_before_newlines(entire_line_end)
+            comment += comment_spacing
+            _, value, post_value_spacing = keep_strip(rvalue)
+            # ^ _ since there is no spacing before rvalue at this stage
+            #   due to spaceSignSpace capturing it and placing it in
+            #   sign_and_spacing
+
+    if comment is None:
+        _, value, __ = keep_strip(rvalue)
+        if len(__) > 0:
+            raise RuntimeError(
+                "The first keep_strip call should have obtained post-value space"
+                " when there is no comment but left '%s' in rvalue."
+                "\n  line_strip=%s"
+                "\n  name=%s"
+                "\n  sign_and_spacing=%s"
+                "\n  rvalue=%s"
+                "\n  value=%s"
+                "\n  comment=%s"
+                "\n  line_end=%s"
+                % (__, pformat(line_strip),
+                   pformat(name), pformat(sign_and_spacing),
+                   pformat(rvalue), pformat(value),
+                   pformat(comment), pformat(line_end))
+            )
+        post_value_spacing, line_end = split_before_newlines(entire_line_end)
+    if None in (value, post_value_spacing, line_end):
+        raise NotImplementedError(
+            "None for one of: value=%s, post_value_spacing=%s, line_end=%s"
+            % (value, post_value_spacing, line_end)
+        )
+    if len(_) > 0:
+        raise RuntimeError(
+            "spaceOpSpace should have obtained pre-value space"
+            " but left '%s' in line_strip=%s"
+            "\n  name=%s"
+            "\n  sign_and_spacing=%s"
+            "\n  rvalue=%s"
+            "\n  value=%s"
+            "\n  comment=%s"
+            "\n  line_end=%s"
+            % (_, pformat(line_strip),
+               pformat(name), pformat(sign_and_spacing),
+               pformat(rvalue), pformat(value),
+               pformat(comment), pformat(line_end))
+        )
+
+    return [indent, name, sign_and_spacing, value, post_value_spacing,
+            comment, line_end]
+
+
+def _tokenize_conf_line_bytes(raw_line, allow_comment_after_value, **kwargs):
+    if kwargs.get('sign') is None:
+        kwargs['sign'] = b"="
+    if kwargs.get('comment_mark') is None:
+        kwargs['comment_mark'] = b"#"
+    return _tokenize_conf_line(raw_line, allow_comment_after_value, **kwargs)
+
+
+def _tokenize_conf_line_str(raw_line, allow_comment_after_value, **kwargs):
+    if kwargs.get('sign') is None:
+        kwargs['sign'] = "="
+    if kwargs.get('comment_mark') is None:
+        kwargs['comment_mark'] = "#"
+    return _tokenize_conf_line(raw_line, allow_comment_after_value, **kwargs)
+
+
+class AssignmentInfo:
+    INDENT = 0
+    NAME = 1
+    SIGN_AND_SPACING = 2
+    VALUE = 3
+    POST_VALUE_SPACING = 4
+    COMMENT = 5
+    LINE_END = 6
+    EMPTY = [None, None, None, None, None, None, None]
+    PARTS = EMPTY.copy()
+    PARTS[INDENT] = "indent"
+    PARTS[NAME] = "name"
+    PARTS[SIGN_AND_SPACING] = "sign_and_spacing"
+    PARTS[VALUE] = "value"
+    PARTS[POST_VALUE_SPACING] = "post_value_spacing"
+    PARTS[COMMENT] = "comment"
+    PARTS[LINE_END] = "line_end"
+    PARTS_BYTES = []
+    for __part in PARTS:
+        PARTS_BYTES.append(__part.encode("utf-8"))
+
+    def __init__(self):
+        # behave as enum, but better since type can be checked.
+        self.value = None
+
+    @classmethod
+    def set_by_name(cls, parts, name, value):
+        if isinstance(name, (bytes, bytearray)):
+            parts[cls.PARTS_BYTES.index(name)] = value
+        else:
+            parts[cls.PARTS.index(name)] = value
+
+    @classmethod
+    def get_by_name(cls, parts, name):
+        if isinstance(name, (bytes, bytearray)):
+            return parts[cls.PARTS_BYTES.index(name)]
+        return parts[cls.PARTS.index(name)]
+
+
+def tokenize_conf_line(raw_line, allow_comment_after_value, **kwargs):
+    """Tokenize conf or *any* assignment line without spaces in var name.
+
+    Uses consistent indices that indicate meaning of token.
+
+    Args:
+        raw_line (Union[str,bytes,bytearray]): A conf file line.
+            Must be blank, comment, or assignment
+            (*not* "[section_name]" format--preprocess those).
+        allow_comment_after_value (bool): If True, a
+            comment mark after the value will be processed.
+        sign (Optional[Union[str,bytes,bytearray]]): The sign separating name
+            from value.
+        comment_mark (Optional[Union[str,bytes,bytearray]]): The mark that
+            starts a comment.
+        path (Optional[Union[str,bytes,bytearray]]): For syntax errors
+            readable by the IDE, specify a file path where raw_line
+            originated.
+        lineN (Optional[Union[str,bytes,bytearray]]): For syntax error line
+            numbers the IDE can jump to via click, specify a line number
+            in path where the first line is 1.
+        # quote_mark (Optional[Union[str,bytes,bytearray]]): If not . Defaults
+        #     to QUOTE_MARKS.
+
+    Returns:
+        list[Union[str,bytes,bytearray]]: Parts of the line in consistent
+            indices (last index is always right space *and* comment if any,
+            including space left of comment if any)
+            [indent,     name, sign_and_spacing, value, post_value_spacing,
+            comment,  line_end]
+            - where comment may contain whitespace or be only comment_mark
+            - *or* if starts with comment after whitespace:
+              [indent,     None, None,             None,  None,
+              comment, line_end]
+            - *or* if blank:
+              [raw_line,   None, None,             None,  None,
+              None, None]
+    """
+    if isinstance(raw_line, (bytes, bytearray)):
+        # _tokenize_conf_line_bytes sets default arguments as bytes objects:
+        return _tokenize_conf_line_bytes(raw_line, allow_comment_after_value,
+                                         **kwargs)
+    return _tokenize_conf_line_str(raw_line, allow_comment_after_value,
+                                   **kwargs)
+
+
+def tokenize_conf_line_as_dict(raw_line, allow_comment_after_value, **kwargs):
+    """Process any assignment and return the results as a dict
+
+    For documentation other than return see tokenize_conf_line.
+
+    Returns:
+        dict: A dict where each element of AssignmentInfo.PARTS is a key
+            and each value is the literal chunk of raw_line (Therefore
+            values are all strings or all bytes objects depending on the
+            type of raw_line).
+    """
+    parts = tokenize_conf_line(raw_line, allow_comment_after_value, **kwargs)
+    results = {}
+    if len(AssignmentInfo.PARTS) != len(parts):
+        raise NotImplementedError(
+            "expected %s values from but got %s from tokenize_conf_line"
+            % (len(AssignmentInfo.PARTS), len(parts))
+        )
+    for i, name in AssignmentInfo.PARTS:
+        # Do *not* use PARTS_BYTES here, we just want
+        #   values looked up by programmer not looked up by code.
+        results[name] = parts[i]
+    return results
+
+
+def rewrite_conf(sc_src_path, desktop_sc_path, metadata,
+                 assignment_operator="=", none_string="",
+                 allow_adding=True):
+    """_summary_
+
+    Args:
+        sc_src_path (_type_): _description_
+        desktop_sc_path (_type_): _description_
+        metadata (_type_): _description_
+        assignment_operator (str, optional): _description_. Defaults to "=".
+        none_string (str, optional): _description_. Defaults to "".
+        allow_adding (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        dict: Either None or a dict of values not added.
+    """
+    # TODO: Use 'rb' one instead?
+    line_end = None
+    with open(desktop_sc_path, 'wb') as outs:
+        done_keys = set()
+        with open(sc_src_path, "rb") as ins:
+            for line_orig in ins:
+                indent, name, sign_and_spacing, value, right_spacing = \
+                    tokenize_conf_line(
+                        line_orig,
+                        sign=assignment_operator,
+                    )
+                if line_end is None or (len(right_spacing) < len(line_end)):
+                    line_end = right_spacing
+                if name in metadata:
+                    # instead of .get use "in"--allow value of None
+                    new_value = metadata[name]
+                    outs.write(indent + name + sign_and_spacing + new_value
+                               + right_spacing)
+                    # ^ right_spacing includes newline
+                    done_keys.add(name)
+                    continue
+                outs.write(line_orig)
+        if line_end is None:
+            line_end = os.linesep
+            echo0("Warning: newline detected; using os newline (length=%s)"
+                  % len(line_end))
+        not_added_data = None
+        if not allow_adding:
+            not_added_data = {}
+        for key, value in metadata.items():
+            if key not in done_keys:
+                if allow_adding:
+                    outs.write("%s=%s%s" % (key, value, line_end))
+                else:
+                    not_added_data[key] = value
+        if allow_adding or (len(not_added_data) < 1):
+            # already added everything either way
+            return None
+        echo0('File "%s": Warning: does not contain %s so not added to "%s"'
+              ' (allow_adding=%s)'
+              % (sc_src_path, not_added_data, desktop_sc_path, allow_adding))
+        return not_added_data
+
+
 class ByteConf(Byter):
-    '''
+    """
     See Byter. This subclass is the same for now.
-    '''
+    """
     def __init__(self):
         Byter.__init__(self)
