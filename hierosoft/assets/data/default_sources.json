@@ -1,0 +1,18 @@
+{
+  "default_sources_urls": [
+    "https://github.com/Hierosoft/hierosoft/blob/main/hierosoft/assets/data/default_sources.json",
+    "https://minetest.io/launcherapi/sources.json"
+  ],
+  "self_install_sources": [
+    {
+      "base_url": "https://github.com",
+      "bin_names": [
+        "run.pyw"
+      ],
+      "html_url": "https://github.com/Hierosoft/hierosoft",
+      "must_contain": "/Hierosoft/hierosoft/archive/refs/heads/main.zip",
+      "title": "Hierosoft Launcher",
+      "version": "current"
+    }
+  ]
+}

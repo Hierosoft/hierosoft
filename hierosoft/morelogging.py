@@ -9,6 +9,7 @@ This module can't import hierosoft or it would be a circular dependency
 from __future__ import print_function
 import sys
 import traceback
+import os
 
 CRITICAL = 50
 ERROR = 40
@@ -16,6 +17,13 @@ WARNING = 30
 INFO = 20
 DEBUG = 10
 NOTSET = 0
+MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
+REPO_DIR = os.path.dirname(MODULE_DIR)
+
+if __name__ == "__main__":
+    sys.path.insert(0, REPO_DIR)
+
+# import hierosoft.moreweb  # avoid this--circular import
 
 if sys.version_info.major >= 3:
     import logging
