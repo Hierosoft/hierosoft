@@ -131,6 +131,23 @@ def resource_find(filename, use_cache=False):
     return None
 
 
+def get_missing_paths(destination, good_flag_files):
+    """
+    Args:
+        good_flag_files (Iterable[str]): All of these relative
+            paths must exist in the destination.
+
+    Returns:
+        list (str): Missing paths (full paths)
+    """
+    missing_paths = []
+    for flag_name in good_flag_files:
+        flag_path = os.path.join(destination, flag_name)
+        if not os.path.isfile(flag_path):
+            missing_paths.append(flag_path)
+    return missing_paths
+
+
 SHORTCUT_EXT = "desktop"
 HOME = None  # formerly profile
 APPDATA = None  # formerly APPDATA
@@ -738,8 +755,8 @@ def get_file_names(folder_path, hidden=False):
 
 
 def get_ext(filename):
-    echo0(
-        "Warning: get_ext is deprecated."
+    raise NotImplementedError(
+        "get_ext is deprecated."
         " Use os.path.splitext(path)[1] instead."
     )
     ext = ""
@@ -792,19 +809,22 @@ WIN_EXECUTABLE_DOT_EXTS = [".exe", ".ps1", ".bat", ".com"]
 
 
 def which(program_name, more_paths=[]):
-    '''
-    Get the full path to a given executable. If a full path is provided,
+    '''Get the full path to a given executable.
+
+    If a full path is provided,
     return it if executable. Otherwise, if there isn't an executable one
     the PATH, return None, or return one that exists but isn't
     executable (using program_name as the preferred path if it is a full
     path even if not executable).
 
-    Sequential arguments:
-    program_name -- This can leave off the potential file extensions and
-        on Windows each known file extension will be checked (for the
-        complete list that will be checked, see the
-        WIN_EXECUTABLE_DOT_EXTS constant in the module's
-        __init__.py.
+    Args:
+        program_name (str): This can leave off the potential file extensions
+            and on Windows each known file extension will be checked (for the
+            complete list that will be checked, see the
+            WIN_EXECUTABLE_DOT_EXTS constant in the module's
+            __init__.py.
+        more_paths (Iterable[str]): Paths other than those in system PATH
+            that should also be checked.
     '''
     # from https://github.com/poikilos/DigitalMusicMC
     preferred_path = None
@@ -849,6 +869,18 @@ def which(program_name, more_paths=[]):
                   ' but is not executable.'.format(fallback_path))
             result = fallback_path
     return result
+
+
+def which_python():
+    more_paths = []
+    names = ["python3", "python"]
+    if platform.system() == "Windows":
+        names = ["pythonw", "python"]
+    for name in names:
+        got = which(name, more_paths=more_paths)
+        if got:
+            return got
+    return None
 
 
 def get_pyval(name, py_path):

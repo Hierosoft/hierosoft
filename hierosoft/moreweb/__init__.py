@@ -5,7 +5,7 @@ import os
 import platform
 import time
 import socket
-import psutil
+# import psutil  # requires a Python package
 from socket import (
     getaddrinfo,
     gethostname,
@@ -14,6 +14,8 @@ import ipaddress
 import subprocess
 import shlex
 import threading
+import shutil
+import copy
 
 if sys.version_info.major < 3:
     # FileNotFoundError = IOError
@@ -161,13 +163,11 @@ from hierosoft import (
     echo0,
     echo1,
     echo2,
-    HOME,
-    LOCALAPPDATA,
-    APPDATA,
-    SHORTCUT_EXT,
+    write0,
+    write1,
+    write2,
     number_to_place,
 )
-
 
 def valid_ip_address(value, allow_broadcast=False, allow_netmask=False):
     '''
@@ -250,7 +250,7 @@ def get_ips(ip_addr_proto="ipv4", ignore_local=True, ignore_unassigned=True):
     ignore_unassigned -- Ignore 169.* addresses (missing DHCP server or
         disconnected from the network).
     '''
-    # import psutil  # works on Windows, macOS, and GNU/Linux systems.
+    import psutil  # works on Windows, macOS, Linux systems (requires package)
     # Based on <https://stackoverflow.com/a/73559817/4541104>.
     af_inet = socket.AF_INET
     if ip_addr_proto == "ipv6":
@@ -319,60 +319,14 @@ def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local=True):
             ip_address_valid = False
         else:
             no_local = ignore_local
+            # if ((ipaddress.ip_address(ip).is_loopback and ignore_local)
+            #     or (ipaddress.ip_address(ip).is_link_local
+            #         and ignore_local)):
             if ((ipaddress.ip_address(ip).is_loopback and no_local)
                     or (ipaddress.ip_address(ip).is_link_local and no_local)):
                 pass
             elif ip_address_valid:
                 ip_list.append(ip)
-
-    return ip_list
-
-
-def UNUSABLE_get_ips(ip_addr_proto="ipv4", ignore_local=True):
-    '''
-    UNUSABLE: Gets only local on linux.
-
-    By default, this method only returns non-local IPv4 addresses
-    To return IPv6 only, call get_ip('ipv6')
-    To return both IPv4 and IPv6, call get_ip('both')
-    To return local IPs, call get_ip(None, False)
-    Can combine options like so get_ip('both', False)
-    '''
-    # Based on <https://stackoverflow.com/a/64530508/4541104>.
-
-    # See also ways using Python modules from PyPi:
-    # - import netifaces: <https://stackoverflow.com/a/66534468/4541104>
-    # - import psutil: <https://stackoverflow.com/a/73559817/4541104>
-
-    af_inet = socket.AF_INET  # 2
-    if ip_addr_proto == "ipv6":
-        af_inet = socket.AF_INET6  # 30
-    elif ip_addr_proto == "both":
-        af_inet = 0
-    hostname = gethostname()
-    echo0("hostname={}".format(hostname))
-    # system_ip_list = getaddrinfo(hostname, None, af_inet, 1, 0)
-    system_ip_list = getaddrinfo(hostname, None, family=af_inet,
-                                 proto=socket.IPPROTO_TCP)
-    # ^ getaddrinfo(host, port, family=0, type=0, proto=0, flags=0)
-    ip_list = []
-
-    echo0("system_ip_list:")
-    for ip in system_ip_list:
-        echo0("- ip={}".format(ip))
-        ip = ip[4][0]
-
-        try:
-            ipaddress.ip_address(str(ip))
-            ip_address_valid = True
-        except ValueError:
-            ip_address_valid = False
-        else:
-            if ipaddress.ip_address(ip).is_loopback and ignore_local or ipaddress.ip_address(ip).is_link_local and ignore_local:
-                pass
-            elif ip_address_valid:
-                ip_list.append(ip)
-
     return ip_list
 
 
@@ -516,7 +470,6 @@ def netcat(host, port, content, cb_progress=None, cb_done=None,
     cb_done(evt)
     # cb_done is called twice, above with STATUS_DONE and again with
     # STATUS_RESPONSE.
-
 
 
 def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
@@ -694,232 +647,6 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
     cb_done(evt)
     err = ""
 
-
-# create a subclass and override the handler methods
-class DownloadPageParser(HTMLParser):
-    HELP = {
-        # formerly self.linArch, self.darwinArch, self.winArch,
-        #   self.release_version, self.platform_flag, self.release_arch:
-        'version': "Gather only files that are this version.",
-        'platform': "Gather only files with this platform substring.",
-        'arch': ("Gather only files that are marked as this architecture"
-                 " (such as linux64, x86_64, arm, or another"
-                 " custom arch string specific to that software)."),
-        'must_contain': "Only collect file URLs with this substring.",
-    }
-
-    @classmethod
-    def get_option_keys(cls):
-        return list(cls.HELP.keys())
-
-    @classmethod
-    def get_help(cls, key):
-        return HELP.get(key)
-
-    def set_options(self, options):
-        for key, value in options.items():
-            if key not in DownloadPageParser.get_option_keys():
-                echo0('[DownloadPageParser] Warning: The option {} is not valid'
-                      ''.format(key))
-            self.options[key] = value
-
-    def get_option(self, key):
-        return self.options.get(key)
-
-    def __init__(self, options):
-        # avoid "...instance has no attribute rawdata":
-        #   Old way:
-        #     HTMLParser.__init__(self)
-        #   On the next commented line, python2 would say:
-        #       "argument 1 must be type, not classobj"
-        #     super(DownloadPageParser, self).__init__()
-        if sys.version_info.major >= 3:
-            super().__init__()
-            # echo2("Used python3 super syntax")
-        else:
-            # python2
-            HTMLParser.__init__(self)
-            # echo2("Used python2 super syntax")
-        self.options = {}
-        self.set_options(options)
-
-        self.urls = []
-        self.tag = None
-        self.tag_stack = []
-        self.archive_categories = {}  # based on install_any.py
-        self.archive_categories["tar"] = [".tar.bz2", ".tar.gz",
-                                          ".tar.xz"]
-        self.blender_redir = "https://www.blender.org/download/release"
-        self.blender_mirror = "https://mirrors.ocf.berkeley.edu/blender/release"
-        # TODO:
-        #         https://www.blender.org/download/release/Blender3.3/blender-3.3.1-linux-x64.tar.xz/
-        # becomes
-        # https://mirrors.ocf.berkeley.edu/blender/release/Blender3.3/blender-3.3.1-linux-x64.tar.xz
-        self.archive_categories["zip"] = [".zip"]
-        self.archive_categories["dmg"] = [".dmg"]
-        self.extensions = []
-        for category, endings in self.archive_categories.items():
-            self.extensions.extend(endings)
-        self.closers = ["-glibc"]
-        self.openers = ["blender-"]
-        self.remove_this_dot_any = ["-10."]
-        # self.os_release = platform.release()
-        # ^ such as '5.10.0-18-amd64' on linux
-
-    def handle_decl(self, decl):
-        self.urls = []
-        echo0("CLEARED dl list since found document decl: " + decl)
-
-    def handle_starttag(self, tag, attrs):
-        must_contain = self.get_option('must_contain')
-        if tag.lower() == "html":
-            self.urls = []
-            echo0("CLEARED dl list since found <html...")
-            # echo0('Links:  # with "{}"'.format(must_contain))
-        echo2(" " * len(self.tag_stack) + "push: " + str(tag))
-        self.tag_stack.append(tag)
-        # attrs is an array of (name, value) tuples:
-        attr_d = dict(attrs)
-        href = attr_d.get("href")
-        raw_href = href
-        if href is not None:
-            if href.startswith(self.blender_redir) and href.endswith("/"):
-                # TODO: ^ Never occurs since apparently JavaScript loads
-                #   this html? There is no "matches" nor "not match"
-                #   showing below for 3.3.1.
-                href = self.blender_mirror + href[len(self.blender_redir):]
-                if href.endswith("/"):
-                    href = href[:-1]
-                    # Change .xz/ to .xz since .xz/ denotes a redirect.
-                echo1('href {} became {}'.format(raw_href, href))
-            if (must_contain is None) or (must_contain in href):
-                echo1("  - (matches {}) {}".format(must_contain, href))
-                if href not in self.urls:
-                    if not href.lower().endswith("sha256"):
-                        self.urls.append(href)
-            else:
-                echo1('  - (does not match "{}") {}'.format(must_contain, href))
-        echo2(" " * len(self.tag_stack) + "attr_d: " + str(attr_d))
-
-        self.tag = tag
-
-    def handle_endtag(self, tag):
-        if tag.lower() != self.tag_stack[-1].lower():
-            found = None
-            for i in range(1, len(self.tag_stack)+1):
-                if tag.lower() == self.tag_stack[-i].lower():
-                    found = i
-                    break
-            if found is not None:
-                for i in range(found, len(self.tag_stack)+1):
-                    echo2(" " * len(self.tag_stack)
-                          + "unwind: (" + self.tag_stack[-1]
-                          + " at ) " + str(tag))
-                    self.tag_stack.pop()
-            else:
-                echo2(" " * len(self.tag_stack) + "UNEXPECTED: " + str(tag))
-        else:
-            self.tag_stack.pop()
-            echo2(" " * len(self.tag_stack) + ":" + str(tag))
-
-    def handle_data(self, data):
-        echo2(" " * len(self.tag_stack) + "data:" + str(data))
-
-    def id_from_name(self, filename, remove_arch=True,
-                     remove_win_arch=False, remove_ext=False,
-                     remove_openers=True, remove_closers=True):
-        '''
-        Get the id from the filename. This uses the following keys from
-        options: version, platform, arch. Arch can be a string or list
-        of strings.
-        '''
-        only_v = self.options.get('version')
-        only_p = self.options.get('platform')
-        only_a = self.options.get('arch')
-        ret = filename
-        if remove_openers:
-            for opener in self.openers:
-                # ret = ret.replace(opener, "")
-                o_i = ret.find(opener)
-                if o_i == 0:
-                    ret = ret[len(opener):]
-        # only remove platform and arch if not Windows since same
-        # (only way to keep them & allow installing 64&32 concurrently)
-        if only_p is not None:
-            if remove_win_arch or ("win" not in only_p.lower()):
-                ret = ret.replace("-"+only_p, "")
-        if only_a is not None:
-            arches = [only_a]
-            if isinstance(only_a, list):
-                arches = only_a
-            for arch in arches:
-                if remove_win_arch or ("win" not in arch.lower()):
-                    ret = ret.replace("-"+arch, "")
-        if remove_closers:
-            for closer in self.closers:
-                c_i = ret.find(closer)
-                if c_i > -1:
-                    next_i = -1
-                    dot_i = ret.find(".", c_i+1)
-                    hyphen_i = ret.find("-", c_i+1)
-                    if dot_i > -1:
-                        next_i = dot_i
-                    if hyphen_i > -1:
-                        if next_i > -1:
-                            if hyphen_i < next_i:
-                                next_i = hyphen_i
-                        else:
-                            next_i = hyphen_i
-                    if next_i > -1:
-                        # don't remove extension or other chunks
-                        ret = ret[:c_i] + ret[next_i:]
-                    else:
-                        ret = ret[:c_i]
-                    break
-        for rt in self.remove_this_dot_any:
-            for i in range(0, 99):
-                osx = rt + str(i)
-                ext_i = ret.find(osx)
-                if ext_i > -1:
-                    ret = ret[:ext_i]
-                    break
-        if remove_ext:
-            for ext in self.extensions:
-                ext_i = ret.find(ext)
-                if ext_i > -1:
-                    ret = ret[:ext_i]
-        return ret
-
-    def id_from_url(self, url, remove_arch=True,
-                    remove_win_arch=False, remove_ext=False,
-                    remove_openers=True, remove_closers=True):
-        filename = name_from_url(url)
-        return self.id_from_name(
-            filename,
-            remove_arch=remove_arch,
-            remove_win_arch=remove_win_arch,
-            remove_ext=remove_ext,
-            remove_openers=remove_openers,
-            remove_closers=remove_closers
-        )
-
-    def blender_tag_from_url(self, url):
-        tag_and_commit = self.id_from_url(url, remove_ext=True)
-        h_i = tag_and_commit.find("-")
-        version_s = tag_and_commit
-        if h_i > -1:
-            version_s = tag_and_commit[:h_i]
-        return version_s
-
-    def blender_commit_from_url(self, url):
-        tag_and_commit = self.id_from_url(url, remove_ext=True)
-        h_i = tag_and_commit.find("-")
-        commit_s = tag_and_commit
-        if h_i > -1:
-            commit_s = tag_and_commit[h_i+1:]
-        return commit_s
-
-
 def download(stream, url, cb_progress=None, cb_done=None,
              chunk_size=16*1024, evt=None, path=None):
     '''
@@ -987,7 +714,8 @@ def download(stream, url, cb_progress=None, cb_done=None,
         return
     # ^ raises urllib.error.URLError (or Python 2 urllib2.URLError)
     #   if not connected to the internet
-    #   ("urllib.error.URLError: <urlopen error [Errno 11001] getaddrinfo failed")
+    #   ("urllib.error.URLError: <urlopen error [Errno 11001]
+    #    getaddrinfo failed")
     # ^ raises urllib.error.HTTPError (or Python 2 urllib2.HTTPError)
     #   in case of "HTTP Error 404: Not Found"
     # evt['total'] is not implemented (would be from contentlength
@@ -1009,186 +737,39 @@ def download(stream, url, cb_progress=None, cb_done=None,
     cb_done(evt)
 
 
-class DownloadManager:
-    '''
-    Download a file and optionally scrape a web page. All of the
-    option names can be listed using DownloadManager.get_option_keys().
-    for documentation, see DownloadManager.get_help(key) where key is
-    the option. If the option is in DownloadPageParser.get_option_keys()
-    the HELP key is defined there, but get_help will still work here.
-    '''
-    # formerly blendernightly LinkManager (moved to hierosoft by author).
-    # TODO: If there are helpful changes in
-    #   ~/git/linux-preinstall/everyone/deprecated/LBRY-AppImage.py
-    #   then merge them.
-    # - Another variant (of the old file_path version of download) is
-    #   in <https://github.com/poikilos/nopackage>.
-
-    HELP = {
-        'html_url': "Scrape this web page (only for get_urls method).",
-    }  # For further options see DownloadPageParser's get_help
-
-    @classmethod
-    def get_option_keys(cls):
-        return list(cls.HELP.keys()) + DownloadPageParser.get_option_keys()
-
-    @classmethod
-    def get_help(cls, key):
-        if key in DownloadPageParser.get_option_keys():
-            return DownloadPageParser.get_help(key)
-        return cls.HELP.get(key)
-
-    def __init__(self):
-        self.options = {}
-        # self.set_options(options)
-        self.profile_path = HOME
-        self.localappdata_path = LOCALAPPDATA
-        self.appdata_path = APPDATA
-        self.parser = None
-        self.download_thread = None
-        self.url = None
-
-    def set_options(self, options):
-        if self.parser is None:
-            self.parser = DownloadPageParser(self.options)
-        for key, value in options.items():
-            if key in DownloadPageParser.get_option_keys():
-                # Send a matching option to DownloadPageParser
-                self.parser.set_options({key: value})
-                continue
-            if key not in DownloadManager.get_option_keys():
-                echo0('[DownloadManager] Warning: The option {} is invalid'
-                      ''.format(key))
-            self.options[key] = value
-
-    def get_shortcut_ext(self):
-        return SHORTCUT_EXT
-
-    def get_urls(self):
-        if self.parser is None:
-            self.parser = DownloadPageParser(self.options)
-        html_url = self.options.get('html_url')
-        if html_url is None:
-            raise ValueError("html_url is None.")
-        # self.parser.urls = []  # done automatically on BODY tag
-        # python2 way: `urllib.urlopen(html_url)`
-        response = request.urlopen(html_url)
-        dat = response.read()
-        # echo0("GOT:" + dat)
-        # Decode dat to avoid error on Python 3:
-        #   htmlparser self.rawdata  = self.rawdata + data
-        #   TypeError: must be str not bytes
-        self.parser.feed(dat.decode("UTF-8"))
-        return self.parser.urls
-
-    def download_and_wait(self, stream, url, cb_progress=None,
-                          cb_done=None, chunk_size=16*1024, evt=None,
-                          path=None):
-        '''
-        For documentation see the download function rather than the
-        DownloadManager download method.
-        '''
-        self.url = url
-        if evt is None:
-            evt = {}
-        self.total_size = evt.get('total_size')
-        return download(stream, url, cb_progress=cb_progress, cb_done=cb_done,
-                        chunk_size=chunk_size, evt=evt, path=path)
-
-    def _download(self, stream, url, cb_progress=None,
-                 cb_done=None, chunk_size=16*1024, evt=None,
-                 path=None):
-        '''
-        For documentation see download in hierosoft.moreweb.
-        '''
-        try:
-            download(stream, url, cb_progress=cb_progress,
-                     cb_done=cb_done, chunk_size=chunk_size,
-                     evt=evt, path=path)
-        except Exception as ex:
-            self.download_thread = None
-            raise
-        self.download_thread = None
-
-    def download(self, stream, url, cb_progress=None,
-                 cb_done=None, chunk_size=16*1024, evt=None,
-                 path=None):
-        '''
-        For documentation see the download function rather than the
-        DownloadManager download method.
-        '''
-        self.url = url
-        if evt is None:
-            evt = {}
-        self.total_size = evt.get('total_size')
-        if self.download_thread is not None:
-            echo0("download_thread is already running for {}".format(self.url))
-            return False
-
-        self.download_thread = threading.Thread(
-            target=self._download,
-            args=(stream, url,),
-            kwargs={
-                'cb_progress': cb_progress,
-                'cb_done': cb_done,
-                'evt': evt,
-                'chunk_size': chunk_size,
-                'path': path,
-            },
+def get_python_download_spec():
+    if platform.system() != "Windows":
+        raise RuntimeError(
+            "Python should be installed via package on %s"
+            % platform.system()
         )
-        echo0("* starting download thread...")
-        self.download_thread.start()
-        return True
+    Darwin_arch = "x64"
+    Darwin_platform = "macos11"
+    if platform.system() == "Darwin":
+        if "arm64" in platform.platform():
+            # such as "macOS-12.0.1-arm64-i386-64bit"
+            # as seen at <https://stackoverflow.com/a/70253434/4541104>
+            Darwin_arch = "arm64"
+            Darwin_platform = "embed"  # FIXME: Will this work on Darwin arm?
+            #  See https://www.python.org/ftp/python/3.11.4/
+            #    or a later version directory at
+            #    https://www.python.org/ftp/python/
+            #    may have real ones for Darwin arm
 
-    def get_downloads_path(self):
-        return os.path.join(self.profile_path, "Downloads")
-
-    def get_desktop_path(self):
-        return os.path.join(self.profile_path, "Desktop")
-
-    def absolute_url(self, rel_href):
-        route_i = rel_href.find("//")
-        html_url = self.options.get('html_url')
-        echo0("REL: " + rel_href)
-        echo0("HTML: " + html_url)
-        relL = rel_href.lower()
-        if relL.startswith("https://") or relL.startswith("http://"):
-            return rel_href
-        if route_i > -1:
-            # assume before '//' is route (not real directory) & remove:
-            rel_href = rel_href[route_i+2:]
-        redundant_flags = []
-        # redundant_flags = ["download", "download/"]
-        slash2 = rel_href.find("/")
-        if slash2 > -1:
-            start = 0
-            if slash2 == 0:
-                start += 1
-                slash2 = rel_href.find("/", start)
-                if slash2 == 1:
-                    start += 1
-                    slash2 = rel_href.find("/", start)
-            if slash2 > -1:
-                first_word = rel_href[start:slash2]
-                # echo1("FIRST_WORD: " + first_word)
-                redundant_flags.append(first_word)
-                redundant_flags.append(first_word + "/")
-
-        # if first word of subdir is in root dir, assume redundant:
-        for flag in redundant_flags:
-            route_i = rel_href.find(flag)
-            if route_i > -1:
-                if html_url[-len(flag):] == flag:
-                    # assume is route (not real directory) & remove:
-                    rel_href = rel_href[route_i+len(flag):]
-                    echo0("NEW_REL: " + rel_href)
-        if (html_url[-1] == "/") and (rel_href[0] == "/"):
-            start = 1
-            if rel_href[1] == "/":
-                start = 2
-            rel_href = rel_href[start:]
-        return html_url + rel_href
-
-
-if __name__ == "__main__":
-    echo0("You must import this module and call get_meta() to use it")
+    print("Running update installer in standalone mode.")
+    return {
+        'title': "Hierosoft Launcher",  # Shows Hierosoft while getting Python
+        'platforms': {
+            'Linux': "tar.xz",
+            'Windows': "exe",
+            'Darwin': Darwin_platform,
+        },
+        'architectures': {
+            'Linux': ["x86_64", "x64"],
+            'Windows': "x64",
+            'Darwin': Darwin_arch,  # ["x64", "arm64"],
+        },
+        # 'must_contain': "/blender-",
+        'html_url': "https://www.python.org/ftp/python/3.11.4/",
+        'bin_names': ["python", "python.exe"],
+    }
