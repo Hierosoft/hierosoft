@@ -218,7 +218,7 @@ class HierosoftUpdate(object):
             ['version', 'platform', 'arch', 'bin_names', 'exists_action']
             + list(HierosoftUpdate.HELP.keys())
             # + DownloadManager.get_option_keys())
-            # FIXME: ^ Why was this here? 
+            # FIXME: ^ Why was this here?
         )
 
     def set_all_options(self, options, set_gui_fields, require_bin=True):
@@ -757,7 +757,7 @@ class HierosoftUpdate(object):
             # return event
         else:
             echo0("Error: command '{}' is unknown for event={}"
-                    "".format(command, event))
+                  "".format(command, event))
         # return None
 
     def _process_events(self):
@@ -900,13 +900,70 @@ def main():
     if enable_tk:
         root = tk.Tk()
         statusVar = tk.StringVar()
+        screenW = root.winfo_screenwidth()
+        screenH = root.winfo_screenheight()
+        winW1 = int(float(screenW)/3.0)
+        winH1 = int(float(screenH)/3.0)
+        if winH1 < winW1:
+            # widescreen
+            # Enforce 3:2 ratio:
+            winW = int(float(winH1) * 1.5)
+            winH = winH1
+            if winW > screenW:
+                winW = screenW
+                winH  = int(float(winW) / 1.5)
+        else:
+            # narrow screen
+            # Enforce 2:3 ratio
+            winH = int(float(winW1) * 1.5)
+            winW = winW1
+            if winH > screenH:
+                winH = screenH
+                winW = int(float(winH) / 1.5)
+        root.title("")   # "Tk" by default.
+        left = int((screenW - winW) / 2)
+        top = int((screenH - winH) / 2)
+        root.geometry("%sx%s+%s+%s" % (winW, winH, left, top))
+        pointSize = float(screenW) / 14.0 / 72.0  # assume 14" approx screen
+        canvas = tk.Canvas(
+            width=winW,
+            height=winH-int(pointSize*20.0),
+        )
         label = tk.Label(
             root,
             textvariable=statusVar,
         )
         statusVar.set("Preparing...")
-        label.pack()
-    
+        canvas.pack(
+            side=tk.TOP,
+            fill=tk.BOTH,
+            expand=True,
+        )
+        label.pack(
+            side=tk.BOTTOM,
+            fill=tk.BOTH,
+            expand=True,
+        )
+        from hierosoft.hierosoftpacked import hierosoft_svg
+        from hierosoft.moresvg import MoreSVG
+        # def after_size():
+        root.update()
+        # ^ finalizes size (otherwise constrain fails due to
+        #   incorrect canvas.winfo_width() or winfo_height())
+        # canvas.create_line(10,10,canvas.winfo_width(),60, 0,60, 10, 10,
+        #                    fill="black", smooth=1)
+        svg = MoreSVG()
+        pos = [
+            int((winW - winH) / 2),  # this centering assumes square graphic
+            0,
+        ]
+        svg.draw_svg(
+            hierosoft_svg,
+            canvas,
+            constrain="height",
+            # pos=pos,
+        )
+
     self_install_options = copy.deepcopy(default_sources['self_install_sources'][0])
     # TODO: ^ Try another source if it fails, or random for load balancing.
 
@@ -943,11 +1000,11 @@ def main():
 
 def prepare_and_run_launcher(self_install_options):
     """Install self
-    
+
     This should be the cb_done callback for Python install,
     but if Python is already installed this should be called
     right away to install Python version of Hierosoft
-    and run it. 
+    and run it.
     """
     prefix = "[prepare_and_run_launcher] "
     error = self_install_options.get('error')
@@ -1000,9 +1057,10 @@ def prepare_and_run_launcher(self_install_options):
         else:
             echo0("Warning: using specified installed_path: %s"
                   % installed['installed_path'])
-        
+
     error = installed.get('error')
     if error:
+        app.set_status(error)
         raise RuntimeError(prefix+"download & install launcher failed: %s"
                            % error)
 
@@ -1025,14 +1083,20 @@ def prepare_and_run_launcher(self_install_options):
         )
     import subprocess
     launcher_cmd = [app.best_python, start_script]
-    
-    p = subprocess.Popen(
+
+    _ = subprocess.Popen(
         launcher_cmd,
         start_new_session=True,
-        cwd = installed_path,
+        cwd=installed_path,
     )
     # ^ start_new_session allows the binary launcher to close
-    #   and be replaced by the Python copy 
+    #   and be replaced by the Python copy
+    root.mainloop()
+    # Keep splash a moment, not scare user with flashing screen:
+    # time.sleep(2)
+    def close():
+        root.destroy()
+    root.after(2, close)
     return 0
 
 
