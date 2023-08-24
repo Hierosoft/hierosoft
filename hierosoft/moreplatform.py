@@ -131,7 +131,7 @@ def install_extracted(extracted_path, dst,
             dict that is returned. Even keys not used here
             may be important to the caller (the caller may
             use it in a callback)
-                  
+
     Returns:
         dict: Results of the operation (based on event_template if any)
             such as:
@@ -287,7 +287,12 @@ def install_zip(archive, dst, remove_archive=False,
         delete_msg = "Deleting %s" % pformat(archive)
         evt['error'] += "\n" + delete_msg
         echo0(delete_msg)
-        os.remove(archive)
+        try:
+            os.remove(archive)
+        except PermissionError as ex:
+            permission_msg = "Cannot delete %s. Delete the faulty file manually."
+            echo0(permission_msg)
+            evt['error'] + "\n" + permission_msg
     return evt
 
 
