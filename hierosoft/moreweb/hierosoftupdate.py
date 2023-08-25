@@ -892,9 +892,10 @@ def main():
             continue
         if arg == "--upgrade":
             upgrade = True
+    appStatusV = None
     if enable_tk:
         root = tk.Tk()
-        statusVar = tk.StringVar()
+        appStatusV = tk.StringVar()
         screenW = root.winfo_screenwidth()
         screenH = root.winfo_screenheight()
         winW1 = int(float(screenW)/3.0)
@@ -920,15 +921,17 @@ def main():
         top = int((screenH - winH) / 2)
         root.geometry("%sx%s+%s+%s" % (winW, winH, left, top))
         pointSize = float(screenW) / 14.0 / 72.0  # assume 14" approx screen
+        canvasW = winW
+        canvasH = winH - int(pointSize*20.0)  # reduce for status bar
         canvas = tk.Canvas(
-            width=winW,
-            height=winH-int(pointSize*20.0),
+            width=canvasW,
+            height=canvasH,
         )
         label = tk.Label(
             root,
-            textvariable=statusVar,
+            textvariable=appStatusV,
         )
-        statusVar.set("Preparing...")
+        appStatusV.set("Preparing...")
         canvas.pack(
             side=tk.TOP,
             fill=tk.BOTH,
@@ -946,14 +949,15 @@ def main():
         # ^ finalizes size (otherwise constrain fails due to
         #   incorrect canvas.winfo_width() or winfo_height())
         test_only = False
-        if test_only:
-            canvas.create_polygon(10,10,canvas.winfo_width(),60, 0,60, 10, 10,
-                                  fill="black", smooth=1)
+        # canvas.create_polygon(10, 10, canvas.winfo_width(),
+        #                       60, 0,60, 10, 10,
+        #                       fill="black", smooth=1)
         svg = MoreSVG()
         pos = [
-            int((winW - winH) / 2),  # this centering assumes square graphic
+            int((winW - canvasH)),  # assume square graphic to center
             0,
         ]
+        # ^ (winW-canvasH) works without `/ 2`
         if not test_only:
             svg.draw_svg(
                 hierosoft_svg,
@@ -962,15 +966,19 @@ def main():
                 pos=pos,
             )
 
-    self_install_options = copy.deepcopy(default_sources['self_install_sources'][0])
+    self_install_options = copy.deepcopy(
+        default_sources['self_install_sources'][0]
+    )
     # TODO: ^ Try another source if it fails, or random for load balancing.
 
     app = HierosoftUpdate(None, None, self_install_options)
     wait_for_python = False
+    if appStatusV is not None:
+        # Make set_status calls work on the local label (if enable_tk).
+        app.statusVar = appStatusV
     if platform.system() == "Windows":
         # In case this is an exe, install Python if not present
         if not app.best_python:
-            app.statusVar = statusVar
             python_meta = get_python_download_spec()
             app.set_all_options(python_meta, True)
             app.start_refresh()  # synchronous since CLI superclass
@@ -1025,7 +1033,9 @@ def prepare_and_run_launcher(self_install_options):
     app.set_luid("hierosoft")  # other programs should say their own dir name
     if root is not None:
         root.update()
-    app.set_status("Loading...")
+    app.set_status("Loading...")  # Only displayed if app.statusVar=appStatusV
+    if root is not None:
+        root.update()
     app.enable_install = True
     # app.start_refresh()  # synchronous since CLI superclass
     # but use explicitly synchronous version:
@@ -1089,13 +1099,15 @@ def prepare_and_run_launcher(self_install_options):
     )
     # ^ start_new_session allows the binary launcher to close
     #   and be replaced by the Python copy
+
+    def close():
+        if error is None:
+            root.destroy()
+    root.after(2000, close)
     root.mainloop()
     # Keep splash a moment, not scare user with flashing screen:
     # time.sleep(2)
 
-    def close():
-        root.destroy()
-    root.after(2, close)
     return 0
 
 
