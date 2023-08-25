@@ -602,6 +602,8 @@ class MoreSVG(object):  # Must be new-style class (object) for get/set in Py 2
         for root in dom.childNodes:
             # usually just one
             # print("node has: %s" % dir(root))  # See module dostring
+            if type(root).__name__ == "DocumentType":
+                continue
             if done:
                 echo0("Warning got extra %s" % root.tagName)
             else:
