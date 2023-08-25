@@ -337,7 +337,10 @@ class HierosoftUpdate(object):
                 meta = {}
                 meta['url'] = url
                 meta['filename'] = name_from_url(url)
-                meta['detected_luid'] = self.mgr.parser.id_from_url(url, remove_ext=True)
+                meta['detected_luid'] = self.mgr.parser.id_from_url(
+                    url,
+                    remove_ext=True,
+                )
                 if self.luid is not None:
                     meta['luid'] = self.luid
                 meta['version'] = self.mgr.parser.blender_tag_from_url(url)
@@ -430,9 +433,12 @@ class HierosoftUpdate(object):
                 meta['Exec'] = bin_path
 
     def d_progress(self, evt):
-        '''
-        This doesn't have to run on the main thread (so don't access the
-        GUI directly here).
+        '''Handle done events such as for downloads.
+        This just appends an even so it doesn't have to run on the main thread
+        (Therefore, don't access the GUI directly here).
+
+        For the actual event logic, see _d_progress which is run by
+        _process_events on the main thread.
         '''
         pass
         event = copy.deepcopy(evt)
@@ -442,11 +448,11 @@ class HierosoftUpdate(object):
             sys.stderr.write(
                 "\r{} of {}".format(evt['loaded'], evt['total_size'])
             )
-        else:
+        elif ratio is not None:
             sys.stderr.write("\r{}%".format(round(ratio*100, 1)))
         sys.stderr.flush()
-        # GUI overload should do:
-        # self.events.append(event)
+        # GUI overload should skip output above:
+        self.events.append(event)
 
     def d_click(self, meta, uninstall=False, remove_download=False,
                 cb_done=None):
@@ -582,7 +588,7 @@ class HierosoftUpdate(object):
             self.push_label("Warning: Resuming install with existing archive")
             self.push_label(self.archive_path)
             echo0('* archive_path="{}": archive is already downloaded'
-                    ''.format(self.archive_path))  # self.action
+                  ''.format(self.archive_path))  # self.action
             evt['status'] = STATUS_DONE
             cb_done(evt)  # usually a thread could call this
             if not done_is_synchronous:
@@ -625,18 +631,6 @@ class HierosoftUpdate(object):
         event['command'] = "d_done"
         self.events.append(event)
 
-    def d_progress(self, evt):
-        '''Handle done events such as for downloads.
-        This just appends an even so it doesn't have to run on the main thread
-        (Therefore, don't access the GUI directly here).
-
-        For the actual event logic, see _d_progress which is run by
-        _process_events on the main thread.
-        '''
-        event = copy.deepcopy(evt)
-        event['command'] = "d_progress"
-        self.events.append(event)
-
     def _d_progress(self, evt):
         """This should only be called by _process_events
         on the main thread (other threads will throw access violation
@@ -659,11 +653,11 @@ class HierosoftUpdate(object):
         instead (to append an event to the event queue).
         """
         # formerly _d_done
-        prefix = "[_on_archive_ready]"
+        # prefix = "[_on_archive_ready]"
         echo0("")  # end the line that _d_progress started.
         echo0("done: %s" % evt)
         # region move to event_template
-        meta = self.meta
+        # meta = self.meta
         # meta = evt
         # archive = self.archive_path
         # endregion moved to event_template
@@ -733,7 +727,7 @@ class HierosoftUpdate(object):
     def _process_event(self, event):
         echo2("* processing {}".format(event))
         command = event.get('command')
-        caller = event.get('caller')
+        # caller = event.get('caller')
         if command is None:
             echo0("Error: command is one for event={}".format(event))
             # return None
@@ -863,7 +857,7 @@ default_sources = {
             # ^ formerly  "/download//blender-*"
             'must_contain': "/Hierosoft/hierosoft/archive/refs/heads/main.zip",
             'html_url': "https://github.com/Hierosoft/hierosoft",
-            'base_url': "https://github.com",  # Prepend this instead of html_url
+            'base_url': "https://github.com",  # Prepend this not html_url
             'bin_names': ["run.pyw"],
         },
     ],
@@ -874,7 +868,8 @@ default_sources = {
 data_dir = os.path.join(ASSETS_DIR, "data")
 sources_path = os.path.join(data_dir, "default_sources.json")
 # for developer only:
-if os.path.isfile(os.path.join(HOME, "metaprojects", "hierosoft-developer.flag")):
+if os.path.isfile(os.path.join(HOME, "metaprojects",
+                               "hierosoft-developer.flag")):
     if not os.path.isdir(data_dir):
         raise FileNotFoundError(data_dir)
     import json
@@ -911,7 +906,7 @@ def main():
             winH = winH1
             if winW > screenW:
                 winW = screenW
-                winH  = int(float(winW) / 1.5)
+                winH = int(float(winW) / 1.5)
         else:
             # narrow screen
             # Enforce 2:3 ratio
@@ -950,19 +945,22 @@ def main():
         root.update()
         # ^ finalizes size (otherwise constrain fails due to
         #   incorrect canvas.winfo_width() or winfo_height())
-        # canvas.create_line(10,10,canvas.winfo_width(),60, 0,60, 10, 10,
-        #                    fill="black", smooth=1)
+        test_only = False
+        if test_only:
+            canvas.create_polygon(10,10,canvas.winfo_width(),60, 0,60, 10, 10,
+                                  fill="black", smooth=1)
         svg = MoreSVG()
         pos = [
             int((winW - winH) / 2),  # this centering assumes square graphic
             0,
         ]
-        svg.draw_svg(
-            hierosoft_svg,
-            canvas,
-            constrain="height",
-            # pos=pos,
-        )
+        if not test_only:
+            svg.draw_svg(
+                hierosoft_svg,
+                canvas,
+                constrain="height",
+                pos=pos,
+            )
 
     self_install_options = copy.deepcopy(default_sources['self_install_sources'][0])
     # TODO: ^ Try another source if it fails, or random for load balancing.
@@ -1070,10 +1068,10 @@ def prepare_and_run_launcher(self_install_options):
               % pformat(installed_path))
     if not installed_path:
         echo0("d_click called by download_first must set"
-                         " 'installed_path' before *every* return unless"
-                         " 'error' is set. Ultimately, install_folder"
-                         " (or potentially _on_archive_ready)"
-                         " has to set it if install_archive is called.")
+              " 'installed_path' before *every* return unless"
+              " 'error' is set. Ultimately, install_folder"
+              " (or potentially _on_archive_ready)"
+              " has to set it if install_archive is called.")
         # fault-tolerant way:
         installed_path = good_installed_path
     start_script = join_if_exists(installed_path, try_launch_scripts)
@@ -1094,6 +1092,7 @@ def prepare_and_run_launcher(self_install_options):
     root.mainloop()
     # Keep splash a moment, not scare user with flashing screen:
     # time.sleep(2)
+
     def close():
         root.destroy()
     root.after(2, close)

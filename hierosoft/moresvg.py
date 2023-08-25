@@ -34,6 +34,7 @@ Attr (node.attributes[x])'s public members:
 """
 from __future__ import print_function
 from __future__ import division  # workarounds are used, but import to be sure
+import copy
 import sys
 from pprint import pformat
 from xml.dom.minidom import (
@@ -43,9 +44,14 @@ from xml.dom.minidom import (
     Text,
 )
 
+from hierosoft import (
+    echo1,
+)
+
 
 def echo0(*args, **kwargs):
     print(*args, **kwargs, file=sys.stderr)
+    return True
 
 
 # from xml.etree import ElementTree
@@ -65,7 +71,175 @@ def str_to_viewBox(viewBoxStr):
     return viewBox
 
 
-class MoreSVG:
+class SVGSegment:
+    """A collection of points.
+
+    In SVG format, each command in a path node makes a separate Path.
+    """
+    PROPS = [
+        'buffer',
+        'bezier',
+        'command',
+        'quadratic',
+        'smooth',
+        'vector_fmt',
+    ]
+
+    def __init__(self):
+        self.buffer = []
+        self.bezier = False
+        self.command = None
+        self.quadratic = False
+        self.smooth = 0
+        self.vector_fmt = ["x", "y"]
+        # All of these should be copied by copy()
+
+    def to_dict(self, get_buffer=True):
+        result = {}
+        for name in type(self).PROPS:
+            if not get_buffer and (name == 'buffer'):
+                continue
+            result[name] = getattr(self, name)
+        return result
+
+    def element(self, i, name):
+        return self.buffer[
+            i * len(self.vector_fmt)
+            + self.vector_fmt.index(name)
+        ]
+
+    def __len__(self):
+        """Magic (or dunder) method to determine (len(self))
+
+        Returns:
+            int: number of segments
+        """
+        if len(self.buffer) % len(self.vector_fmt) != 0:
+            raise ValueError(
+                "Buffer len %s should be divisiable by vector_fmt %s: %s"
+                % (len(self.buffer), self.vector_fmt, self.buffer)
+            )
+        return int(len(self.buffer) / len(self.vector_fmt))
+
+    def location(self, i):
+        return (
+            self.element(i, "x"),
+            self.element(i, "y")
+        )
+
+    def _location(self, i):
+        return [
+            self.element(i, "x"),
+            self.element(i, "y")
+        ]
+
+    def _2D_to_index(self, index_times_2):
+        """Get the internal index that corresponds to a 1D vector of pairs.
+
+        Args:
+            index_times_2 (int): index in your [x1,y1,x2,y2,...] output
+
+        Returns:
+            int: index inside of the buffer (skips everything but 'x' & 'y')
+        """
+        raise RuntimeError("Set vector_fmt first to generate this method.")
+
+    @property
+    def vector_fmt(self):
+        return self._vector_fmt
+
+    @vector_fmt.setter
+    def vector_fmt(self, vector_fmt):
+        self._vector_fmt = vector_fmt
+        len_vector_fmt = len(vector_fmt)
+        if 'x' not in vector_fmt:
+            if 'y' not in vector_fmt:
+                echo0("Warning, no x nor y in %s" % vector_fmt)
+            else:
+                echo0("Warning, no x in %s" % vector_fmt)
+        elif 'y' not in vector_fmt:
+            echo0("Warning, no y in %s" % vector_fmt)
+        else:
+            _x_i = vector_fmt.index('x')
+            _y_i = vector_fmt.index('y')
+
+        def fast_2D_to_index(index_times_2):
+            """Hard-coded faster copy of _2D_to_index
+
+            Needs late binding so use locals so they will change to latest
+            definition.
+            """
+            index = int(index_times_2 / 2)
+            if index_times_2 % 2 == 0:
+                # echo0("Getting x (index=%s, len(vector_fmt)=%s, _x_i=%s)"
+                #       % (index, len(vector_fmt), _x_i))
+                # even numbers *and* 0 are X values in output buffer
+                return index * len_vector_fmt + _x_i
+            # echo0("Getting y (index=%s, len(vector_fmt)=%s, _y_i=%s)"
+            #       % (index, len(vector_fmt), _y_i))
+            return index * len_vector_fmt + _y_i
+        self._2D_to_index = fast_2D_to_index
+
+    def buffer_2d(self):
+        """Convert n-dimensional buffer to 2D buffer.
+
+        Returns:
+            list[float]: Length is len(self) * 2 since
+                __len__ is overridden by
+                int(len(self.buffer) / len(self.vector_fmt)
+        """
+        fn = self._2D_to_index
+        # len(self) * 2 to simulate 2D output buffer
+        #   (ok since __len__ is overridden. See `def __len__`` above)
+        return [self.buffer[fn(i)] for i in range(len(self) * 2)]
+
+    def copy(self):
+        segment = SVGSegment()
+        segment.buffer = copy.deepcopy(self.buffer)
+        segment.bezier = self.bezier
+        segment.quadratic = self.quadratic
+        segment.smooth = self.smooth
+        segment.vector_fmt = copy.deepcopy(self.vector_fmt)
+        return segment
+
+    def append_location(self, x, y):
+        new_index = len(self)
+        self.buffer += [0 for _ in self.vector_fmt]
+        self.set_element(new_index, "x", x)
+        self.set_element(new_index, "y", y)
+        if len(self.vector_fmt) > 2:
+            echo0("Warning: append_location only set x and y but has %s"
+                  % self.vector_fmt)
+
+    def connect_to_start(self):
+        first = self.buffer[:len(self.vector_fmt)]
+        self.buffer += first
+
+
+def arg_spec_to_vector_fmt(arg_spec):
+    vector_fmt = []
+    for arg in arg_spec:
+        if arg == "location":
+            vector_fmt += ["x", "y"]
+        elif arg == "control1":
+            vector_fmt += ["control1.x", "control1.y"]
+        elif arg == "control2":
+            vector_fmt += ["control2.x", "control2.y"]
+        elif arg == "qcontrol":
+            vector_fmt += ["qcontrol.x", "qcontrol.y"]
+        elif arg == "x":
+            # The parser needs to append prev_y to buffer!
+            vector_fmt += ["x", "y"]
+        elif arg == "y":
+            # The parser needs to insert prev_x to buffer!
+            vector_fmt += ["x", "y"]
+        else:
+            raise NotImplementedError("%s is not implemented"
+                                      % arg)
+    return vector_fmt
+
+
+class MoreSVG(object):  # Must be new-style class (object) for get/set in Py 2
     """Process SVG data.
 
     This could almost be non-OO neatly except prev_x and prev_y may be used by
@@ -74,6 +248,7 @@ class MoreSVG:
     def __init__(self):
         self.prev_x = None
         self.prev_y = None
+        self.shapes = []  # in tkinter canvas, each shape remains changeable
 
     def _draw_svg_path(self, node, canvas, viewBox=None, fill=None,
                        constrain=None, pos=None):
@@ -151,89 +326,226 @@ class MoreSVG:
         x = None
         y = None
         segments = []  # buffer, buffer, buffer
-        buffer = []  # x1,y1,x2,y2,...
+        segment = SVGSegment()  # x1,y1,x2,y2,...
         if fill is None:
             fill = node.attributes.get('fill')
-            if fill:
-                # Get str from Attr
+            if fill is not None:
                 fill = fill.value
-                echo0(prefix+"using fill=%s" % fill)
-        if fill is None:
-            fill = "black"  # Black is default according to SVG spec
-            echo0("Warning: no fill in path node, defaulting to %s" % fill)
+                # echo0(prefix+"using fill=%s" % fill)
+            stroke_width = 0
+        else:
+            # Caller didn't override behavior, so use standard
+            stroke = node.attributes.get("stroke")
+            if stroke is not None:
+                stroke = stroke.value
+            stroke_width = node.attributes.get('stroke-width')
+            if stroke_width is not None:
+                stroke_width = stroke_width.value
+            else:
+                stroke_width = 0
         command = None
         relative = False
+        argi = None  # argument index for current command, looping as per spec
+        arg_spec = None  # argument name list
+        new_segment = SVGSegment()
+        sub_field_i = 0  # for tracing in syntax/parsing errors only
         for index in range(0, len(parts)):
+            sub_field_i += 1
             part = parts[index]
+            part_upper = part.upper()
             coords = part.split(",")
-            if command:
-                command_lower = command.lower()
-                relative = command == command_lower
-                if len(coords) != 2:
-                    echo0("Warning: command %s after %s"
-                          % (part, command))
-                    command = part
-                    continue
-                elif command_lower == "z":
-                    # Close the shape (lowercase is relative, but that
-                    #   doesn't change the behavior of Z).
-                    if len(buffer) < 1:
-                        echo0("Error in SVG: closed before start")
-                    else:
-                        buffer.append(buffer[0])
-                        buffer.append(buffer[1])
-                        self.prev_x = buffer[0]
-                        self.prev_y = buffer[1]
-                    continue
+            is_command = True
+            # See SVG spec:
+            #   <developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d>
+            if part_upper == "M":
+                # Move without closing (lowercase is relative,
+                #   but that doesn't change the behavior of Z).
+                arg_spec = ["location"]
+                # previous line is cut before this
+                #   automatically by code below since
+                #   is_command so coord prior to M will
+                #   be termination location of that segment.
+            elif part_upper == "Z":
+                # Close the shape (lowercase is relative,
+                #   but that doesn't change the behavior of Z).
+                if not segment.buffer:
+                    echo0("Error in SVG: closed before start")
+                else:
+                    segment.connect_to_start()
+                    # self.prev_x = segment.buffer[0]
+                    # self.prev_y = segment.buffer[1]
+                    # TODO: Do these count as previous??
+                arg_spec = []  # No arguments
+            elif part_upper == "L":
+                # Line
+                arg_spec = ["location"]
+                new_segment.bezier = False
+                new_segment.smooth = 0
+            elif part_upper == "H":
+                arg_spec = ["x"]
+                new_segment.bezier = False
+                new_segment.smooth = 0
+            elif part_upper == "V":
+                arg_spec = ["y"]
+                new_segment.bezier = False
+                new_segment.smooth = 0
+            elif part_upper == "C":
+                # Cubic bezier curve
+                arg_spec = ["control1", "control2", "location"]
+                new_segment.bezier = True
+                new_segment.smooth = 1
+            elif part_upper == "S":
+                # Smooth cubic bezier curve
+                # control1 is control2 of previous location.
+                arg_spec = ["control2", "location"]
+                new_segment.bezier = True
+                new_segment.smooth = 1
+            elif part_upper == "Q":
+                # Quadratic bezier curve
+                arg_spec = ["qcontrol", "location"]
+                new_segment.bezier = True
+                new_segment.quadratic = True
+                new_segment.smooth = 1
+            elif part_upper == "T":
+                # Quadratic bezier curve
+                arg_spec = ["location"]
+                new_segment.bezier = False
+                new_segment.quadratic = True
+                new_segment.smooth = 1
+            elif part_upper == "A":
+                # Elliptical arc curve
+                # TODO: generate arc
+                arg_spec = ["r1", "r2", "angle", "large-arc-flag",
+                            "sweep-flag", "location"]
+                new_segment.bezier = False
+                new_segment.quadratic = False
+                new_segment.smooth = 1
+            else:
+                is_command = False
+            if is_command:
+                # Can have multiple segments such as: M C Z m c z
+                #   in that order, where lowercase is relative
+                segments.append(segment)
+                new_segment.vector_fmt = arg_spec_to_vector_fmt(arg_spec)
+                new_segment.command = part
+                segment = new_segment.copy()
+                argi = -1
+                # Lowercase indicates arguments are relative.
+                relative = part != part_upper
+                if arg_spec:
+                    command_upper = part_upper
+                else:
+                    # No arguments are allowed (such as for Z)
+                    command_upper = None
+                    command = None
+                    # else has no args
                 # else use the coord (fall through)
                 #   and execute the command using the coord
-            elif len(coords) != 2:
-                command = part
-                # Such as M C Z m c z in that order
+                continue  # skip to the param(s)
+            if arg_spec:
+                argi += 1  # start at 0 (reset to -1 usually)
+                if argi == len(arg_spec):
+                    argi = 0
+                elif argi > len(arg_spec):
+                    raise NotImplementedError("argi overflow")
+            else:
                 continue
-            x = float(coords[0])
-            y = float(coords[1])
-            if command:
-                # ^ If lowercase,
-                if command_lower == "m":
-                    # Move means start a new segment,
-                    #   and usually is first element.
-                    if len(buffer) > 0:
-                        segments.append(buffer)
-                    buffer = []
-                else:
-                    # TODO: more SVG commands
-                    # h: horizonal line (takes one value, not coords)
-                    # v: vertical line (takes one value, not coords)
-                    # l: Lineto (takes *two* space-separated x and y)
-                    echo0("Warning: not a coord pair nor implemented command:"
-                          " %s" % command)
-                command = None
-
+            x = None
+            y = None
+            arg = None
+            if arg_spec[argi] in ["location", "control1", "control2",
+                                  "qcontrol"]:
+                x = float(coords[0])
+                y = float(coords[1])
+                if relative:
+                    x = self.prev_x + x
+                    y = self.prev_y + y
+            elif arg_spec[argi] == "x":
+                x = float(part)
+                if relative:
+                    x = self.prev_x + x
+                y = self.prev_y
+            elif arg_spec[argi] == "y":
+                x = self.prev_x
+                y = float(part)
+                if relative:
+                    y = self.prev_y + y
+            else:
+                arg = float(part)
+            if arg:
+                # It is not a coordinate pair
+                segment.buffer.append(arg)
+                continue
             if relative:
                 if self.prev_x is None:
                     raise ValueError(
                         "Error in SVG syntax: %s in relative mode"
-                        "before any points (command=%s)"
-                        % (pformat(coords), command)
+                        "before any points (command=%s) at subfield %s"
+                        % (pformat(coords), segment.command, sub_field_i)
                     )
-                x = self.prev_x + x
-                y = self.prev_y + y
             self.prev_x = x
             self.prev_y = y
-            if pos:
-                x += pos[0]
-                y += pos[1]
-            buffer.append(x)
-            buffer.append(y)
-        if len(buffer) > 0:
+            segment.buffer.append(x)
+            segment.buffer.append(y)
+            # end for part
+
+        # Process the segments
+        if len(segment.buffer) > 0:
             echo0("Warning, unterminated segment")
-            segments.append(buffer)
-        for buffer in segments:
+            segments.append(segment)
+        if not pos:
+            pos = (0, 0)
+        scale = 1.0
+        if viewBox:
+            if constrain is None:
+                pass
+            elif constrain == "width":
+                scale = (float(canvas.winfo_width())
+                         / float(viewBox[2]-viewBox[0]))
+            elif constrain == "height":
+                scale = (float(canvas.winfo_height())
+                         / float(viewBox[3]-viewBox[1]))
+            else:
+                raise ValueError(
+                    'constrain should be "width" or "height" but was %s'
+                    % constrain
+                )
+        for segment in segments:
             # NOTE: cyclic must be handled in the SVG itself
             #   (Z or z means draw line to start)
             # TODO: use node.attributes.get('stroke') (string such as "black")
-            canvas.create_line(*buffer, fill=fill, smooth=1)
+            buffer2d = segment.buffer_2d()
+            if len(buffer2d) < 1:
+                # Avoid obscure tkinter error `cnf = args[-1]` fails on len 0
+                continue
+            elif len(buffer2d) < 4:
+                # Avoid obscure tkinter error
+                #   "wrong # coordinates: expected at least 4, got 2"
+                echo0("Warning: skipped non-implemented"
+                      " single point SVG command: %s"
+                      % segment.to_dict(get_buffer=False))
+                continue
+            if viewBox:
+                for x_i in range(0, len(buffer2d), 2):
+                    y_i = x_i + 1
+                    buffer2d[x_i] = int(round(
+                        float(buffer2d[x_i] - viewBox[0] + pos[0]) * scale
+                    ))
+                    buffer2d[y_i] = int(round(
+                        float(buffer2d[y_i] - viewBox[1] + pos[1]) * scale
+                    ))
+            if fill is not None:
+                self.shapes.append(canvas.create_polygon(
+                    *buffer2d,
+                    fill=fill,
+                    smooth=segment.smooth,
+                ))
+            else:
+                self.shapes.append(canvas.create_line(
+                    *buffer2d,
+                    fill=stroke,
+                    smooth=segment.smooth,
+                ))
 
     def _draw_svg_root(self, root, canvas, constrain=None, pos=None):
         """Draw a Node assuming it is the svg root node.

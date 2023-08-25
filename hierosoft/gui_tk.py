@@ -272,7 +272,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                   " the process is programmed to call cb_done"
                   "".format(STATUS_DONE))
         self.root.update()
-    
+
     # There is a generic _d_done on superclass called _on_archive_ready
     # but if not not installing an archive, set cb_done to something useful
     # (such as, install Hierosoft after Python is installed by download_first)
@@ -513,7 +513,11 @@ def get_tk():
     themes_dir = resource_find(theme_name)
 
     # Import the tcl file
-    root.tk.call("source", resource_find("%s.tcl" % theme_name))
+    tcl_theme_rel = "%s.tcl" % theme_name
+    tcl_theme_path = resource_find(tcl_theme_rel)
+    if not tcl_theme_path:
+        raise FileNotFoundError(tcl_theme_rel)
+    root.tk.call("source", tcl_theme_path)
 
     # Set the theme with the theme_use method
     root.tk.call('lappend', 'auto_path', themes_dir)  # necessary if not in CWD
