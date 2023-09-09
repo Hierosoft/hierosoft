@@ -128,3 +128,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 /hierosoft/example.py
+/licenses.txt
