@@ -222,6 +222,31 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         self.count_label = ttk.Label(self.root, text="")  # at bottom
         self.addRow(self.count_label, sticky='we')
 
+        news = options.get('news')
+        if news:
+            for article in news:
+                news_date_str = article.get('date')
+                news_text = article.get('text')
+                news_url = article.get('url')
+                if news_date_str:
+                    label = ttk.Label(self.root, text=news_date_str)
+                    self.addRow(label, sticky="we")
+                if news_text:
+                    label = ttk.Label(self.root, text=news_text)
+                    self.addRow(label, sticky="we")
+                if news_url:
+                    import webbrowser
+                    button = ttk.Button(
+                        self.root,
+                        text=news_text,
+                        command=lambda url=news_url: webbrowser.open(
+                            url,
+                            new=0,
+                            autoraise=True,
+                        )
+                    )
+                    self.addRow(button, sticky="we")
+
         self.del_arc_cb = ttk.Checkbutton(
             self.root, text="Delete archive after install",
             variable=self.del_arc_var,

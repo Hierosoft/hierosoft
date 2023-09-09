@@ -1,4 +1,7 @@
+from __future__ import print_function
+from __future__ import division
 import copy
+import json
 import os
 import platform
 import shutil
@@ -12,8 +15,9 @@ MOREWEB_SUBMODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 MODULE_DIR = os.path.dirname(MOREWEB_SUBMODULE_DIR)
 REPO_DIR = os.path.dirname(MODULE_DIR)
 
-if __name__ == "__main__":
-    sys.path.insert(0, REPO_DIR)
+# if __name__ == "__main__":
+#     sys.path.insert(0, REPO_DIR)
+
 
 from hierosoft import (
     echo0,
@@ -23,7 +27,7 @@ from hierosoft import (
     get_installed_bin,
     get_subdir_names,
     get_missing_paths,
-    HOME,
+    # HOME,
     USER_PROGRAMS,
     CACHES,
     ASSETS_DIR,
@@ -35,8 +39,8 @@ from hierosoft.ggrep import (
 )
 
 from hierosoft.moreplatform import (
-    install_zip,
-    make_shortcut,
+    # install_zip,
+    # make_shortcut,
     install_archive,
     subprocess,
 )
@@ -49,6 +53,8 @@ from hierosoft.moreweb import (
 )
 
 from hierosoft.moreweb.downloadmanager import DownloadManager
+
+from hierosoft.hierosoftpacked import sources_json
 
 
 enable_tk = False
@@ -76,7 +82,7 @@ try:
         # import Tix as tix
     enable_tk = True
 except ImportError as ex:
-    echo0("Error: You must install python3-tk")
+    echo0("Error: You must install python3-tk (%s)" % ex)
     sys.exit(1)
 
 
@@ -186,6 +192,7 @@ class HierosoftUpdate(object):
         self.pbar = None
         self.statusVar = None  # main should set if it uses a GUI subclass.
         self.startup_message = None
+        self.news = None
 
         self.v_urls = None  # urls matching specified Blender version (tag)
         self.p_urls = None  # urls matching specified platform flag
@@ -227,6 +234,18 @@ class HierosoftUpdate(object):
         else:
             self.startup_message = msg
             echo0("%s" % msg)
+            if self.news:
+                for article in self.news:
+                    echo0("")
+                    date = article.get('date')
+                    text = article.get('text')
+                    url = article.get('url')
+                    if date:
+                        echo0(date)
+                    if text:
+                        echo0(text)
+                    if url:
+                        echo0(url)
 
     @property
     def only_a(self):
@@ -280,10 +299,12 @@ class HierosoftUpdate(object):
                 self.mgr.set_mgr_and_parser_options({
                     'arch': value[platform.system()],
                 })
+            elif key == "news":
+                self.news = value
             elif key in HierosoftUpdate.get_option_keys():
                 self.options[key] = value
             else:
-                raise KeyError("Invalid option: %s=%s" % (key, value))
+                raise KeyError("Invalid option: %s=%s" % (key, pformat(value)))
         if require_bin:
             if self.bin_names is None:
                 raise ValueError(
@@ -877,38 +898,21 @@ class HierosoftUpdate(object):
         # Do not schedule--CLI may have to do successive downloads/steps
 
 
-default_sources = {
-    'default_sources_urls': [  # URLs for data to update default_sources itself
-        ("https://github.com/Hierosoft/hierosoft"
-         "/blob/main/hierosoft/assets/data/default_sources.json"),
-        "https://minetest.io/launcherapi/sources.json",
-    ],
-    'self_install_sources': [
-        {
-            'title': "Hierosoft Launcher",
-            'version': "current",  # formerly parser.release_version
-            # ^ formerly  "/download//blender-*"
-            'must_contain': "/Hierosoft/hierosoft/archive/refs/heads/main.zip",
-            'html_url': "https://github.com/Hierosoft/hierosoft",
-            'base_url': "https://github.com",  # Prepend this not html_url
-            'bin_names': ["run.pyw"],
-        },
-    ],
-}
+default_sources = json.loads(sources_json)
 # ^ Overwrites hierosoft/data/default_sources.json only if
 #   ~/metaprojects/hierosoft-developer.flag exists.
 
 data_dir = os.path.join(ASSETS_DIR, "data")
 sources_path = os.path.join(data_dir, "default_sources.json")
 # for developer only:
-if os.path.isfile(os.path.join(HOME, "metaprojects",
-                               "hierosoft-developer.flag")):
-    if not os.path.isdir(data_dir):
-        raise FileNotFoundError(data_dir)
-    import json
-    with open(sources_path, 'w') as stream:
-        json.dump(default_sources, stream, indent=2, sort_keys=True)
-
+# if os.path.isfile(os.path.join(HOME, "metaprojects",
+#                                "hierosoft-developer.flag")):
+#     if not os.path.isdir(data_dir):
+#         raise FileNotFoundError(data_dir)
+#     import json
+#     with open(sources_path, 'w') as stream:
+#         json.dump(default_sources, stream, indent=2, sort_keys=True)
+# Instead, use prebuild.py to pack files.
 
 appStatusV = None
 
@@ -987,6 +991,7 @@ def construct_gui(root, app):
     )
     from hierosoft.hierosoftpacked import hierosoft_svg
     from hierosoft.moresvg import MoreSVG
+    # from hierosoft.moretk import OffscreenCanvas
     # def after_size():
     root.update()
     # ^ finalizes size (otherwise constrain fails due to
@@ -996,18 +1001,22 @@ def construct_gui(root, app):
     #                       60, 0,60, 10, 10,
     #                       fill="black", smooth=1)
     svg = MoreSVG()
+    slack = winH - canvasH
     pos = [
-        int((winW - canvasH)),  # assume square graphic to center
+        int((winW - canvasH - slack) // 2),  # assume square graphic to center
         0,
     ]
     # ^ (winW-canvasH) works without `/ 2`
+    # aa = 4
+    # aa_canvas = OffscreenCanvas(canvasW*aa, canvasH*aa)
     if not test_only:
         svg.draw_svg(
             hierosoft_svg,
-            canvas,
+            canvas,  # TODO: aa_canvas,
             constrain="height",
             pos=pos,
         )
+    # aa_canvas.render(canvas, divisor=aa, transparent="FFFFFF")
     return root
 
 
@@ -1067,10 +1076,11 @@ def main():
         root = construct_gui(root, None)  # root starts as None in this case
 
     self_install_options = copy.deepcopy(
-        default_sources['self_install_sources'][0]
+        default_sources['programs']['hierosoft']['sources'][0]
     )
     # TODO: ^ Try another source if it fails, or random for load balancing.
 
+    self_install_options['news'] = default_sources.get('news')
     app = HierosoftUpdate(None, root, self_install_options)
     # ^ root many be None
     if platform.system() == "Windows":

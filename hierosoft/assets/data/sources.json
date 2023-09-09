@@ -1,0 +1,75 @@
+{
+  "sources_urls": [
+    "https://github.com/Hierosoft/hierosoft/blob/main/hierosoft/assets/data/default_sources.json"
+  ],
+  "sources_urls.comment": "If GitHub sources_urls is down, try https://minetest.io/launcherapi/sources.json",
+  "news": [
+    {
+      "date": "2023-09-09 19:27",
+      "text": "Now with awesomesauce!",
+      "url": "https://minetest.io"
+    }
+  ],
+  "programs": {
+    "hierosoft": {
+      "sources": [
+        {
+          "base_url": "https://github.com",
+          "bin_names": [
+            "run.pyw"
+          ],
+          "html_url": "https://github.com/Hierosoft/hierosoft",
+          "must_contain": "/Hierosoft/hierosoft/archive/refs/heads/main.zip",
+          "title": "Hierosoft Launcher",
+          "version": "current"
+        }
+      ]
+    },
+    "blender-nightly": {
+      "sources": [
+        {
+          "title": "Blender Nightly",
+          "version": "3.6.3",
+          "version.comment": "# ^ formerly  parser.release_version",
+          "platforms": {
+              "Linux": "linux",
+              "Windows": "windows",
+              "Darwin": "macos"
+          },
+          "architectures": {
+              "Linux": ["x86_64", "x64"],
+              "Windows": "x64",
+              "Darwin.x64": ["x64"],
+              "Darwin.arm64": ["arm64"],
+              "Darwin.comment": "x64, but if 'arm64' in platform.platform() such as macOS-12.0.1-arm64-i386-64bit as seen at <https://stackoverflow.com/a/70253434/4541104> then arm64"
+          },
+          "must_contain": "/blender-",
+          "must_contain.comment": "# ^ formerly  /download//blender-*",
+          "html_url": "https://builder.blender.org/download/",
+          "bin_names": ["blender", "blender.exe"]
+        },
+        {
+          "title": "Blender Nightly",
+          "version": "4.0.0",
+          "version.comment": "# ^ formerly  parser.release_version",
+          "platforms": {
+              "Linux": "linux",
+              "Windows": "windows",
+              "Darwin": "macos"
+          },
+          "architectures": {
+              "Linux": ["x86_64", "x64"],
+              "Windows": "x64",
+              "Darwin.x64": ["x64"],
+              "Darwin.arm64": ["arm64"],
+              "Darwin.comment": "x64, but if 'arm64' in platform.platform() then arm64 such as macOS-12.0.1-arm64-i386-64bit as seen at <https://stackoverflow.com/a/70253434/4541104>"
+          },
+          "must_contain": "/blender-",
+          "must_contain.comment": "# ^ formerly  /download//blender-*",
+          "html_url": "https://builder.blender.org/download/",
+          "bin_names": ["blender", "blender.exe"]
+        }
+      ]
+    }
+  }
+}
