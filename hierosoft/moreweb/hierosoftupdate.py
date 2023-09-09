@@ -38,15 +38,46 @@ from hierosoft.moreplatform import (
     install_zip,
     make_shortcut,
     install_archive,
+    subprocess,
 )
 
 from hierosoft.moreweb import (
     name_from_url,
     STATUS_DONE,
     get_python_download_spec,
+    URLError,
 )
 
 from hierosoft.moreweb.downloadmanager import DownloadManager
+
+
+enable_tk = False
+
+
+try:
+    if sys.version_info.major >= 3:  # try:
+        from tkinter import messagebox
+        from tkinter import filedialog
+        from tkinter import simpledialog
+        # ^ such as name = simpledialog.askstring('Name',
+        #                                         'What is your name?')
+        import tkinter as tk
+        import tkinter.font as tkFont
+        from tkinter import ttk
+        # from tkinter import tix
+    else:  # except ImportError:
+        # Python 2
+        import tkMessageBox as messagebox
+        import tkFileDialog as filedialog
+        import tkSimpleDialog as simpledialog
+        import Tkinter as tk
+        import tkFont
+        import ttk
+        # import Tix as tix
+    enable_tk = True
+except ImportError as ex:
+    echo0("Error: You must install python3-tk")
+    sys.exit(1)
 
 
 def i_am_static_build():
@@ -93,6 +124,7 @@ class HierosoftUpdate(object):
         root: (ignored) reserved for sub-classes or alike-classes.
         options (dict): a download spec
     """
+    NO_WEB_MSG = "Couldn't launch web update nor find downloaded copy."
     HELP = {
         'title': "Set the window title for the updater.",
         'platforms': (
@@ -117,7 +149,7 @@ class HierosoftUpdate(object):
         ),
     }
 
-    def __init__(self, parent, root, options):
+    def __init__(self, parent, root, options, status_var=None):
         # For docstring see class.
         self.root = None
         # region for d_done
@@ -152,7 +184,8 @@ class HierosoftUpdate(object):
         self.msg_labels = []
         self.events = []
         self.pbar = None
-        self.statusVar = None  # for subclass: set to StringVar or similar
+        self.statusVar = None  # main should set if it uses a GUI subclass.
+        self.startup_message = None
 
         self.v_urls = None  # urls matching specified Blender version (tag)
         self.p_urls = None  # urls matching specified platform flag
@@ -189,8 +222,10 @@ class HierosoftUpdate(object):
 
     def set_status(self, msg):
         if self.statusVar is not None:
+            echo0("set status: %s" % msg)
             self.statusVar.set(msg)
         else:
+            self.startup_message = msg
             echo0("%s" % msg)
 
     @property
@@ -231,7 +266,7 @@ class HierosoftUpdate(object):
                 (which will apply parser options to parser).
         """
         # FIXME: See if use of set_gui_fields is really right & necessary here
-        prefix = "[set_options] "
+        prefix = "[set_all_options] "
         self.download_done = False
         echo0(prefix+"running")
         for key, value in options.items():
@@ -842,8 +877,6 @@ class HierosoftUpdate(object):
         # Do not schedule--CLI may have to do successive downloads/steps
 
 
-enable_tk = False
-
 default_sources = {
     'default_sources_urls': [  # URLs for data to update default_sources itself
         ("https://github.com/Hierosoft/hierosoft"
@@ -877,6 +910,139 @@ if os.path.isfile(os.path.join(HOME, "metaprojects",
         json.dump(default_sources, stream, indent=2, sort_keys=True)
 
 
+appStatusV = None
+
+
+def construct_gui(root, app):
+    global appStatusV
+    prefix = "[construct_gui] "
+    if root is not None:
+        echo0("Warning: tk already constructed")
+    else:
+        echo0(prefix+"creating tk")
+        root = tk.Tk()
+    if appStatusV is not None:
+        raise NotImplementedError(prefix+"GUI already constructed.")
+    else:
+        # root must be constructed first (above)
+        appStatusV = tk.StringVar()
+    if app is not None:
+        # Make set_status calls work on the local label (if enable_tk).
+        if app.statusVar is not None:
+            appStatusV = app.statusVar
+        else:
+            app.statusVar = appStatusV
+            # OK to set if None (not assigned to label yet)
+
+    screenW = root.winfo_screenwidth()
+    screenH = root.winfo_screenheight()
+    winW1 = int(float(screenW)/3.0)
+    winH1 = int(float(screenH)/3.0)
+    if winH1 < winW1:
+        # widescreen
+        # Enforce 3:2 ratio:
+        winW = int(float(winH1) * 1.5)
+        winH = winH1
+        if winW > screenW:
+            winW = screenW
+            winH = int(float(winW) / 1.5)
+    else:
+        # narrow screen
+        # Enforce 2:3 ratio
+        winH = int(float(winW1) * 1.5)
+        winW = winW1
+        if winH > screenH:
+            winH = screenH
+            winW = int(float(winH) / 1.5)
+    root.title("")   # "Tk" by default.
+    left = int((screenW - winW) / 2)
+    top = int((screenH - winH) / 2)
+    root.geometry("%sx%s+%s+%s" % (winW, winH, left, top))
+    pointSize = float(screenW) / 14.0 / 72.0  # assume 14" approx screen
+    canvasW = winW
+    canvasH = winH - int(pointSize*20.0)  # reduce for status bar
+    canvas = tk.Canvas(
+        width=canvasW,
+        height=canvasH,
+    )
+    label = tk.Label(
+        root,
+        textvariable=appStatusV,
+    )
+    appStatusV.set("Preparing...")
+    if app and app.startup_message:
+        appStatusV.set(app.startup_message)
+        # such as HierosoftUpdate.NO_WEB_MSG
+        app.startup_message = None
+
+    canvas.pack(
+        side=tk.TOP,
+        fill=tk.BOTH,
+        expand=True,
+    )
+    label.pack(
+        side=tk.BOTTOM,
+        fill=tk.BOTH,
+        expand=True,
+    )
+    from hierosoft.hierosoftpacked import hierosoft_svg
+    from hierosoft.moresvg import MoreSVG
+    # def after_size():
+    root.update()
+    # ^ finalizes size (otherwise constrain fails due to
+    #   incorrect canvas.winfo_width() or winfo_height())
+    test_only = False
+    # canvas.create_polygon(10, 10, canvas.winfo_width(),
+    #                       60, 0,60, 10, 10,
+    #                       fill="black", smooth=1)
+    svg = MoreSVG()
+    pos = [
+        int((winW - canvasH)),  # assume square graphic to center
+        0,
+    ]
+    # ^ (winW-canvasH) works without `/ 2`
+    if not test_only:
+        svg.draw_svg(
+            hierosoft_svg,
+            canvas,
+            constrain="height",
+            pos=pos,
+        )
+    return root
+
+
+def run_binary_launcher(self_install_options):
+    prefix = "[run_binary_launcher] "
+    app = self_install_options.get('next_app')
+    root = self_install_options.get('next_root')
+    # upgrade = self_install_options.get('next_enable_upgrade')
+    # ^ Can't upgrade in binary_mode
+    # Use self instead of Python version
+    if app:
+        app.set_status(HierosoftUpdate.NO_WEB_MSG)
+    if root is None:
+        # Try to force tk mode.
+        echo0(prefix+"Constructing GUI")
+        root = construct_gui(root, app)
+    # This is updater mode but there is no web & no Python copy
+    #   so try to run self without web:
+    args = [
+        __file__,  # Try the binary
+        "--offline",  # Force offline mode (run main GUI not updater)
+    ]
+    error = self_install_options.get('error')
+    if error:
+        args.append("--error")
+        args.append(error)
+    try:
+        _ = subprocess.Popen(args)
+    except OSError:
+        # Apparently Python version is being tested, so use gui_main
+        from hierosoft.gui_tk import main as gui_main
+        sys.exit(gui_main())
+    root.mainloop()
+
+
 def main():
     """Run Hierosoft update without a GUI to install the GUI.
 
@@ -886,96 +1052,27 @@ def main():
     prefix = "[hierosoftupdate main] "
     global enable_tk
     root = None
+    offline = False
     upgrade = False  # Don't upgrade without --upgrade (but install if missing)
     for argi, arg in enumerate(sys.argv):
         if argi == 0:
             continue
         if arg == "--upgrade":
             upgrade = True
-    appStatusV = None
-    if enable_tk:
-        root = tk.Tk()
-        appStatusV = tk.StringVar()
-        screenW = root.winfo_screenwidth()
-        screenH = root.winfo_screenheight()
-        winW1 = int(float(screenW)/3.0)
-        winH1 = int(float(screenH)/3.0)
-        if winH1 < winW1:
-            # widescreen
-            # Enforce 3:2 ratio:
-            winW = int(float(winH1) * 1.5)
-            winH = winH1
-            if winW > screenW:
-                winW = screenW
-                winH = int(float(winW) / 1.5)
+        elif arg == "--offline":
+            offline = True
         else:
-            # narrow screen
-            # Enforce 2:3 ratio
-            winH = int(float(winW1) * 1.5)
-            winW = winW1
-            if winH > screenH:
-                winH = screenH
-                winW = int(float(winH) / 1.5)
-        root.title("")   # "Tk" by default.
-        left = int((screenW - winW) / 2)
-        top = int((screenH - winH) / 2)
-        root.geometry("%sx%s+%s+%s" % (winW, winH, left, top))
-        pointSize = float(screenW) / 14.0 / 72.0  # assume 14" approx screen
-        canvasW = winW
-        canvasH = winH - int(pointSize*20.0)  # reduce for status bar
-        canvas = tk.Canvas(
-            width=canvasW,
-            height=canvasH,
-        )
-        label = tk.Label(
-            root,
-            textvariable=appStatusV,
-        )
-        appStatusV.set("Preparing...")
-        canvas.pack(
-            side=tk.TOP,
-            fill=tk.BOTH,
-            expand=True,
-        )
-        label.pack(
-            side=tk.BOTTOM,
-            fill=tk.BOTH,
-            expand=True,
-        )
-        from hierosoft.hierosoftpacked import hierosoft_svg
-        from hierosoft.moresvg import MoreSVG
-        # def after_size():
-        root.update()
-        # ^ finalizes size (otherwise constrain fails due to
-        #   incorrect canvas.winfo_width() or winfo_height())
-        test_only = False
-        # canvas.create_polygon(10, 10, canvas.winfo_width(),
-        #                       60, 0,60, 10, 10,
-        #                       fill="black", smooth=1)
-        svg = MoreSVG()
-        pos = [
-            int((winW - canvasH)),  # assume square graphic to center
-            0,
-        ]
-        # ^ (winW-canvasH) works without `/ 2`
-        if not test_only:
-            svg.draw_svg(
-                hierosoft_svg,
-                canvas,
-                constrain="height",
-                pos=pos,
-            )
+            echo0(prefix+"Error: Incorrect argument: {}".format(arg))
+    if enable_tk:
+        root = construct_gui(root, None)  # root starts as None in this case
 
     self_install_options = copy.deepcopy(
         default_sources['self_install_sources'][0]
     )
     # TODO: ^ Try another source if it fails, or random for load balancing.
 
-    app = HierosoftUpdate(None, None, self_install_options)
-    wait_for_python = False
-    if appStatusV is not None:
-        # Make set_status calls work on the local label (if enable_tk).
-        app.statusVar = appStatusV
+    app = HierosoftUpdate(None, root, self_install_options)
+    # ^ root many be None
     if platform.system() == "Windows":
         # In case this is an exe, install Python if not present
         if not app.best_python:
@@ -988,20 +1085,23 @@ def main():
             python_meta['next_enable_upgrade'] = upgrade
             # endregion prepare_and_run_launcher args
             installed = app.download_first(
-                cb_done=prepare_and_run_launcher,
+                # cb_done=prepare_and_run_launcher,
                 event_template=python_meta,
             )
-            # ^ installed *Python*
+            prepare_and_run_launcher(installed)
+            # ^ installed Python itself (*not* hierosoft repo)
             # ^ merely calls self.d_click(evt) on first meta
             #   in self.link_metas + self.installed_metas
-            wait_for_python = True
+            return  # since already did prepare_and_run_launcher
         else:
             echo0(prefix+"Using %s" % app.best_python)
-    if not wait_for_python:
-        self_install_options['next_app'] = app
-        self_install_options['next_root'] = root
-        self_install_options['next_enable_upgrade'] = upgrade
-        prepare_and_run_launcher(self_install_options)
+            # not waiting for Python
+    # Python was found. Try to launch in online mode.
+    self_install_options['next_app'] = app
+    self_install_options['next_root'] = root
+    self_install_options['next_enable_upgrade'] = upgrade
+
+    prepare_and_run_launcher(self_install_options)
 
 
 def prepare_and_run_launcher(self_install_options):
@@ -1016,6 +1116,8 @@ def prepare_and_run_launcher(self_install_options):
     error = self_install_options.get('error')
     if error:
         raise RuntimeError("Installing Python failed: %s" % error)
+    local_options = self_install_options.copy()
+    # ^ Keep keys deleted below in case fails (Deepcopy can't copy tkinter)
     app = self_install_options['next_app']
     del self_install_options['next_app']
     root = self_install_options['next_root']
@@ -1048,8 +1150,15 @@ def prepare_and_run_launcher(self_install_options):
     try_launch_scripts = ["run.pyw", "run.py", "main.py"]
     start_script = join_if_exists(good_installed_path, try_launch_scripts)
     if not start_script or self_install_options['exists_action'] != "skip":
-        app._download_page()
-        installed = app.download_first(event_template=self_install_options)
+        try:
+            app._download_page()
+            installed = app.download_first(event_template=self_install_options)
+        except URLError:
+            error = "Web is required to update (use --offline option to avoid update)."
+            installed = {
+                'error': error,
+            }
+            # app.set_status(error)
         # ^ installed *hierosoft*
         # ^ merely calls self.d_click(evt) on first meta
         #   in self.link_metas (not self.installed_metas)
@@ -1069,8 +1178,12 @@ def prepare_and_run_launcher(self_install_options):
     error = installed.get('error')
     if error:
         app.set_status(error)
-        raise RuntimeError(prefix+"download & install launcher failed: %s"
-                           % error)
+        # root.mainloop()  # allow the error to be shown.
+        big_error = "download & install launcher failed: %s" % error
+        echo0(prefix+big_error)
+        local_options['error'] = big_error
+        run_binary_launcher(local_options)
+        return
 
     installed_path = installed.get('installed_path')
     if installed.get("already_installed"):
@@ -1086,23 +1199,26 @@ def prepare_and_run_launcher(self_install_options):
         installed_path = good_installed_path
     start_script = join_if_exists(installed_path, try_launch_scripts)
     if start_script is None:
-        raise FileNotFoundError(
-            "Any of %s in %s" % (try_launch_scripts, installed_path)
-        )
+        if error is None:
+            error = (
+                "Any of %s in %s" % (try_launch_scripts, installed_path)
+            )
     import subprocess
     launcher_cmd = [app.best_python, start_script]
-
-    _ = subprocess.Popen(
-        launcher_cmd,
-        start_new_session=True,
-        cwd=installed_path,
-    )
-    # ^ start_new_session allows the binary launcher to close
-    #   and be replaced by the Python copy
+    if error is None:
+        _ = subprocess.Popen(
+            launcher_cmd,
+            start_new_session=True,
+            cwd=installed_path,
+        )
+        # ^ start_new_session allows the binary launcher to close
+        #   and be replaced by the Python copy
+    # else allow compiled copy to show error
 
     def close():
         if error is None:
             root.destroy()
+
     root.after(2000, close)
     root.mainloop()
     # Keep splash a moment, not scare user with flashing screen:
@@ -1112,28 +1228,4 @@ def prepare_and_run_launcher(self_install_options):
 
 
 if __name__ == "__main__":
-    try:
-        if sys.version_info.major >= 3:  # try:
-            from tkinter import messagebox
-            from tkinter import filedialog
-            from tkinter import simpledialog
-            # ^ such as name = simpledialog.askstring('Name',
-            #                                         'What is your name?')
-            import tkinter as tk
-            import tkinter.font as tkFont
-            from tkinter import ttk
-            # from tkinter import tix
-        else:  # except ImportError:
-            # Python 2
-            import tkMessageBox as messagebox
-            import tkFileDialog as filedialog
-            import tkSimpleDialog as simpledialog
-            import Tkinter as tk
-            import tkFont
-            import ttk
-            # import Tix as tix
-        enable_tk = True
-    except ImportError as ex:
-        echo0("Error: You must install python3-tk")
-        sys.exit(1)
     sys.exit(main())
