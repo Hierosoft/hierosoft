@@ -47,6 +47,7 @@ else:
     shlex.join = shlex_join
 """
 
+
 def install_folder(src, dst, event_template=None):
     '''
     Args:
@@ -111,8 +112,7 @@ def install_folder(src, dst, event_template=None):
     return evt
 
 
-def install_extracted(extracted_path, dst,
-                      event_template=None):
+def install_extracted(extracted_path, dst, event_template=None):
     """Install extracted_path, or if has only sub, install that instead.
 
     For further documentation see install_folder (where src is either
