@@ -9,6 +9,7 @@ from pprint import pformat
 from hierosoft import (
     echo0,
     echo1,
+    echo2,
 )
 
 
@@ -507,7 +508,7 @@ QUOTE_MARKS = ('"', "'", "`")
 QUOTE_MARKS_BYTES = (b"'", b'"', b'`')
 
 
-def find_not_quoted(haystack, needle, start=None, quote_mark=None,
+def find_not_quoted(haystack, needle, start=None, end=None, quote_mark=None,
                     escape_mark="\\", already_in_quote=None,
                     allow_nested_quotes=True):
     """Find a string respecting quotes
@@ -526,6 +527,7 @@ def find_not_quoted(haystack, needle, start=None, quote_mark=None,
             Remember to tet already_in_quote if searching for the
             end quote by setting start to the index after the
             opening quote.
+        end (Optional[int]): End looking here in haystack (exclusive).
         quote_mark (Optional[list[str]]): The quote mark. Defaults to
             QUOTE_MARKS (or QUOTE_MARKS_BYTES if haystack is bytes
             or bytearray *and* Python>=3 is being used).
@@ -541,14 +543,22 @@ def find_not_quoted(haystack, needle, start=None, quote_mark=None,
         raise ValueError("needle must be a non-blank string")
     if not start:
         start = 0
-        if start < 0 or start > len(haystack):
-            raise ValueError('start was %s but len of "%s" is %s'
-                             % (start, haystack, len(haystack)))
-        elif start == len(haystack):
-            # Allowed for edge cases (such as succinct code without checks)
-            echo1('Warning: start was %s but len of "%s" is %s'
-                  % (start, haystack, len(haystack)))
-            return -1
+    if start < 0 or start > len(haystack):
+        raise ValueError('start was %s but len of "%s" is %s'
+                         % (start, haystack, len(haystack)))
+    elif start == len(haystack):
+        # Allowed for edge cases (such as succinct code without checks)
+        echo1('Warning: start was %s but len of "%s" is %s'
+              % (start, haystack, len(haystack)))
+        return -1
+    if end is None:
+        end = len(haystack)
+    if start > end:
+        raise ValueError("start=%s is greater than end=%s"
+                         % (start, end))
+    if end > len(haystack):
+        raise ValueError("end=%s is greater than len(haystack)=%s"
+                         % (end, len(haystack)))
 
     if quote_mark is not None:
         if not isinstance(quote_mark, (bytes, bytearray, str)):
@@ -581,9 +591,12 @@ def find_not_quoted(haystack, needle, start=None, quote_mark=None,
         quote_stack.append(in_quote)
     # prev_ch = None
     # prev_ch_is_escaped = False
-    print(prefix+'started at %s: "%s"' % (start, haystack[start:]))
+    echo2(prefix+'started at %s: "%s"' % (start, haystack[start:]))
     in_escape = None
-    for index in range(start, len(haystack)):
+    for index in range(start, end):
+        if index + len(needle) > end:
+            # The needle would end beyond the end.
+            return -1
         if in_quote is not None:
             # already in quotes
             if ((haystack[index:index+len(in_quote)] == in_quote)
@@ -627,6 +640,44 @@ def find_not_quoted(haystack, needle, start=None, quote_mark=None,
                 #   (so keep prev_ch_is_escaped = False)
         # prev_ch = haystack[index]
     return -1
+
+
+def without_comments(style_str, enclosures=None):
+    """Get style_str without comments enclosed by enclosures.
+
+    Args:
+        style_str (str): any string
+        enclosures (Union[list[str],tuple[str]], optional): Start and end. Defaults to ("/*", "*/") if None.
+
+    Raises:
+        SyntaxError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+    if enclosures is None:
+        if isinstance(style_str, (bytes, bytearray)):
+            enclosures = (b"/*", b"*/")
+            squo = b"'"
+        else:
+            enclosures = ("/*", "*/")
+            squo = "'"
+    starter = enclosures[0]
+    ender = enclosures[1]
+    while True:
+        c_start = find_not_quoted(style_str, starter,
+                                  quote_mark=squo,
+                                  allow_nested_quotes=False)
+        if c_start < 0:
+            break
+        c_end = find_not_quoted(style_str, ender, c_start+len(starter),
+                                quote_mark=squo,
+                                allow_nested_quotes=False)
+        if c_end < 0:
+            raise SyntaxError("style string has unclosed /*")
+        style_str = style_str[:c_start] + style_str[c_end+len(ender):]
+
+    return style_str
 
 
 newlineBytesRE = re.compile(b"[\\r\\n]")

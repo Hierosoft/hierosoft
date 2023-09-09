@@ -11,6 +11,8 @@ import sys
 import traceback
 import os
 
+from collections import OrderedDict
+
 CRITICAL = 50
 ERROR = 40
 WARNING = 30
@@ -225,6 +227,113 @@ for argI in range(1, len(sys.argv)):
             verbosity = 1
         elif arg == "--debug":
             verbosity = 2
+
+
+def is_enclosed(value, start, end):
+    if len(value) < len(start) + len(end):
+        return False
+    return value.startswith(start) and value.endswith(end)
+
+
+def is_str_like(value):
+    return type(value).__name__ in ("str", "bytes", "bytearray", "unicode")
+
+
+pformat_preferred_quote = None  # < See quote under set_pformat_preferred_quote
+
+
+def set_pformat_preferred_quote(quote):
+    """Set the global pformat_preferred_quote
+
+    Args:
+        quote (str): Set pformat_preferred_quote to this. Defaults to
+            adaptive ("'" if "'" not in value else '"' when
+            pformat_preferred_quote is None).
+    """
+    global pformat_preferred_quote
+    pformat_preferred_quote = quote
+
+
+def pformat(value, quote_if_like_str=True):
+    """This is mostly like pformat from pprint except always on one line.
+
+    Numbers are left as numbers even if quote_if_like_str is True, to
+    avoid adding extra quotes. Use set pformat_preferred_quote to set
+    the preferred quote.
+
+    Args:
+        value: any value that can convert to str. Values in
+            an iterable will be processed resursively first.
+        quote_if_like_str (Optional[bool]): Do not use this option, or
+            your pformat calls will be incompatible with
+            pprint.pformat--This option is only for recursion. Add
+            quotes (not done recursively, since if iterable but not
+            is_str_like, the last step which is converting from iterable
+            to string adds quotes to all string values).
+
+    Returns:
+        str: string where only strings are quote_if_like_str (without
+            leading b or u).
+    """
+    original_value = value
+    enclosures = None
+    if not is_str_like(value):
+        # ^ unicode isn't normal in Python 3 so check typename not isinstance
+        iterated = False
+        try:
+            parts = []
+            enclosures = ("[", "]")
+            if isinstance(enclosures, tuple):
+                enclosures = ("(", ")")
+            if hasattr(value, 'items'):
+                if isinstance(value, OrderedDict):
+                    parts = OrderedDict()
+                else:
+                    parts = {}
+                for key, item in value.items():
+                    parts[key] = pformat(item, quote_if_like_str=False)
+                return parts
+            for i, item in enumerate(value):
+                iterated = True
+                parts.append(pformat(item, quote_if_like_str=False))
+                # Use append not '=' since tuple is not assignable
+            if isinstance(value, tuple):
+                value = tuple(parts)
+            else:
+                value = parts
+        except TypeError:
+            if iterated:
+                raise
+            # else it is not iterable, so do not try to fix elements
+    if not quote_if_like_str:
+        try:
+            _ = len(value)
+        except TypeError:
+            # It is not str-like. To avoid adding quotes to non-str-like
+            #   (number, bool, etc.) leave it as is
+            #   (otherwise it will get quotes on list to str).
+            return value
+    value = str(value)
+    # big_enclosures = ["OrderedDict(", ")"]
+    if is_enclosed(value, "b'", "'") or is_enclosed(value, "u'", "'"):
+        if quote_if_like_str:
+            return value[1:]  # Only remove b or u not b'' etc.
+        else:
+            return value[2:-1]
+    elif is_str_like(original_value):
+        if quote_if_like_str:
+            if pformat_preferred_quote is None:
+                if '"' in value:
+                    return "'%s'" % value.replace("'", "\\'")
+                else:
+                    return '"%s"' % value.replace('"', '\\"')
+            else:
+                # This is universal but isn't as nice since it will
+                #   force escaped quotes. The case above is adaptive.
+                quo = pformat_preferred_quote
+                return '%s%s%s' % (quo, value.replace(quo, '\\'+quo), quo)
+    # elif isinstance(value, OrderedDict)
+    return value
 
 
 def write0(arg):
