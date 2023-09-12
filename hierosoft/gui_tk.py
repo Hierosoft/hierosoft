@@ -95,6 +95,11 @@ from hierosoft.ggrep import (  # noqa E402
     contains_any,
 )
 
+from hierosoft.hierosoftpacked import (
+    hierosoft_16px_png,
+)
+
+
 # from hierosoft.hierosoftlaunchertk import (  # noqa E402
 #     HierosoftLauncherTk,
 # )
@@ -170,6 +175,12 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         # self.rowconfigure(index=1, weight=1)
         # self.rowconfigure(index=2, weight=1)
         # ^ weight=0 ensures widget isn't less than its own specified size
+        photo = tk.PhotoImage(
+            # data=transparent_png,
+            # data=hierosoft_16px_png,
+            data=hierosoft_16px_png,
+        )
+        root.iconphoto(False, photo)
 
         self.root.geometry("1000x600")
         self.root.minsize(600, 400)
