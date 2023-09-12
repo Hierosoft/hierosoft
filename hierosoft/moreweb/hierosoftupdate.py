@@ -7,6 +7,9 @@ import platform
 import shutil
 import sys
 import time
+import tempfile
+import base64
+import zlib
 import zipfile
 
 from pprint import pformat
@@ -54,7 +57,12 @@ from hierosoft.moreweb import (
 
 from hierosoft.moreweb.downloadmanager import DownloadManager
 
-from hierosoft.hierosoftpacked import sources_json
+from hierosoft.hierosoftpacked import (
+    sources_json,
+    # transparent_png,
+    # hierosoft_16px_png,
+    white_png,
+)
 
 
 enable_tk = False
@@ -959,6 +967,30 @@ def construct_gui(root, app):
             winH = screenH
             winW = int(float(winH) / 1.5)
     root.title("")   # "Tk" by default.
+
+    # Remove Tk feather logo:
+    # - "" doesn't work for icon path, so generate a file
+    #   (See <https://python-forum.io/thread-35274.html>)
+    # BLANK_PAGE_ICON = zlib.decompress(base64.b64decode(
+    #     'eJxjYGAEQgEBBiDJwZDBy'
+    #     'sAgxsDAoAHEQCEGBQaIOAg4sDIgACMUj4JRMApGwQgF/ykEAFXxQRc='
+    # ))
+
+    # _, ICON_PATH = tempfile.mkstemp()
+    # with open(ICON_PATH, 'wb') as icon_file:
+    #     icon_file.write(BLANK_PAGE_ICON)
+    # Instead, use "with" for the temp file
+    #   (See <https://stackoverflow.com/a/30795252/4541104>):
+    # with tempfile.NamedTemporaryFile(delete=True) as iconfile:
+    #   # iconfile.write(BLANK_PAGE_ICON)
+    #   # iconfile.write(transparent_png)
+    #   # root.iconbitmap(default=iconfile.name)
+    photo = tk.PhotoImage(
+        # data=transparent_png,  # Doesn't work (black; tested on Windows 10)
+        # data=hierosoft_16px_png,  # Only for main window not splash screen
+        data=white_png,
+    )
+    root.iconphoto(False, photo)
     left = int((screenW - winW) / 2)
     top = int((screenH - winH) / 2)
     root.geometry("%sx%s+%s+%s" % (winW, winH, left, top))
