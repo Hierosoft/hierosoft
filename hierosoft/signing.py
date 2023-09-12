@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Detect files that need to be signed and call an available signtool.
+"""
 from __future__ import print_function
 import os
 import sys
@@ -30,6 +33,7 @@ SIGN_CMD_FMT = (
     # "{signtool} /F {pfx_path} /P {password} /TR {timestamp_server} {sign_this_file}"
     # ^ /T is deprecated. See doc/development/signing.md.
     # ^ /F may not be necessary. PFX can be generated from PVK/other format
+    # ^ /debug would have to go directly after "sign" to diagnose failures.
 )
 # ^ such as `SIGNTOOL.EXE /F tcs.pfx /P <password>
 # Sectigo support says:
@@ -68,6 +72,7 @@ if KNOWN_SIGNTOOLS is not None:
             SIGNTOOL = KNOWN_SIGNTOOL
             break
     del KNOWN_SIGNTOOL
+
 
 def main():
     if KNOWN_SIGNTOOLS is None:
@@ -111,7 +116,16 @@ def main():
                 return 1
             options['sign_this_file'] = arg
     echo0()
-    echo0("The SafeNet USB key must be inserted before you continue and you must have the password on hand. To work, this tool must launch a GUI window via signtool.")
+    echo0()
+    echo0("Before you continue:")
+    echo0("1. The SafeNet USB key must be inserted")
+    echo0("2. You must have the password on hand.")
+    echo0(
+        "3. You must have installed the SafeNet Authentication Client"
+        " from the link sent along with the SafeNet USB key"
+        " (To work, this tool must"
+        " launch a GUI window via signtool)."
+    )
     echo0()
     if options.get('sign_this_file') is None:
         search_dir = os.getcwd()
