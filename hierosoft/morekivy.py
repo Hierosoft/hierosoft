@@ -66,7 +66,9 @@ def set_widget_id(widget, widget_id):
     where the key is the Python id and the value is the Kivy id.
     '''
     if widget_id is None:
-        raise ValueError("set_widget_id must only be used with non-None widget_id")
+        raise ValueError(
+            "set_widget_id must only be used with non-None widget_id"
+        )
     _id_lookup[str(id(widget))] = widget_id
 
 
@@ -88,8 +90,8 @@ def get_widget_id(widget):
 
 def widget_to_kv(widget, indent, widget_id=None, outfn=print,
                  className=None):
-    '''
-    Show information about one widget, for debugging purposes.
+    """Show information about one widget, for debugging purposes.
+
     This method is designed to translate Python-generated
     widgets into KV (kvlang code).
 
@@ -99,22 +101,22 @@ def widget_to_kv(widget, indent, widget_id=None, outfn=print,
     calls of the given ids (managed by SinglePage instances in
     this App).
 
-    Keyword arguments:
-    widget_id -- Specify a dictionary key or variable name in
-        (from the App) which is used to access this
-        widget. This will be used as the "id" in the KV file.
-        Otherwise, id will be ignored (since this method assumes
-        that the widgets were dynamically generated in a py
-        file rather than a kv file which has ids)
-    outfn -- The output function (print to console by default); The
-        given function itself must add a newline at the end like
-        print does.
-    className -- You must set this if you are using a widget subclass
-        so that the KV language output is written properly. For
-        example, if you have a "SinglePage" class that is a
-        subclass of KivyMD's "MD3Card", you must set className to
-        "<SinglePage@MD3Card>" (including the "<>" signs).
-    '''
+    Args:
+        widget_id (str): Specify a dictionary key or variable name in
+            (from the App) which is used to access this
+            widget. This will be used as the "id" in the KV file.
+            Otherwise, id will be ignored (since this method assumes
+            that the widgets were dynamically generated in a py
+            file rather than a kv file which has ids)
+        outfn (Callable): The output function (print to console by default); The
+            given function itself must add a newline at the end like
+            print does.
+        className (str): You must set this if you are using a widget subclass
+            so that the KV language output is written properly. For
+            example, if you have a "SinglePage" class that is a
+            subclass of KivyMD's "MD3Card", you must set className to
+            "<SinglePage@MD3Card>" (including the "<>" signs).
+    """
     if widget is None:
         outfn(indent + "# None")
         if widget_id is not None:

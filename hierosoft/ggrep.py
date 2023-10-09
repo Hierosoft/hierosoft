@@ -246,37 +246,28 @@ def usage():
     print("")
 
 
-def _wild_increment(haystack_c, needle_c):
-    if needle_c == "*":
-        return 0
-    if needle_c == "?":
-        return 1
-    if needle_c == haystack_c:
-        return 1
-    return -1
-
-
 def contains(haystack, needle, allow_blank=False, quiet=False):
-    '''
-    Check if the substring "needle" is in haystack. The behavior differs
-    from the Python "in" command according to the arguments described
-    below.
+    '''Check if the substring "needle" is in haystack.
 
-    Sequential arguments:
-    haystack -- a string to look in
-    needle -- a string for which to look
-    allow_blank -- Instead of raising an exception on a blank needle,
-        return False and show a warning (unless quiet).
-    quiet -- Do not report errors to stderr.
+    The behavior differs from the Python "in" command according to the
+    arguments described below.
+
+    Args:
+        haystack (str): a string to look in
+        needle (str): a string for which to look
+        allow_blank (bool) Instead of raising an exception on a blank
+            needle, return False and show a warning (unless quiet).
+        quiet (bool): Do not report errors to stderr.
 
     Raises:
-    ValueError -- If allow_blank is not True, a blank needle will raise
-        a ValueError, otherwise there will simply be a False return.
-    TypeError -- If no other error occurs, the "in" command will raise
-        "TypeError: argument of type 'NoneType' is not iterable" if
-        haystack is None (or haystack and needle are None), or
-        "TypeError: 'in <string>' requires string as left operand, not
-        NoneType" it needle is None.
+        ValueError: If allow_blank is not True, a blank needle will
+            raise a ValueError, otherwise there will simply be a False
+            return.
+        TypeError: If no other error occurs, the "in" command will raise
+            "TypeError: argument of type 'NoneType' is not iterable" if
+            haystack is None (or haystack and needle are None), or
+            "TypeError: 'in <string>' requires string as left operand,
+            not NoneType" it needle is None.
     '''
     if len(needle) == 0:
         if not allow_blank:
@@ -293,12 +284,11 @@ def contains(haystack, needle, allow_blank=False, quiet=False):
 
 def any_contains(haystacks, needle, allow_blank=False, quiet=False,
                  case_sensitive=True):
-    '''
-    Check whether any haystack contains the needle.
+    '''Check whether any haystack contains the needle.
     For documentation of keyword arguments, see the "contains" function.
 
     Returns:
-    bool -- The needle is in any haystack.
+        bool: The needle is in any haystack.
     '''
     if not case_sensitive:
         needle = needle.lower()
@@ -316,12 +306,12 @@ def any_contains(haystacks, needle, allow_blank=False, quiet=False,
 
 def contains_any(haystack, needles, allow_blank=False, quiet=False,
                  case_sensitive=True):
-    '''
-    Check whether the haystack contains any of the needles.
+    '''Check whether the haystack contains any of the needles.
+
     For documentation of keyword arguments, see the "contains" function.
 
     Returns:
-    bool -- Any needle is in the haystack.
+        bool: Any needle is in the haystack.
     '''
     if not case_sensitive:
         needle = haystack.lower()
@@ -350,27 +340,40 @@ def is_abs_path(path):
     return False
 
 
+def _wild_increment(haystack_c, needle_c):
+    if needle_c == "*":
+        return 0
+    if needle_c == "?":
+        return 1
+    if needle_c == haystack_c:
+        return 1
+    return -1
+
+
 def is_like(haystack, needle, allow_blank=False, quiet=False,
             haystack_start=None, needle_start=None, indent=2):
-    '''
-    Check if haystack is like needle (See needle and other arguments for
-    details).
+    '''Compare to needle using wildcard notation not regex.
 
-    Sequential arguments:
-    haystack -- a string in which to find the needle.
-    needle -- It is a filename pattern such as "*.png" not regex, so the
-        only wildcards are '*' and '?'.
+    Args:
+        haystack (str): a string in which to find the needle.
+        needle (str): It is a filename pattern such as "*.png" not
+            regex, so the only wildcards are '*' and '?'.
+        allow_blank (Optional[bool]): Instead of raising an exception on
+            a blank needle, return False and show a warning (unless
+            quiet).
+        quiet (Optional[bool]): Do not report errors to stderr.
+        haystack_start (Optional[bool]): Start at this character index
+            in haystack.
+        needle_start (Optional[bool]): Start at this character index in
+            needle.
+        indent (Optional[int]): Set the visual indent level for debug
+            output, expressed as a number of spaces. The default is 2
+            since some higher level debugging will normally be taking
+            place and calling this method.
 
-    Keyword arguments:
-    allow_blank -- Instead of raising an exception on a blank needle,
-        return False and show a warning (unless quiet).
-    quiet -- Do not report errors to stderr.
-    haystack_start -- Start at this character index in haystack.
-    needle_start -- Start at this character index in needle.
-    indent -- Set the visual indent level for debug output, expressed as
-        a number of spaces. The default is 2 since some higher level
-        debugging will normally be taking place and calling this
-        method.
+    Returns:
+        bool: If needle in literal text or wildcard syntax matches
+            haystack.
     '''
     tab = " " * indent
     if haystack_start is None:
