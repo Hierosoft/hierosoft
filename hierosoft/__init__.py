@@ -185,7 +185,11 @@ else:
     USER = os.environ.get("USER")
     HOME = os.environ.get("HOME")
     LOCALAPPDATA = os.path.join(HOME, ".local", "share")
+    # ^ "home/.local/share" -<developers.redhat.com/blog/2018/11/07
+    #   /dotnet-special-folder-api-linux>
+    # ^ Or os.path.join(HOME, ".var") maybe??
     USER_PROGRAMS = os.path.join(HOME, ".local", "lib")
+    # ^ Or os.path.join(HOME, ".local", "share") maybe??
     SHARE = LOCALAPPDATA  # synonymous; generally written on install
     if platform.system() == "Darwin":
         SHORTCUT_EXT = "command"
@@ -235,7 +239,20 @@ else:
         # GNU+Linux Systems
         SHARE = os.path.join(PREFIX, "share")
         SHORTCUTS_DIR = os.path.join(SHARE, "applications")
-        APPDATA = os.path.join(HOME, ".config")
+        _default_localappdata = LOCALAPPDATA
+        # region based on <developers.redhat.com/blog/2018/11/07
+        #   /dotnet-special-folder-api-linux>
+        LOCALAPPDATA = os.environ.get('XDG_DATA_HOME')
+        if not LOCALAPPDATA:
+            LOCALAPPDATA = _default_localappdata  # ~/.local/share
+        APPDATA = os.environ.get('XDG_CONFIG_HOME')
+        if not APPDATA:
+            APPDATA = os.path.join(HOME, ".config")
+        CommonApplicationData = "/usr/share"
+        CommonTemplates = "/usr/share/templates"
+
+        # endregion based on <developers.redhat.com/blog/2018/11/07
+        #   /dotnet-special-folder-api-linux>
         # LOCALAPPDATA = APPDATA
         LOGS = os.path.join(HOME, ".var", "log")
         PROFILES = "/home"
@@ -492,15 +509,16 @@ def get_unique_path(luid, key, extension=".conf", allow_cloud=False):
 
 
 def join_if_exists(parent, sub):
-    '''
-    Join an existing sub(s), otherwise return none.
+    """Join an existing sub(s), otherwise return none.
 
-    Sequential arguments:
-    parent -- The parent directory possibly containing sub(s). If it is
-        not a string, it is assumed to be an iterable and each element
-        will be tried as a path string that may contain sub.
-    sub -- A path or multiple paths (assumed to be iterable if not str).
-    '''
+    Args:
+        parent (str): The parent directory possibly containing sub(s).
+            If it is not a string, it is assumed to be an iterable and
+            each element will be tried as a path string that may
+            contain sub.
+        sub (str): A path or multiple paths (assumed to be iterable if
+            not str).
+    """
     if isinstance(parent, str):
         parents = [parent]
     else:
@@ -615,15 +633,20 @@ def no_enclosures(
         openers=["(", "[", "{", '"', "'"],
         closers=[")", "]", "}", '"', "'"]
         ):
-    '''
-    Remove the enclosures from a string. For example, change
-    "(12-22-2022)" to "12-22-2022".
+    """Remove the enclosures from a string.
 
-    Keyword arguments:
-    openers -- The delimiters that start the scope such as "(" or '"'.
-    closers -- The delimiters that end the scope such as ")" or '"'.
-        Each item must be paired with the same index in openers.
-    '''
+    For example, change "(12-22-2022)" to "12-22-2022".
+
+    Args:
+        openers (Optional[list[str]]): The delimiters that start the
+            scope such as "(" or '"'.
+        closers (Optional[list[str]]): The delimiters that end the scope
+            such as ")" or '"'. Each item must be paired with the same
+            index in openers.
+
+    Returns:
+        str: The original string without enclosures.
+    """
     if len(openers) != len(closers):
         raise ValueError(
             "The openers and closers must be paired in order"
@@ -663,10 +686,15 @@ def number_to_place(num):
 
 
 def run_and_get_lists(cmd_parts, collect_stderr=True):
-    '''
+    '''Run a command and check the output.
+
+    Args:
+        collect_stderr (bool): Collect stderr output for the err return list Defaults to True.
+
     Returns:
-    a tuple of (out, err, returncode) where out and err are each a list
-    of 0 or more lines.
+        tuple[list[str], list[str], int]: (out, err, returncode) where
+            out and err are each a list of 0 or more lines, and return
+            code is the code returned by the process (0 if ok).
     '''
     # See <https://stackabuse.com/executing-shell-commands-with-python>:
     # called = subprocess.run(list_installed_parts,
@@ -798,6 +826,11 @@ def is_installed(programs_path, dest_id, flag_names):
 
 
 def is_exe(path):
+    """Check if the path exists and is executable.
+
+    Returns:
+        bool: Is an executable file.
+    """
     # Jay, & Mar77i. (2017, November 10). Path-Test if executable exists in
     #     Python? [Answer]. Stack Overflow.
     #     https://stackoverflow.com/questions/377017/
@@ -825,7 +858,11 @@ def which(program_name, more_paths=[]):
             __init__.py.
         more_paths (Iterable[str]): Paths other than those in system PATH
             that should also be checked.
+
+    Returns:
+        str: The full path to the executable or None.
     '''
+    prefix = "[which] "
     # from https://github.com/poikilos/DigitalMusicMC
     preferred_path = None
     filenames = [program_name]
@@ -848,24 +885,24 @@ def which(program_name, more_paths=[]):
         paths = paths_str.split(os.path.pathsep)
         fallback_path = None
         for path in (paths + more_paths):
-            echo1("[hierosoft which] looking in {}".format(path))
+            echo1(prefix+"looking in {}".format(path))
             try_path = os.path.join(path, filename)
             if is_exe(try_path):
                 return try_path
             elif os.path.isfile(try_path):
-                echo0('[hierosoft which] Warning: "{}" exists'
+                echo0(prefix+'Warning: "{}" exists'
                       ' but is not executable.'.format(try_path))
                 fallback_path = try_path
             else:
-                echo1("[hierosoft which] There is no {}".format(try_path))
+                echo1(prefix+"There is no {}".format(try_path))
         result = None
         if preferred_path is not None:
-            echo0('[hierosoft which] Warning: "{}" will be returned'
+            echo0(prefix+'Warning: "{}" will be returned'
                   ' since given as filename="{}" but is not executable.'
                   ''.format(preferred_path, filename))
             result = fallback_path
         elif fallback_path is not None:
-            echo0('[hierosoft which] Warning: "{}" will be returned'
+            echo0(prefix+'Warning: "{}" will be returned'
                   ' but is not executable.'.format(fallback_path))
             result = fallback_path
     return result

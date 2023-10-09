@@ -36,11 +36,12 @@ if sys.version_info.major >= 3:
         getLogger,
     )
 else:
+    # Polyfills for Python 2
     FORMAT_STYLES = ['%', '{', '$']
     class Formatter:
         def __init__(self, fmt=None, datefmt=None, style='%',
                      validate=True, defaults=None):
-                     # validate=True, *, defaults=None):  what? (upstream code)
+            # FIXME  validate=True, *, defaults=None):  what? (upstream code)
             if fmt is None:
                 fmt = '%(message)s'
             self.fmt = fmt
@@ -68,8 +69,9 @@ else:
                 return self.t.substitute(message=message)
             else:
                 raise ValueError("style was %s but should be one in %s"
-                                 % (style, FORMAT_STYLES))
+                                 % (self.style, FORMAT_STYLES))
     default_formatter = Formatter()
+
     class Logger:
         def __init__(self, name):
             self.name = name
@@ -130,42 +132,42 @@ else:
         def critical(self, msg):
             if CRITICAL < self.level:
                 return
-            prefix = "" if self.name is None else "[%s] " % self.name
+            # prefix = "" if self.name is None else "[%s] " % self.name
             self._log.write("%s\n" % msg)
             self._log.flush()
 
         def debug(self, msg):
             if DEBUG < self.level:
                 return
-            prefix = "" if self.name is None else "[%s] " % self.name
+            # prefix = "" if self.name is None else "[%s] " % self.name
             self._log.write("%s\n" % msg)
             self._log.flush()
 
         def error(self, msg):
             if ERROR < self.level:
                 return
-            prefix = "" if self.name is None else "[%s] " % self.name
+            # prefix = "" if self.name is None else "[%s] " % self.name
             self._log.write("%s\n" % msg)
             self._log.flush()
 
         def exception(self, ex):
             # if ERROR < self.level:
             #     return
-            prefix = "" if self.name is None else "[%s] " % self.name
-            self._log.write("%s: %s\n" % (type(msg), msg))
+            # prefix = "" if self.name is None else "[%s] " % self.name
+            self._log.write("%s: %s\n" % (type(ex).__name__, ex))
             self._log.flush()
 
         def fatal(self, msg):
             # if ERROR < self.level:
             #     return
-            prefix = "" if self.name is None else "[%s] " % self.name
+            # prefix = "" if self.name is None else "[%s] " % self.name
             self._log.write("%s" % (msg) + "\n")
             self._log.flush()
 
         def info(self, msg):
             if INFO < self.level:
                 return
-            prefix = "" if self.name is None else "[%s] " % self.name
+            # prefix = "" if self.name is None else "[%s] " % self.name
             self._log.write("%s" % (msg) + "\n")
             self._log.flush()
 
@@ -173,13 +175,14 @@ else:
             self.level = level
 
         def warn(self, msg):
-            print("<stdin>:1: DeprecationWarning: The 'warn' method is deprecated, use 'warning' instead")
+            print("<stdin>:1: DeprecationWarning:"
+                  " The 'warn' method is deprecated, use 'warning' instead")
             self.warning(msg)
 
-        def info(self, msg):
+        def warning(self, msg):
             if WARNING < self.level:
                 return
-            prefix = "" if self.name is None else "[%s] " % self.name
+            # prefix = "" if self.name is None else "[%s] " % self.name
             self._log.write("%s" % (msg) + "\n")
             self._log.flush()
 
@@ -190,6 +193,7 @@ else:
     # class logging:
     filename = None
     encoding = 'utf-8'
+
     def getLogger(self, name=None):
         logger = loggers.get(name)  # None is allowed (root of hierarchy)
         if logger is not None:
@@ -198,10 +202,13 @@ else:
 
     def basicConfig(**kwargs):
         global filename
+        global encoding
         string_keys = ['filename', 'encoding']
-        for key, value in kwags.items():
+        for key, value in kwargs.items():
             if key in string_keys:
-                if not isinstance(value, (str, unicode)):
+                if type(value).__name__ not in ("str", "unicode"):
+                    # ^ Do not use isinstance, since unicode is not in Python 3
+                    #   (every str is unicode)
                     raise TypeError("Expected str/unicode for %s but got %s %s"
                                     % (key, type(value).__name__, value))
             if key == "filename":
@@ -214,7 +221,9 @@ to_log_level = {
     3: 10,
     2: 20,
     1: 30,
+    True: 30,
     0: 40,
+    False: 40,
 }
 
 verbosity_levels = [False, True, 0, 1, 2, 3]
@@ -397,6 +406,18 @@ def get_verbosity():
 
 
 def set_verbosity(verbosity_level):
+    """Set verbosity of the console output of the entire module.
+
+    This affects any program(s) using the module.
+
+    Args:
+        verbosity_level (int): Level 0 to 3. Some granular decisions
+            (any code using echo2) may appear on the console if 2 or
+            higher.
+
+    Raises:
+        ValueError: If verbosity_level is not within bounds.
+    """
     global verbosity
     if verbosity_level not in verbosity_levels:
         vMsg = verbosity_levels
@@ -410,25 +431,32 @@ def set_verbosity(verbosity_level):
 
 
 def get_traceback(indent=""):
+    """Get a formatted traceback.
+
+    Args:
+        indent (Optional[str]): Indent. Defaults to "".
+
+    Returns:
+        str: Traceback, usually multiple lines. Lines
+            are delimited by "\n".
+    """
     ex_type, ex, tb = sys.exc_info()
     msg = "{}{} {}:\n".format(indent, ex_type, ex)
     msg += traceback.format_exc()
     del tb
     return msg
 
+
 def view_traceback(indent="", min_indent=None):
-    '''
-    Write the traceback to stderr.
-
-    Keyword arguments:
-    indent each line of output this much.
-
-    Globals used:
-    import traceback
+    """Write the traceback to stderr.
 
     Deprecations:
     min_indent keyword argument
-    '''
+
+    Args:
+        min_indent (Optional[str]): indent each line of output this
+            much.
+    """
     if min_indent is not None:
         raise ValueError("min_indent is deprecated. Use indent.")
     # # echo0(min_indent+str(ex_type))
@@ -438,7 +466,6 @@ def view_traceback(indent="", min_indent=None):
     echo0(get_traceback(indent=indent))
     # del tb
     echo0("")
-
 
 
 # syntax_error_fmt = "{path}:{row}:{column}: {message}"
