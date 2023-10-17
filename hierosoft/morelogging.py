@@ -263,7 +263,7 @@ def set_pformat_preferred_quote(quote):
     pformat_preferred_quote = quote
 
 
-def pformat(value, quote_if_like_str=True):
+def pformat(value, quote_if_like_str=None, escape_if_like_str=None):
     """This is mostly like pformat from pprint except always on one line.
 
     Numbers are left as numbers even if quote_if_like_str is True, to
@@ -278,12 +278,23 @@ def pformat(value, quote_if_like_str=True):
             pprint.pformat--This option is only for recursion. Add
             quotes (not done recursively, since if iterable but not
             is_str_like, the last step which is converting from iterable
-            to string adds quotes to all string values).
+            to string adds quotes to all string values). Defaults to
+            True.
+        escape_if_like_str (Optional[bool]): Escape newlines and
+            backspace to avoid various display issues (display the
+            string in a way that helps debugging rather than original
+            function). For example, change "\n" (literal newline, on
+            character) to "\\n" (actually one backslash followed by
+            newline). Defaults to True.
 
     Returns:
         str: string where only strings are quote_if_like_str (without
             leading b or u).
     """
+    if escape_if_like_str is None:
+        escape_if_like_str = True
+    if quote_if_like_str is None:
+        quote_if_like_str = True
     original_value = value
     enclosures = None
     if not is_str_like(value):
@@ -330,6 +341,10 @@ def pformat(value, quote_if_like_str=True):
         else:
             return value[2:-1]
     elif is_str_like(original_value):
+        if escape_if_like_str:
+            value = value.replace("\r", "\\r").replace("\n", "\\n")
+            value = value.replace("\b", "\\b")
+            value = value.replace("\t", "\\t")
         if quote_if_like_str:
             if pformat_preferred_quote is None:
                 if '"' in value:
