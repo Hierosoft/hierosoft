@@ -71,7 +71,7 @@ from hierosoft import (  # noqa E402
 THEME_DIR = os.path.join(ASSETS_DIR, "Forest-ttk-theme")
 resource_add_path(THEME_DIR)
 
-# from hierosoft.morelogging import (
+# from hierosoft.logging import (
 #     view_traceback,
 # )
 from hierosoft.moreplatform import (  # noqa E402
@@ -87,7 +87,7 @@ from hierosoft.moreweb.hierosoftupdate import HierosoftUpdate  # noqa E402
 
 from hierosoft.moreweb.downloadmanager import DownloadManager  # noqa E402
 
-from hierosoft.morelogging import (  # noqa E402
+from hierosoft.logging import (  # noqa E402
     view_traceback,
 )
 

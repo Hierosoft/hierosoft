@@ -77,7 +77,7 @@ else:
                                 stderr=errs)
     subprocess.run = sp_run
 
-from hierosoft.morelogging import (
+from hierosoft.logging import (
     echo0,
     echo1,
     echo2,
