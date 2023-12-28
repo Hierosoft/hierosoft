@@ -4,7 +4,7 @@ import platform
 import sys
 
 from collections import OrderedDict
-from hierosoft.morelogging import (
+from hierosoft.logging import (
     # is_enclosed,
     pformat,
     echo0,

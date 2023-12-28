@@ -72,7 +72,7 @@ default_bad_enabled = True
 if platform.system() == "Windows":
     default_bad_enabled = False
 
-from hierosoft.morelogging import (
+from hierosoft.logging import (
     echo0,
     echo1,
     echo2,
