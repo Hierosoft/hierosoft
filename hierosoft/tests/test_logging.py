@@ -30,16 +30,16 @@ from hierosoft.morelogging import (
 
 
 class TestLogging(unittest.TestCase):
-    
+
     def __init__(self):
         if sys.version_info.major >=3:
             super().__init__()
         else:
             # unittest.TestCase.__init__(self)
             super(TestLogging, self).__init__()
-    
+
     def test_to_syntax_error(self):
-        
+
         '''
         self.assertEqual(
             to_syntax_error("no_file", None, "no_error"),
@@ -102,7 +102,7 @@ class TestLogging(unittest.TestCase):
         ), "\bHello")
         self.assertEqual(pformat("Hello\r\n"), '"Hello\\r\\n"')
         self.assertEqual(pformat("Hello\t"), '"Hello\\t"')
-        
+
 
 if __name__ == "__main__":
     # unittest.main()
