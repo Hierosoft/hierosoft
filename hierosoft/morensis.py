@@ -9,6 +9,68 @@ Project: hierosoft Python module by Hierosoft
 from collections import OrderedDict
 
 
+def python_encoded(value):
+    if isinstance(value, str):
+        return '"{}"'.format(value.replace('"', '\\"'))
+    return str(value)
+
+
+def rewrite_python_var(path, key, value):
+    """Rewrite a Python file and change a value.
+
+    Args:
+        value: If the value is a str, quotes will be added.
+    """
+    prevLineN = None
+    lineN = 0
+    if not key:
+        raise ValueError('No variable name was set (got {}).'.format(key))
+    if key[0].isdigit():
+        raise ValueError('A Python variable name must not start with a digit.')
+    bads = "\\\n\r\t;:@#$%^&*!?-(){}[]<>`~\"' "
+    # ^ Do not allow characters that are not allowed in Python symbols
+    #   (but "." is allowed since it may be setting an object attribute)
+    for bad in bads:
+        if bad in key:
+            raise ValueError(
+                'The variable name must not contain "{}"'
+                ''.format(bad)
+            )
+    openers = []
+    enders = "\t ="
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        print('created temporary directory', tmpdirname)
+        tmpPath = os.path.join(temp_dir.name, path)
+        with open(tmpPath, 'w') as ostream:
+            with open(path, 'r') as istream:
+                for rawL in stream:
+                    lineN += 1
+                    indented = rawL.rstrip(rawL)
+                    line = indented.strip()
+                    indent = indented[len(indented)-len(line):]
+                    if (line.startswith(key) and (line[len(key):len(key)+1] in enders)):
+                        if prevLineN:
+                            echo0('File "{}", line {}: Warning:'
+                                  ' already had {} on line {}'
+                                  ''.format(path, lineN, key, prevLineN))
+                        prevLineN = lineN
+                        encoded = python_encoded(value)
+                        ostream.write(indent+"{} = {}\n"
+                    else:
+                        if line == key:
+                            echo0('File "{}", line {}: Warning:'
+                                  ' {} has no value, so left untouched'
+                                  ''.format(path, lineN, key))
+                        ostream.write(rawL)
+            if prevLineN is None:
+                echo0('File "{}", line {}: Warning:'
+                      ' {} was not found, so it will be added to the end!'
+                      ''.format(path, lineN, key))
+                ostream.write("\n{} = {}\n".format(key, value))
+                        
+        shutil.move(tmpPath, path)
+
+
 class NSISInclude:
     """Load and process NSIS Setup include files.
     The files can only contain blank lines, comments, and !define
@@ -49,8 +111,10 @@ class NSISInclude:
         for opener in plain_openers:
             openers.append(opener+" ")
             openers.append(opener+"\t")
+        lineN = 0
         with open(self.path, 'r') as stream:
             for rawL in stream:
+                lineN += 1  # Counting numbers start at 1.
                 line = rawL.strip()
                 if not line:  # blank
                     self._post_comments.append(rawL.rstrip("\r\n"))
@@ -65,7 +129,7 @@ class NSISInclude:
                         opener = openers[i]
                         break
                 if not opener:
-                    raise SyntaxError('{}, line {}: {}'.format(
+                    raise SyntaxError('File "{}", line {}: {}'.format(
                         self.path,
                         lineN,
                         ("Can only process include if all lines start with"
@@ -122,9 +186,11 @@ class NSISInclude:
                         stream.write(comment)
                 encoded = value
                 type_name = self.types.get(key)
-                if (type_name == 'date') or isinstance(value, str):
+                if value is None:
+                    encoded = ""  # No quotes or anything, just blank
+                elif (type_name == 'date') or isinstance(value, str):
                     # Save it with quotes.
-                    encoded = '"{}"'.format(value)
+                    encoded = '"{}"'.format(value.replace('"', '\\"'))
                 if type_name:
                     stream.write("!define /{} {} {}\n"
                                  "".format(type_name, key, encoded))
