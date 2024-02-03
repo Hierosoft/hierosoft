@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [git] - 2024-02-02
+### Added
+- rewrite_conf_str (moved from EnlivenMinetest/utilities/install-lmk)
+  - FIXME: combine with rewrite_conf?
+
+
 ## [git] - 2022-11-28
 ### Changed
 - Require key for `get_unique_path` (Change it from a keyword argument

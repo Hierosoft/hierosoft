@@ -2,14 +2,18 @@
 from __future__ import print_function
 import binascii
 import os
+import shutil
 import sys
 import re
+import tempfile
+
 from pprint import pformat
 
 from hierosoft import (
     echo0,
     echo1,
     echo2,
+    write0,
 )
 
 
@@ -647,7 +651,8 @@ def without_comments(style_str, enclosures=None):
 
     Args:
         style_str (str): any string
-        enclosures (Union[list[str],tuple[str]], optional): Start and end. Defaults to ("/*", "*/") if None.
+        enclosures (Union[list[str],tuple[str]], optional): Start and
+            end. Defaults to ("/*", "*/") if None.
 
     Raises:
         SyntaxError: _description_
@@ -836,8 +841,8 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
         _, value, __ = keep_strip(rvalue)
         if len(__) > 0:
             raise RuntimeError(
-                "The first keep_strip call should have obtained post-value space"
-                " when there is no comment but left '%s' in rvalue."
+                "The first keep_strip call should have obtained post-value"
+                " space when there is no comment but left '%s' in rvalue."
                 "\n  line_strip=%s"
                 "\n  name=%s"
                 "\n  sign_and_spacing=%s"
@@ -1018,7 +1023,6 @@ def rewrite_conf(sc_src_path, desktop_sc_path, metadata,
     Returns:
         dict: Either None or a dict of values not added.
     """
-    # TODO: Use 'rb' one instead?
     line_end = None
     with open(desktop_sc_path, 'wb') as outs:
         done_keys = set()
@@ -1060,6 +1064,104 @@ def rewrite_conf(sc_src_path, desktop_sc_path, metadata,
               ' (allow_adding=%s)'
               % (sc_src_path, not_added_data, desktop_sc_path, allow_adding))
         return not_added_data
+
+
+# TODO: combine rewrite_conf_str with rewrite_conf (rewrite_conf_str was
+#   named rewrite_conf when install-lmk was a dependency-free script in
+#   EnlivenMinetest [It now depends on hierosoft and nopackage])
+def rewrite_conf_str(src, dst, changes={}):
+    """Install a conf such as an XDG desktop shortcut with changes.
+
+    This will be *redefined* if running in *Python 2* (see
+    sys.version_info.major check).
+
+    Args:
+        src (string): The conf file to read.
+        dst (string): The conf file to write or overwrite.
+        changes (dict): A set of values to change by name. For any value
+            that is None, the line will be removed!
+    """
+    # This function is redefined further down in the case of Python 2.
+    fd, path = tempfile.mkstemp()
+    try:
+        with os.fdopen(fd, 'wb') as tmp:
+            # ^ ensure still exists when moving
+            write0("Generating temporary icon %s..." % path)
+            # NOTE: tmp.name is just some number (int)!
+            with open(src, "rb") as stream:
+                for rawL in stream:  # noqa N406
+                    signI = rawL.find(b'=')  # noqa N806
+                    # commentI = rawl.find(b'#')
+                    if rawL.strip().startswith(b"#"):
+                        tmp.write(rawL)
+                        continue
+                    if rawL.strip().startswith(b"["):
+                        tmp.write(rawL)
+                        continue
+                    if signI < 0:
+                        tmp.write(rawL)
+                        continue
+                    key_bytes = rawL[:signI].strip()
+                    key = key_bytes.decode("utf-8")
+                    value = changes.get(key)
+                    if key not in changes:
+                        # The value wasn't changed so write it as-is
+                        # echo0("%s not in %s" % (key, changes))
+                        tmp.write(rawL)
+                        continue
+                    if value is None:
+                        echo0("%s was excluded from the icon" % key)
+                        continue
+                    line = "%s=%s\n" % (key, value)
+                    tmp.write(line.encode("utf-8"))
+        shutil.copy(path, dst)
+    finally:
+        write0("removing tmp file...")
+        os.remove(path)
+
+
+if sys.version_info.major < 3:
+    # Python 2 (strings are bytes)
+    def rewrite_conf_str(src, dst, changes={}):  # noqa F811
+        """Install a conf such as an XDG desktop shortcut with changes.
+
+        See Python 3 implementation's docstring for more info.
+        """
+        fd, path = tempfile.mkstemp()
+        try:
+            with os.fdopen(fd, 'wb') as tmp:
+                write0("Generating temporary icon %s..." % path)
+                sys.stderr.flush()
+                with open(src, "rb") as stream:
+                    for rawL in stream:  # noqa N406
+                        signI = rawL.find('=')  # noqa N806
+                        # commentI = rawl.find('#')
+                        if rawL.strip().startswith("#"):
+                            tmp.write(rawL)
+                            continue
+                        if rawL.strip().startswith("["):
+                            tmp.write(rawL)
+                            continue
+                        if signI < 0:
+                            tmp.write(rawL)
+                            continue
+                        key_bytes = rawL[:signI].strip()
+                        key = key_bytes
+                        value = changes.get(key)
+                        if key not in changes:
+                            # The value wasn't changed so write it as-is
+                            tmp.write(rawL)
+                            continue
+                        if value is None:
+                            echo0("%s was excluded from the icon" % key)
+                            continue
+                        line = "%s=%s\n" % (key, value)
+                        tmp.write(line)
+            shutil.copy(path, dst)
+        finally:
+            write0("removing tmp file...")
+            sys.stderr.flush()
+            os.remove(path)
 
 
 class ByteConf(Byter):
