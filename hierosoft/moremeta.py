@@ -35,13 +35,17 @@ similarsDirPath = os.path.join(dataDirPath, similarsDirName)
 similarLists = {}  # formerly artists and albums
 
 
-badPathChars = ["></\\:;\t|\n\r\"?"]   # NOTE: Invalid characters on
-                                       # Windows also include 1-31 & \b
-replacementPathChars = [("\"", "in"), (":","-"), ("?",""),("\r",""), ("\n",""), ("/",","), ("\\",","), (":","-")]
+badPathChars = ["></\\:;\t|\n\r\"?"]    # NOTE: Invalid characters on
+#                                         Windows also include 1-31 & \b
+replacementPathChars = [("\"", "in"), (":", "-"), ("?", ""), ("\r", ""),
+                        ("\n", ""), ("/", ","), ("\\", ","), (":", "-")]
 
 categories = {}
-categories["Backup"] = ["7z", "accdb", "dbx", "idx", "mbox", "mdb", "pst", "sqlite", "tar", "wab", "zip"]
-categories["Documents"] = ["ai", "csv", "doc", "docx", "mpp", "pdf", "ppt", "pptx", "ps", "rtf", "wpd", "wps", "xls", "xlsx", "xlr"]
+categories["Backup"] = ["7z", "accdb", "dbx", "idx", "mbox", "mdb", "pst",
+                        "sqlite", "tar", "wab", "zip"]
+categories["Documents"] = ["ai", "csv", "doc", "docx", "mpp", "pdf", "ppt",
+                           "pptx", "ps", "rtf", "wpd", "wps", "xls", "xlsx",
+                           "xlr"]
 categories["PlainText"] = ["txt"]
 categories["Downloads"] = ["bin", "cue", "iso"]
 categories["Torrents"] = ["torrent"]
@@ -49,11 +53,18 @@ categories["eBooks"] = ["prc", "lit"]
 categories["Links"] = ["url", "website"]
 categories["Meshes"] = ["x3d"]
 categories["Music"] = ["ape", "flac", "m4a", "mid", "mp3", "ogg", "wav", "wma"]
-categories["Pictures"] = ["bmp", "gif", "ico", "jpe", "jpeg", "jpg", "png", "psd", "svg", "wmf"]
-categories["Playlists"] = ["asx", "bpl", "feed", "itpc", "m3u", "m3u8", "opml", "pcast", "pls", "podcast", "rm", "rmj","rmm", "rmx", "rp", "smi", "smil", "upf", "vlc", "wpl", "xspf", "zpl"]
+categories["Pictures"] = ["bmp", "gif", "ico", "jpe", "jpeg", "jpg", "png",
+                          "psd", "svg", "wmf"]
+categories["Playlists"] = ["asx", "bpl", "feed", "itpc", "m3u", "m3u8", "opml",
+                           "pcast", "pls", "podcast", "rm", "rmj", "rmm",
+                           "rmx", "rp", "smi", "smil", "upf", "vlc", "wpl",
+                           "xspf", "zpl"]
 categories["Shortcuts"] = ["lnk"]
-categories["Videos"] = ["asf", "avi", "mp2", "mp4", "mpe", "mpeg", "mpg", "mov", "swf", "wmv", "webm", "wm"]
-_eMusicFlag = ", @ www.emusic.com.  Download, play, burn MP3s @ www.emusic.com."
+categories["Videos"] = ["asf", "avi", "mp2", "mp4", "mpe", "mpeg", "mpg",
+                        "mov", "swf", "wmv", "webm", "wm"]
+_eMusicFlag = (", @ www.emusic.com."
+               "  Download, play, burn MP3s @ www.emusic.com.")
+
 
 def replaceAnyChar(s, characters, newStr="_"):
     ret = s
@@ -61,6 +72,7 @@ def replaceAnyChar(s, characters, newStr="_"):
         for c in characters:
             ret = ret.replace(c, newStr)
     return ret
+
 
 def cleanFileName(fileName):
     newName = fileName
@@ -80,10 +92,11 @@ def cleanFileName(fileName):
     newName = replaceAnyChar(newName, badPathChars, newStr="_")
     return newName
 
+
 def withExt(namePart, ext=None):
     ret = namePart
     if (ext is not None) and (len(ext) > 0):
-         ret += "." + ext
+        ret += "." + ext
     return ret
 
 
@@ -101,12 +114,13 @@ def getSimilar(needle, haystack):
             theSL = theS.lower()
             sL = s.lower()
             # if (theSL == needleL) or (theSL == theNeedleL) \
-                    # or (sL == needleL) or (sL == theNeedleL):
+            #         or (sL == needleL) or (sL == theNeedleL):
             if (sL == needleL) or (sL == theNeedleL):
                 if (retQuality is None) or (quality > retQuality):
                     retQuality = quality
                     ret = s
     return ret
+
 
 # formerly getAndCollectSimilarAlbum and getAndCollectSimilarArtist
 def getAndCollectSimilar(name, what):
@@ -151,6 +165,7 @@ def startsWithThe(s):
         return False
     return (len(s) >= 4) and (s.lower()[0:4] == "the ")
 
+
 def getWithThe(s):
     ret = s
     if ret is not None:
@@ -158,12 +173,14 @@ def getWithThe(s):
             ret = "The " + s
     return ret
 
+
 def getWithoutThe(s):
     ret = s
     if ret is not None:
         if startsWithThe(s):
             ret = s[4:]
     return ret
+
 
 def getTitleQuality(title):
     ret = -1
@@ -179,40 +196,41 @@ def getTitleQuality(title):
 
 derivedMetas = []
 derivedMetas.append({
-    'category' : 'ads',
-    'sizes' : [(252,252)],
-    'subcategory' : None,
-    'disposable' : True
+    'category': 'ads',
+    'sizes': [(252, 252)],
+    'subcategory': None,
+    'disposable': True
 })
 derivedMetas.append({
-    'category' : 'square-small',
-    'sizes' : [(300,300)],
-    'subcategory' : None,
-    'disposable' : False
+    'category': 'square-small',
+    'sizes': [(300, 300)],
+    'subcategory': None,
+    'disposable': False
 })
 derivedMetas.append({
-    'category' : 'thumbnails',
-    'sizes' : [(386,217)],
-    'subcategory' : 'YouTube',
-    'disposable' : True
+    'category': 'thumbnails',
+    'sizes': [(386, 217)],
+    'subcategory': 'YouTube',
+    'disposable': True
 })
 derivedMetas.append({
-    'category' : 'widgets',
-    'sizes' : [(170,330),(242,189)],
-    'subcategory' : 'hp-setup',
-    'disposable' : True
+    'category': 'widgets',
+    'sizes': [(170, 330), (242, 189)],
+    'subcategory': 'hp-setup',
+    'disposable': True
 })
 derivedMetas.append({
-    'category' : 'widgets',
-    'sizes' : [(256,256), (360,225), (360,225), (360,250)],
-    'subcategory' : 'MapTiles',
-    'disposable' : False
+    'category': 'widgets',
+    'sizes': [(256, 256), (360, 225), (360, 225), (360, 250)],
+    'subcategory': 'MapTiles',
+    'disposable': False
 })
 derivedMetas.append({
-    'category' : 'widgets',
-    'sizes' : [(180,180), (340,200), (400,334), (230,150), (222,195), (302,221)],
-    'subcategory' : None,
-    'disposable' : False
+    'category': 'widgets',
+    'sizes': [(180, 180), (340, 200), (400, 334), (230, 150), (222, 195),
+              (302, 221)],
+    'subcategory': None,
+    'disposable': False
 })
 
 
@@ -225,13 +243,19 @@ def metaBySize(size):
                 break
     return ret
 
-knownThumbnailSizes = [(160,120), (160,120), (200,200), (264,318), (218,145), (100,100), (158,158), (53,53), (386,217), (320,240)]
+
+knownThumbnailSizes = [(160, 120), (160, 120), (200, 200), (264, 318),
+                       (218, 145), (100, 100), (158, 158), (53, 53),
+                       (386, 217), (320, 240)]
 
 minBannerRatio = 3.0
 
-# photoSizes can be opposite as well (if portrait orientation such as 0.75 ratio instead of 1.3333333...)
-photoSizes = [(2816,2112), (2422,2069), (2473,2070), (2672,2072)]
+# photoSizes can be opposite as well (if portrait orientation such as
+#   0.75 ratio instead of 1.3333333...)
+photoSizes = [(2816, 2112), (2422, 2069), (2473, 2070), (2672, 2072)]
 maxNonPhotoDimension = 640
+
+
 def isPhotoSize(size, allowRatioAndMinDim=True):
     ret = False
     if allowRatioAndMinDim:
@@ -251,7 +275,10 @@ def isPhotoSize(size, allowRatioAndMinDim=True):
                 break
     return ret
 
+
 minNonThumbnailPixels = 150 * 199 + 1
+
+
 def isThumbnailSize(size):
     ret = False
     if size[0] * size[1] < minNonThumbnailPixels:
@@ -301,6 +328,7 @@ hex_description = {
     'f4': "o with caret (pointing up)",
 }
 
+
 def is_jpeg(path):
     path_lower = path.lower()
     ret = False
@@ -311,6 +339,7 @@ def is_jpeg(path):
     elif path_lower[-5:] == ".jpeg":
         ret = True
     return ret
+
 
 def is_html(path):
     path_lower = path.lower()
@@ -324,6 +353,7 @@ def is_html(path):
     elif path_lower[-9:] == ".html.bak":
         ret = True
     return ret
+
 
 html_date_patterns = []
 html_date_patterns.append({
@@ -341,8 +371,10 @@ html_date_patterns.append({
     "format": "%m/%d/%y"  # 10/17/02
 })
 
+
 def parse_date(dt_s, fmt):
     return datetime.strptime(dt_s, fmt)
+
 
 def extract_exif_date(path, verbose=False):
     img = Image.open(path)
@@ -351,7 +383,8 @@ def extract_exif_date(path, verbose=False):
         # print(",,NO EXIF DATA")
         return None
     # convert numeric tags to dict:
-    # (see <https://stackoverflow.com/questions/4764932/in-python-how-do-i-read-the-exif-data-for-an-image>)
+    # (see <https://stackoverflow.com/questions/4764932/
+    # in-python-how-do-i-read-the-exif-data-for-an-image>)
     exif = {
         PIL.ExifTags.TAGS[k]: v
         for k, v in exif_data.items()
@@ -409,18 +442,17 @@ def extract_exif_date(path, verbose=False):
         except ValueError:
             t_date = parse(t_date_s)
         # if t_date is None:
-            # print(",,ERROR: could not read '" + fmt + "' format date"
-                  # " from '" + t_date_s)
+        #     print(",,ERROR: could not read '" + fmt + "' format date"
+        #           " from '" + t_date_s)
         # else:
-            # print(",,GOT DATE " + t_date.strftime(fmt))
+        #     print(",,GOT DATE " + t_date.strftime(fmt))
     else:
-        print(',' + path + ','
-              + '"ERROR: No DateTimeDigitized, OriginalDateTime,"'
-              + ' DateTimeOriginal in '
-              + str(exif) + '"')
+        print(',{},"ERROR: No DateTimeDigitized, OriginalDateTime,"'
+              ' DateTimeOriginal in {}"'.format(path, exif))
     if verbose:
         print("  result: {}".format(t_date))
     return t_date
+
 
 enc_pattern = {
     'opener': "decode byte ",
@@ -449,8 +481,8 @@ def extract_html_date(path):
         try:
             line = ins.readline()
         except UnicodeDecodeError as e:
-            msg = ("," + path + ",(line " + str(line_number) + "): "
-                  + "ERROR: bad character")
+            msg = (",{},(line {}): ERROR: bad character"
+                   "".format(path, line_number))
             e_s = str(e)
 
             opener = enc_pattern['opener']
@@ -460,7 +492,7 @@ def extract_html_date(path):
             if o_i >= 0:
                 start_i = o_i + len(opener)
                 c_i = e_s.find(closer, start_i)
-                if c_i >=0:
+                if c_i >= 0:
                     byte_found = True
                     hex_s = e_s[start_i:c_i]
                     if hex_s[:2] == "0x":
@@ -469,8 +501,8 @@ def extract_html_date(path):
                     html_s = bad_hex_to_html.get(hex_s)
                     if html_s is None:
                         html_s = "&#x" + hex_s.upper() + ";"
-                    msg += ("--Symbol '0x" + hex_s + "' is not allowed"
-                           + " in HTML--change it to " + html_s)
+                    msg += ("--Symbol '0x{}' is not allowed"
+                            " in HTML--change it to {}".format(hex_s, html_s))
                     print(msg + "  " + e_s)
             if not byte_found:
                 msg += ("--WARNING: Unable to read hex from error:")
@@ -483,7 +515,7 @@ def extract_html_date(path):
         if line:
             line = line.strip()
             # if line_number == 1:
-                # print("line 1 is: " + line)
+            #     print("line 1 is: " + line)
             if pattern is not None:
                 closer_i = line.find(pattern['closer'])
                 if closer_i >= 0:
@@ -516,6 +548,7 @@ def extract_html_date(path):
     if result is not None:
         dt = parse_date(result, pattern['format'])
     return dt
+
 
 def process_files(folder_path, op, more_results=None, verbose=False):
     unknown_type = None
@@ -552,9 +585,9 @@ def process_files(folder_path, op, more_results=None, verbose=False):
                     t_date = extract_exif_date(sub_path,
                                                verbose=verbose)
                     # if processed_count == 0:
-                        # outs = open("example.exif.dict.txt", 'w')
-                        # outs.write(str(exif))
-                        # outs.close()
+                    #     outs = open("example.exif.dict.txt", 'w')
+                    #     outs.write(str(exif))
+                    #     outs.close()
                     type_mark = "JPEG"
                 elif is_html(sub_path):
                     t_date = extract_html_date(sub_path)
@@ -591,8 +624,14 @@ def process_files(folder_path, op, more_results=None, verbose=False):
     results['processed_count'] = processed_count
     return results
 
-# Non-recursively sort into "ext" directories where ext is extension.
+
 def sortByExt(folderPath):
+    """Non-recursively sort into "ext" directories
+    where ext is extension.
+
+    Args:
+        folderPath (str): Any folder.
+    """
     if os.path.isdir(folderPath):
         subs = os.listdir(folderPath)
         subIndex = -1
@@ -609,7 +648,10 @@ def sortByExt(folderPath):
             subPath = os.path.join(folderPath, subName)
             parentName = os.path.basename(folderPath)
             if progressChunkCount >= interval:
-                print("# " + parentName + " " + str(int(round(float(subIndex)/float(len(subs))*100.0))) + "%")
+                print("# {} {}%".format(
+                    parentName,
+                    int(round(float(subIndex)/float(len(subs))*100.0)),
+                ))
                 progressChunkCount = -1
             if os.path.isfile(subPath):
                 ext = os.path.splitext(subPath)[1]
@@ -632,6 +674,7 @@ def sortByExt(folderPath):
 def modificationDate(filePath):
     stat = os.stat(filePath)
     return datetime.fromtimestamp(stat.st_mtime)
+
 
 def creationDate(filePath):
     """
@@ -668,7 +711,7 @@ def decodeAny(unicode_or_str):
             text = unicode_or_str.decode('ascii')
             decoded = True
         # text = text.rstrip('\x00')
-        text = text.replace('\x00','')  # overkill (rstrip is ok)
+        text = text.replace('\x00', '')  # overkill (rstrip is ok)
     return text
 
 
@@ -688,13 +731,13 @@ def getCategoryByExt(lowercaseExt):
     return category
 
 
-
 def getCategoryByExtUsingPath(path):
     ext = os.path.splitext(path)[1]
     if len(ext) > 1:
         ext = ext[1:]  # remove dot
     lowerExt = ext.lower()
     return getCategoryByExt(lowerExt)
+
 
 def hasAnyChar(haystack, needles):
     ret = False
@@ -705,10 +748,29 @@ def hasAnyChar(haystack, needles):
                 break
     return ret
 
-# Usage:
-# tag = TinyTag.get(subPath)
-# filenName = fileNameFromStats(tag.__dict__)
+
 def neatMetaTags(path, makeAllValidPathChars=True):
+    """Clean meta tags.
+
+    Usage:
+    tag = TinyTag.get(subPath)
+    filenName = fileNameFromStats(tag.__dict__)
+
+
+    Args:
+        path (str): Any file.
+        makeAllValidPathChars (bool, optional): Convert characters to
+            characters usable for a filename or directory. Defaults to
+            True.
+
+    Raises:
+        RuntimeError: _description_
+        RuntimeError: _description_
+        RuntimeError: _description_
+
+    Returns:
+        _type_: _description_
+    """
     ret = {}
     album = None
     artist = None
@@ -750,12 +812,10 @@ def neatMetaTags(path, makeAllValidPathChars=True):
         disc = decodeAny(disc)
         comment = decodeAny(comment)
 
-
         if _eMusicFlag in artist:
             artist = artist.replace(_eMusicFlag, "")
             ret['eMusicFlag'] = _eMusicFlag
             # Do NOT add to comment, since would aready have song URL.
-
 
         if makeAllValidPathChars:
             artist = cleanFileName(artist)
@@ -849,22 +909,22 @@ if __name__ == "__main__":
     # print("unknown_type_count: "
     #       + str(results.get('unknown_type_count')))
     # for path in results.get('unknown_type'):
-        # print("  - " + path)
+    #     print("  - " + path)
     # print("missing_meta_count: "
     #       + str(results.get('missing_meta_count')))
     # missing_meta_non_html_only_count = 0
     # print("missing_meta_non_html_only:")
     # for path in results.get('missing_meta'):
-        # if not is_html(path):
-            # print("  - " + path)
-            # missing_meta_non_html_only_count += 1
+    #     if not is_html(path):
+    #         print("  - " + path)
+    #         missing_meta_non_html_only_count += 1
     # print("missing_meta_non_html_only_count:"
-          # + str(missing_meta_non_html_only_count))
+    #       + str(missing_meta_non_html_only_count))
     # print("processed_count: " + str(results.get('processed_count')))
 
     # not tried yet:
-        # with open('image.jpg', 'rb') as fh:
-            # tags = EXIF.process_file(fh,
-            #                          stop_tag="EXIF DateTimeOriginal")
-            # dateTaken = tags["EXIF DateTimeOriginal"]
-            # return dateTaken
+    #     with open('image.jpg', 'rb') as fh:
+    #         tags = EXIF.process_file(fh,
+    #                                  stop_tag="EXIF DateTimeOriginal")
+    #         dateTaken = tags["EXIF DateTimeOriginal"]
+    #         return dateTaken

@@ -46,7 +46,7 @@ from xml.dom.minidom import (
     Text,
 )
 
-from hierosoft import (
+from hierosoft import (  # noqa F401
     echo1,
 )
 

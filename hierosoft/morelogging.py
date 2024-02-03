@@ -28,7 +28,7 @@ if __name__ == "__main__":
 # import hierosoft.moreweb  # avoid this--circular import
 
 if sys.version_info.major >= 3:
-    import logging
+    import logging  # noqa F401
     from logging import (
         Formatter,
         Logger,
@@ -38,6 +38,7 @@ if sys.version_info.major >= 3:
 else:
     # Polyfills for Python 2
     FORMAT_STYLES = ['%', '{', '$']
+
     class Formatter:
         def __init__(self, fmt=None, datefmt=None, style='%',
                      validate=True, defaults=None):

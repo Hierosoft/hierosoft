@@ -95,7 +95,7 @@ from hierosoft.ggrep import (  # noqa E402
     contains_any,
 )
 
-from hierosoft.hierosoftpacked import (
+from hierosoft.hierosoftpacked import (  # noqa E402
     hierosoft_16px_png,
 )
 
@@ -300,8 +300,9 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
             self.pbar['value'] = evt['loaded']
             # print(evt['loaded'])
             # evt['total'] is not implemented
-            self.count_label.config(text="downloading..." +
-                                    str(int(evt['loaded']/1024/1024)) + "MB..")
+            self.count_label.config(
+                text="downloading...{}MB.".format(int(evt['loaded']/1024/1024))
+            )
         if evt.get('status') == STATUS_DONE:
             echo0("Warning: Got status={} for progress."
                   " Set cb_done to something else and ensure"

@@ -23,7 +23,6 @@ POST_MSG = ('The version in version.py should be changed to the actual'
             ' a tag matching that should be added to git for the release.')
 
 
-
 def main():
     GIT = which("git")
     echo0('* trying to detect version of repo...')
@@ -88,7 +87,7 @@ def main():
             VERSION = line
         else:
             echo0("Error: '{}' returned an unexpected extra line: {}"
-                  "".format(line))
+                  "".format(describe_cmd_parts, line))
     err_count = 0
     for rawL in git_err:
         line = rawL.strip()
@@ -118,9 +117,6 @@ def main():
               " the version of the tag you are going to add.")
         return 2
 
-
-
-
     echo0("{}:".format(version_py_rel))
     with open(version_py_rel, 'r') as f:
         for rawL in f:
@@ -137,6 +133,7 @@ def main():
     echo0()
     echo0(POST_MSG)
     echo0()
+
 
 if __name__ == "__main__":
     sys.exit(main())

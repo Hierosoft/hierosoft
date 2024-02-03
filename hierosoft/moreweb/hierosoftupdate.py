@@ -418,8 +418,9 @@ class HierosoftUpdate(object):
                 if (os.path.isfile(try_dl_path) and
                         not os.path.isfile(dst_dl_path)):
                     shutil.move(try_dl_path, dst_dl_path)
-                    msg = ("collected old download '" + meta['filename'] +
-                           "' from Downloads to '" + self.archives_path + "'")
+                    msg = ("collected old download '{}'"
+                           " from Downloads to '{}'"
+                           "".format(meta['filename'], self.archives_path))
                     print(msg)
                     self.push_label("collected old download:")
                     self.push_label(meta['detected_luid'])
@@ -1197,7 +1198,8 @@ def prepare_and_run_launcher(self_install_options):
             app._download_page()
             installed = app.download_first(event_template=self_install_options)
         except URLError:
-            error = "Web is required to update (use --offline option to avoid update)."
+            error = ("Web is required to update"
+                     " (use --offline option to avoid update).")
             installed = {
                 'error': error,
             }

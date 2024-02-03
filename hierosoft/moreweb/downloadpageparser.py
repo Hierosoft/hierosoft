@@ -11,8 +11,9 @@ from hierosoft.moreweb import (
     HTMLParser,
 )
 
-# create a subclass and override the handler methods
+
 class DownloadPageParser(HTMLParser):
+    '''subclass to override handler methods'''
     HELP = {
         # formerly self.linArch, self.darwinArch, self.winArch,
         #   self.release_version, self.platform_flag, self.release_arch:
@@ -147,7 +148,7 @@ class DownloadPageParser(HTMLParser):
                      remove_win_arch=False, remove_ext=False,
                      remove_openers=True, remove_closers=True):
         '''Get the luid from the filename.
-        
+
         This uses the following keys from options: version, platform, arch.
         Arch can be a string or list of strings.
         '''

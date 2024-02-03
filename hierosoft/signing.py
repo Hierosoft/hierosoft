@@ -21,8 +21,10 @@ MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 ASSETS_DIR = os.path.join(MODULE_DIR, "assets")
 DATA_DIR = os.path.join(ASSETS_DIR, "data")
 
+
 def echo0(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+
 
 if sys.version_info.major < 3:
     input = raw_input
@@ -93,10 +95,10 @@ def main():
         'timestamp_server': "http://timestamp.sectigo.com"
         # ^ formerly "http://timestamp.comodoca.com", now a documentation alias
     }
-    option_keys = {  # Make every key all caps and check all caps arg against it
+    option_keys = {  # Make every key all caps & check all caps arg against it
         "/P": "password",
         "/F": "pfx_path",
-        # "/T": "timestamp_server",  # deprecated see doc/development/signing.md
+        # "/T": "timestamp_server", # deprecated see doc/development/signing.md
         "/TR": "timestamp_server",
     }
     key = None

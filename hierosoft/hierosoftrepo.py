@@ -1,7 +1,7 @@
 import json
 import os
 import platform
-import sys
+# import sys
 
 from collections import OrderedDict
 from hierosoft.morelogging import (
@@ -26,7 +26,8 @@ licenses = [
     },
     {
         'for': "Forest Theme",
-        'path': os.path.join(MODULE_DIR, "assets", "Forest-ttk-theme", "LICENSE"),
+        'path': os.path.join(MODULE_DIR, "assets", "Forest-ttk-theme",
+                             "LICENSE"),
     },
 ]
 
@@ -106,7 +107,8 @@ def _pack_binary(stream, name, path):
                 big_string = ""
             print(indent+'"%s"' % small_string, file=stream)
     print(')', file=stream)
-    print("%s = zlib.decompress(base64.b64decode(\n    %s_str.encode('utf-8')\n))"
+    print("%s = zlib.decompress(base64.b64decode(\n"
+          "    %s_str.encode('utf-8')\n))"
           % (name, name), file=stream)
     print("packed binary %s" % pformat(path))
 
