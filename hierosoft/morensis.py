@@ -5,8 +5,15 @@ by Jake Gustafson
 
 Project: hierosoft Python module by Hierosoft
 '''
+import os
+import shutil
+import tempfile
 
 from collections import OrderedDict
+
+from hierosoft import (
+    echo0,
+)
 
 
 def python_encoded(value):
@@ -40,15 +47,17 @@ def rewrite_python_var(path, key, value):
     enders = "\t ="
     with tempfile.TemporaryDirectory() as tmpdirname:
         print('created temporary directory', tmpdirname)
-        tmpPath = os.path.join(temp_dir.name, path)
+        # temp_dir.name
+        tmpPath = os.path.join(tmpdirname, path)
         with open(tmpPath, 'w') as ostream:
             with open(path, 'r') as istream:
-                for rawL in stream:
+                for rawL in istream:
                     lineN += 1
                     indented = rawL.rstrip(rawL)
                     line = indented.strip()
                     indent = indented[len(indented)-len(line):]
-                    if (line.startswith(key) and (line[len(key):len(key)+1] in enders)):
+                    if (line.startswith(key)
+                            and (line[len(key):len(key)+1] in enders)):
                         if prevLineN:
                             echo0('File "{}", line {}: Warning:'
                                   ' already had {} on line {}'
@@ -56,6 +65,7 @@ def rewrite_python_var(path, key, value):
                         prevLineN = lineN
                         encoded = python_encoded(value)
                         ostream.write(indent+"{} = {}\n"
+                                      "".format(key, encoded))
                     else:
                         if line == key:
                             echo0('File "{}", line {}: Warning:'
@@ -218,7 +228,6 @@ class NSISInclude:
         if got is None:
             return None
         return int(got)
-        
 
     def set(self, key, value):
         self.vars[key] = value
