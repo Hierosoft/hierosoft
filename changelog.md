@@ -6,10 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [git] - 2024-02-02
 ### Added
-- Several functions in moreplatform: get_dir_size, zip_dir, get_digest,
-  get_hexdigest, same_hash and install_shortcut (moved from
-  EnlivenMinetest/utilities/install-lmk; FIXME: combine with
-  make_shortcut?)
+- `sysdirs` dict-like constants collection (and generally-enforceable Constants class)
+- functions: app_version_dir, appstates_dir, generate_caption, dt_str, str_dt, dt_path_str, path_str_dt
+- PATH_TIME_FMT (moved from nopackage).
+
+
+## [git] - 2024-02-02
+### Added
+- Several functions in moreplatform: `get_dir_size`, `zip_dir`, `get_digest`, `get_hexdigest`, `same_hash` and `install_shortcut` (moved from EnlivenMinetest/utilities/install-lmk; FIXME: combine with `make_shortcut`?)
 
 
 ## [git] - 2024-02-02

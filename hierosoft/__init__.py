@@ -5,6 +5,8 @@ import os
 import subprocess
 import platform
 
+from datetime import datetime
+
 if sys.version_info.major < 3:
     FileNotFoundError = IOError
     ModuleNotFoundError = ImportError
@@ -354,6 +356,133 @@ substitutions = {
 }
 
 # ^ For cloud, see check_cloud.
+# FIXME: Replace constants above with elements in sysdirs below.
+
+
+class Constants(dict):
+    """Read-only Dictionary.
+
+    based on https://stackoverflow.com/a/19023331/4541104
+    """
+    def __init__(self):
+        dict.__init__(self)
+        self.__readonly = False
+
+    def readonly(self, readonly=True):
+        """Allow or deny modifying dictionary"""
+        if readonly is None:
+            readonly = False
+        elif readonly not in (True, False):
+            raise TypeError("readonly shoul be True or False (got {})"
+                            "".format(readonly))
+        self.__readonly = readonly
+
+    def __setitem__(self, key, value):
+        if self.__readonly:
+            raise TypeError("__setitem__ is not supported")
+        return dict.__setitem__(self, key, value)
+
+    def __delitem__(self, key):
+        if self.__readonly:
+            raise TypeError("__delitem__ is not supported")
+        return dict.__delitem__(self, key)
+
+
+sysdirs = Constants()  # Call .readonly() after vars are set below.
+
+# For semi-standard folders on Windows and Darwin see
+# <johnkoerner.com/csharp/special-folder-values-on-windows-versus-mac/>
+if platform.system() == "Windows":
+    # HOME = os.environ['USERPROFILE']
+    sysdirs['HOME'] = HOME
+    sysdirs['SHORTCUTS_DIR'] = os.path.join(HOME, "Desktop")
+    sysdirs['APPDATA'] = os.environ['APPDATA']
+    sysdirs['LOCALAPPDATA'] = os.environ['LOCALAPPDATA']
+    sysdirs['PROGRAMS'] = os.path.join(sysdirs['LOCALAPPDATA'], "Programs")
+    sysdirs['CACHES'] = os.path.join(sysdirs['LOCALAPPDATA'], "Caches")
+elif platform.system() == "Darwin":
+    # See <https://developer.apple.com/library/archive/
+    #   documentation/MacOSX/Conceptual/BPFileSystem/Articles/
+    #   WhereToPutFiles.html>
+    # HOME = os.environ['HOME']
+    sysdirs['HOME'] = HOME
+    sysdirs['SHORTCUTS_DIR'] = os.path.join(HOME, "Desktop")
+    # APPDATA = os.path.join(HOME, "Library", "Preferences")
+    # ^ Don't use Preferences: It only stores plist format files
+    #   generated using the macOS Preferences API.
+    # APPDATA = "/Library/Application Support" # .net-like
+    sysdirs['APPDATA'] = os.path.join(HOME, ".config")  # .net Core-like
+    sysdirs['LOCALAPPDATA'] = os.path.join(HOME, ".local",
+                                           "share")  # .net Core-like
+    sysdirs['CACHES'] = os.path.join(HOME, "Library",
+                                     "Caches")  # .net Core-like
+    # ^ APPDATA & LOCALAPPDATA & CACHES can also be in "/" not HOME
+    #   (.net-like)
+    # sysdirs['PROGRAMS'] = os.path.join(HOME, "Applications")
+    # ^ Should only be used for Application Bundle, so:
+    sysdirs['PROGRAMS'] = os.path.join(HOME, ".local", "lib")
+else:
+    # HOME = os.environ['HOME']
+    sysdirs['HOME'] = HOME
+    sysdirs['SHORTCUTS_DIR'] = os.path.join(HOME, ".local", "share",
+                                            "applications")
+    sysdirs['APPDATA'] = os.path.join(HOME, ".config")
+    sysdirs['LOCALAPPDATA'] = os.path.join(HOME, ".local",
+                                           "share")  # .net-like
+    sysdirs['CACHES'] = os.path.join(HOME, ".cache")
+    sysdirs['PROGRAMS'] = os.path.join(HOME, ".local", "lib")
+
+# del HOME
+
+sysdirs.readonly()
+
+
+def app_version_dir(org_name, app_name, version):
+    """Get a path for installing an app into Hierosoft launcher.
+
+    For uninstall data use LOCALAPPDATA (such as ~/.local/share on
+    linux) instead of PROGRAMS (such as ~/.local/lib on linux)!
+
+    Args:
+        org_name (str): The name of the organization, with no spaces.
+            Example: minetest.io
+        app_name (str): The unique-enough id of the app, with no
+            spaces. Examples: "minetest", "finetest" (or if compiled,
+            "finetest-local")
+        version (str): The unique version of the app, with no spaces.
+            Examples: "0.4", "0.4-dev", "current".
+            - If multi-version support is not selected by user, use
+              version="current" to upgrade continuously. HInstall tries
+              to create rollback data (Uses hierosoft.appstates_dir).
+    """
+    # formerly get_happ_path
+    happs = os.path.join(sysdirs['PROGRAMS'], "hierosoft", "apps")
+    # ^ such as in ~/.local/lib on linux
+    return os.path.join(happs, org_name, app_name, version)
+
+
+def appstates_dir(org_name, app_name, version):
+    """Get a path for installing an app into Hierosoft launcher.
+
+    For uninstall data use LOCALAPPDATA (such as ~/.local/share on
+    linux) instead of PROGRAMS (such as ~/.local/lib on linux)!
+
+    Args:
+        org_name (str): The name of the organization, with no spaces.
+            Example: minetest.io
+        app_name (str): The unique-enough id of the app, with no
+            spaces. Examples: "minetest", "finetest" (or if compiled,
+            "finetest-local").
+        version (str): The unique version of the app, with no spaces.
+            Examples: "0.4", "0.4-dev", "current".
+            - If multi-version support is not selected by user, use
+              version="current" to upgrade continuously. HInstall tries
+              to create rollback data. In this case, this function is
+              the rollback data parent folder itself.
+    """
+    appstates = os.path.join(sysdirs['LOCALAPPDATA'], "hierosoft", "appstates")
+    # ^ such as in ~/.local/share on linux
+    return os.path.join(appstates, org_name, app_name, version)
 
 
 class TextStream:
@@ -689,7 +818,8 @@ def run_and_get_lists(cmd_parts, collect_stderr=True):
     '''Run a command and check the output.
 
     Args:
-        collect_stderr (bool): Collect stderr output for the err return list Defaults to True.
+        collect_stderr (bool): Collect stderr output for the err return
+            list Defaults to True.
 
     Returns:
         tuple[list[str], list[str], int]: (out, err, returncode) where
@@ -943,6 +1073,65 @@ def get_pyval(name, py_path):
                           ''.format(py_path, line_n, quote))
                     continue
                 return quoted_value[1:ender_i]
+
+
+def generate_caption(project_meta, variant):
+    """Generate the icon caption.
+
+    Args:
+        project_meta (dict): The dict containing 'name' and
+            'name_and_variant_fmt' where 'name' is like
+            "Finetest (minetest.org)", and 'name_and_variant_fmt' is
+            like 'Minetest ({}) (minetest.org build)'.
+            The "{}" will be replaced with the variant.
+    """
+    Name = project_meta['name']
+    if variant is not None:
+        name_and_variant_fmt = project_meta.get('name_and_variant_fmt')
+        if name_and_variant_fmt is not None:
+            Name = name_and_variant_fmt.format(variant)
+        else:
+            Name += " (" + project_meta['variant'] + ")"  # raise if None
+    return Name
+
+
+# Date variables below are borrowed from enissue.py in
+# <https://github.com/Poikilos/EnlivenMinetest>, but the sanitized
+# version instead of the Gitea-specific version is used:
+giteaSanitizedDtFmt = "%Y-%m-%dT%H:%M:%S%z"
+sanitizedDtExampleS = "2021-11-25T12:00:13-0500"
+# PATH_TIME_FMT = "%Y-%m-%d %H..%M..%S"  # from rotocanvas
+# PATH_SUFFIX_FMT = "_%Y-%m-%d_%H_%M_%S"  # from my lepidopterist fork
+# "%Y-%m-%d %H..%M..%S" # from rotocanvas
+PATH_TIME_FMT = "%Y-%m-%dT%H_%M_%S"
+
+
+def dt_str(dt):
+    """Convert datetime to a string standardized for nopackage metadata.
+
+    Args:
+        dt (datetime): Examples: from datetime import timezone;
+            datetime.now(timezone.utc); or without tzinfo:
+            datetime.utcnow()
+
+    Returns:
+        str: Date and time string in giteaSanitizedDtFmt
+    """
+    # return datetime.strftime(dt, "%Y-%m-%dT%H:%M:%SZ")  # from enissue.py
+    return datetime.strftime(dt, giteaSanitizedDtFmt)
+
+
+def str_dt(timestamp_s):
+    return datetime.strptime(timestamp_s, giteaSanitizedDtFmt)
+
+
+def dt_path_str(dt):
+    # a.k.a. datetime_path_str but couldn't find my old method anywhere
+    return datetime.strftime(dt, PATH_TIME_FMT)
+
+
+def path_str_dt(timestamp_s):
+    return datetime.strptime(timestamp_s, PATH_TIME_FMT)
 
 
 if __name__ == "__main__":
