@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [git] - 2024-02-02
 ### Added
+- Several functions in moreplatform: get_dir_size, zip_dir, get_digest,
+  get_hexdigest, same_hash and install_shortcut (moved from
+  EnlivenMinetest/utilities/install-lmk; FIXME: combine with
+  make_shortcut?)
+
+
+## [git] - 2024-02-02
+### Added
 - rewrite_conf_str (moved from EnlivenMinetest/utilities/install-lmk)
   - FIXME: combine with rewrite_conf?
 
