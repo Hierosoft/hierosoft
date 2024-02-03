@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [git] - 2024-02-02
 ### Added
+- `HInstaller` (install, upgrade, and uninstall features)
+  - Metadata (`hinstaller.meta`) format is based on nopackage metadata format.
+- `HInstaller` metadata for installing Minetest
+- `install-lmk.py` HInstaller example script and cli script for installing Minetest.
+
+
+## [git] - 2024-02-02
+### Added
 - `sysdirs` dict-like constants collection (and generally-enforceable Constants class)
 - functions: app_version_dir, appstates_dir, generate_caption, dt_str, str_dt, dt_path_str, path_str_dt
 - PATH_TIME_FMT (moved from nopackage).
