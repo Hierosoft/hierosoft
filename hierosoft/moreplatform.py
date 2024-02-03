@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import copy
+import hashlib
 import os
-# import platform
+import platform
 import shutil
+import stat
 import sys
 import subprocess
 import tarfile
@@ -15,13 +17,16 @@ from zipfile import ZipFile
 
 from hierosoft import (
     echo0,
+    write0,
     SHORTCUT_EXT,
     CACHES,
     get_subdir_names,
+    sysdirs,
 )
 
 from hierosoft.morebytes import (
     rewrite_conf,
+    rewrite_conf_str,
 )
 
 if sys.version_info.major < 3:
@@ -229,7 +234,7 @@ def install_tar(archive, dst, remove_archive=False,
             extracted_path = os.path.join(tmpdirname, "extracted")
             with tarfile.open(archive, mode) as archive_handle:
                 # for i in archive_handle:
-                    # archive_handle.extractfile(i)
+                #     archive_handle.extractfile(i)
                 archive_handle.extractall(extracted_path)
             installed = install_extracted(
                 extracted_path,
@@ -342,15 +347,20 @@ def make_shortcut(meta, program_name, mgr, push_label=echo0,
                   uninstall=False):
     """Create a shortcut.
 
+    See also install_shortcut.
+
     Args:
-        meta (dict): data about the program
-        program_name (_type_): _description_
-        mgr (_type_): _description_
-        push_label (_type_, optional): _description_. Defaults to echo0.
-        uninstall (bool, optional): _description_. Defaults to False.
+        meta (dict): Data about the program.
+        program_name (str): unix-like unique-enough program name.
+        mgr (object): A DownloadManager (for callbacks).
+        push_label (Callable, optional): Status function accepting a
+            string. Defaults to echo0.
+        uninstall (bool, optional): Whether to change to uninstall mode
+            (remove the shortcut file using the path that this method
+            would create). Defaults to False.
 
     Returns:
-        _type_: _description_
+        bool: Whether successful.
     """
     installed_path = meta['Path']  # *required*--missing from earlier versions
     ret = True
@@ -538,3 +548,210 @@ def make_shortcut(meta, program_name, mgr, push_label=echo0,
         push_label(msg)
         print(msg)
     return ret
+
+
+def install_shortcut(Exec, dst, project_meta):
+    """Install a shortcut to any program on any understood platform.
+
+    See also make_shortcut.
+
+    - sc_template_path is determined based on dst and shortcut_relpath
+    - sc_installed_path (path) is determined from OS and shortcut_namespace
+      (filename is based on Name on platforms other than Linux).
+    - sc_template_path is read, Exec string is filled based on dst
+      (the selected destination where the program is installed)
+      then the resulting shortcut is saved to sc_installed_path
+      (only after temp file is complete).
+
+    Args:
+        Exec (string): The executable path where the shortcut
+            should point.
+        dst (string): The directory path where the program is
+            installed.
+        project_meta (dict): All metadata describing the program.
+            For this method, it must have the keys:
+            - 'shortcut' (dict): contains:
+              - 'Name': The entire name (except variant) that
+                should be displayed as the shortcut's caption.
+              - 'GenericName' (Optional[string]): A simplified
+                name for the program. If None, the GenericName
+                line will be removed from the shortcut. This
+                option is only for GNU/Linux systems or other
+                systems using XDG.
+              - 'Keywords' (Optional[string]): If None, Keywords
+                line will be removed from the shortcut. This
+                option is only for GNU/Linux systems or other
+                systems using XDG.
+              - 'Path' (str): The working directory for the
+                program. Defaults to dir containing Exec.
+            - 'shortcut_relpath': The location of an existing
+              shortcut file to use and modify.
+            - 'platform_icon_relpath' (dict[string]): A dict
+              where the key is platform.system() (Must have
+              at least 'Linux', 'Windows', *AND* 'Darwin')
+              and the value is the relative path from
+              dst to the icon image file.
+    Raises:
+        FileNotFoundError: If src does not exist.
+    """
+    if not os.path.isdir(dst):
+        raise ValueError("The dst must be an existing directory."
+                         " The name will be generated.")
+    warning = None
+    Name = project_meta['shortcut']['Name']
+    echo0("Name={}".format(Name))
+    platform_icon_relpath = project_meta.get('platform_icon_relpath')
+    icon_relpath = None
+    if platform_icon_relpath is not None:
+        icon_relpath = platform_icon_relpath.get(platform.system())
+    if icon_relpath is None:
+        raise NotImplementedError(
+            "There is no platform icon for {}.".format(platform.system())
+        )
+    Icon = os.path.join(dst, icon_relpath)
+    shortcut_meta = copy.deepcopy(project_meta.get('shortcut'))
+    shortcut_meta['Name'] = Name
+    shortcut_meta['Exec'] = Exec
+    shortcut_meta['Icon'] = Icon
+    if not project_meta['shortcut'].get('Path'):
+        shortcut_meta['Path'] = os.path.dirname(Exec)
+
+    # ^ rewrite_conf_str *removes* any lines where value is None
+
+    if platform.system() == "Linux":
+        sc_template_path = os.path.join(dst, project_meta['shortcut_relpath'])
+        shortcut_name = "{}.desktop".format(
+            project_meta['shortcut_namespace'],  # must include -variant if any
+        )
+        sc_installed_path = os.path.join(
+            sysdirs['SHORTCUTS_DIR'],
+            shortcut_name
+        )
+        if not os.path.isdir(sysdirs['SHORTCUTS_DIR']):
+            os.makedirs(sysdirs['SHORTCUTS_DIR'])  # default mode is 511
+        write0('Installing icon to "{}"...'.format(sc_installed_path))
+        rewrite_conf_str(
+            sc_template_path,
+            sc_installed_path,
+            changes=shortcut_meta,
+        )
+        echo0("OK")
+    elif platform.system() == "Darwin":
+        shortcut_name = Name + ".command"
+        sc_installed_path = os.path.join(
+            sysdirs['SHORTCUTS_DIR'],
+            shortcut_name
+        )
+        with open(sc_installed_path) as stream:
+            stream.write('"%s"\n' % Exec)
+            # ^ Run the game & close Command Prompt immediately.
+            # ^ First arg is Command Prompt title, so leave it blank.
+        st = os.stat(sc_installed_path)
+        os.chmod(sc_installed_path, st.st_mode | stat.S_IXUSR)
+        # ^ same as stat.S_IEXEC: "Unix V7 synonym for S_IXUSR."
+    elif platform.system() == "Windows":
+        shortcut_name = Name + ".bat"
+        sc_installed_path = os.path.join(
+            sysdirs['SHORTCUTS_DIR'],
+            shortcut_name
+        )
+        with open(sc_installed_path) as stream:
+            stream.write('start "" "%s"\n' % Exec)
+            # ^ Run the game & close Command Prompt immediately.
+            # ^ First arg is Command Prompt title, so leave it blank.
+    else:
+        warning = ("Icon install isn't implemented for {}."
+                   "".format(platform.system()))
+    return {
+        'sc_path': sc_installed_path,
+        'shortcut_meta': shortcut_meta,
+        "warning": warning,  # may be None
+        "destination": dst,
+    }
+
+
+def get_dir_size(path, add_symlinks=False):
+    total_size = os.path.getsize(path)
+    for sub in os.listdir(path):
+        sub_path = os.path.join(path, sub)
+        if os.path.islink(sub_path) and not add_symlinks:
+            continue
+        if os.path.isfile(sub_path):
+            total_size += os.path.getsize(sub_path)
+        elif os.path.isdir(sub_path):
+            total_size += get_dir_size(sub_path)
+    return total_size
+
+
+def _zip_dir(zipfile, src, dst, simulate=False):
+    if os.path.isfile(src):
+        if not simulate:
+            zipfile.write(src, dst)
+        return 1
+    count = 0
+    for sub in os.listdir(src):
+        # is already known to be a dir
+        src_sub_path = os.path.join(src, sub)
+        dst_sub_path = os.path.join(dst, sub)
+        count += zip_dir(zipfile, src_sub_path, dst_sub_path)
+    return count
+
+
+def zip_dir(zipfile, src, dst, simulate=False):
+    if dst.startswith(os.path.sep) or dst.startswith("/"):
+        raise ValueError('dst may not start with slash: "{}"'
+                         ''.format(dst))
+    if platform.system() == "Windows":
+        if ":" in dst:
+            raise ValueError('dst may not contain ":": "{}"'
+                             ''.format(dst))
+    return _zip_dir(zipfile, src, dst)
+
+
+def get_digest(path):
+    """Get MD5 digest bytes.
+
+    Args:
+        path (str): Any file.
+
+    Returns:
+        bytes: md5 digest bytes
+    """
+    hasher = hashlib.md5()
+    with open(path, 'rb') as f:
+        buf = f.read()
+        hasher.update(buf)
+        return hasher.digest()
+
+
+def get_hexdigest(path):
+    """Get MD5 digest hex-encoded string.
+
+    Args:
+        path (str): Any file.
+
+    Returns:
+        str: md5 digest hex string.
+    """
+    hasher = hashlib.md5()
+    with open(path, 'rb') as f:
+        buf = f.read()
+        hasher.update(buf)
+        return hasher.hexdigest()
+
+
+
+
+
+def same_hash(path1, path2):
+    # Based on https://stackoverflow.com/a/36873550/4541104 by unutbu
+    digests = []
+    for path in (path1, path2):
+        hasher = hashlib.md5()
+        with open(path, 'rb') as f:
+            buf = f.read()
+            hasher.update(buf)
+            a = hasher.hexdigest()
+            digests.append(a)
+
+    return digests[0] == digests[1]
