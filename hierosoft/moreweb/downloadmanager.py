@@ -1,7 +1,7 @@
 import os
 import threading
 
-from hierosoft import (
+from hierosoft import (  # noqa F401
     echo0,
     echo1,
     echo2,
@@ -20,6 +20,7 @@ from hierosoft.moreweb import (
 )
 
 from hierosoft.moreweb.downloadpageparser import DownloadPageParser
+
 
 class DownloadManager:
     '''

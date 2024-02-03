@@ -24,7 +24,7 @@ def property_to_kv_value(property):
         return str(parts)[1:-1]  # 1:-1 to remove braces
         # ^ Change "[1.0, None]" to "1.0, None" for use in KV
     if ((type(property).__name__ == "StringProperty")
-          or (type(property).__name__ == "str")):
+            or (type(property).__name__ == "str")):
         return "'{}'".format(property.replace("'", "\\'"))
     if type(property).__name__ == "dp":
         return "{}dp".format(float(property))
@@ -53,6 +53,7 @@ def property_to_kv_value(property):
     return str(property)
     # ^ else Python-like dict representation is ok for pos_hint in kvlang
     #   (See <https://stackoverflow.com/a/45100701/4541104>).
+
 
 _id_lookup = {}  # Look up the id of a widget.
 
@@ -108,9 +109,9 @@ def widget_to_kv(widget, indent, widget_id=None, outfn=print,
             Otherwise, id will be ignored (since this method assumes
             that the widgets were dynamically generated in a py
             file rather than a kv file which has ids)
-        outfn (Callable): The output function (print to console by default); The
-            given function itself must add a newline at the end like
-            print does.
+        outfn (Callable): The output function (print to console by
+            default); The given function itself must add a newline at
+            the end like print does.
         className (str): You must set this if you are using a widget subclass
             so that the KV language output is written properly. For
             example, if you have a "SinglePage" class that is a
@@ -168,16 +169,19 @@ def widget_to_kv(widget, indent, widget_id=None, outfn=print,
            - "right is an AliasProperty of (x + width)."
            - "top is an AliasProperty of (y + height)."
         ^ Ignore the following since result is not intended to be
-          an operable app, just working KV code for prototyping in a visual editor:
+          an operable app, just working KV code for prototyping in a
+          visual editor:
           items, exit_manager, select_path,
           select_directory_on_press_button,
           select_directory_on_press_button, previous,
           and any events such as on_press.
         '''
-        if hasattr(widget, try_attr) and (getattr(widget, try_attr) is not None):
+        if (hasattr(widget, try_attr)
+                and (getattr(widget, try_attr) is not None)):
             value = getattr(widget, try_attr)
             kv_value_str = None
-            # There is no need to write the default for the following attributes:
+            # There is no need to write the default for the following
+            #   attributes:
             if try_attr == 'disabled':
                 if value is False:
                     continue
@@ -190,8 +194,8 @@ def widget_to_kv(widget, indent, widget_id=None, outfn=print,
             if try_attr == 'valign':
                 if value == 'bottom':
                     continue
-            # The default value of halign isn't clear. The documentation says it
-            #   is auto and left (contradictory):
+            # The default value of halign isn't clear. The documentation
+            #   says it is auto and left (contradictory):
             #   <https://kivy.org/doc/stable/api-kivy.uix.label.html#kivy.uix.label.Label.halign>
             if try_attr == 'spacing':
                 if value == 0:
@@ -203,7 +207,8 @@ def widget_to_kv(widget, indent, widget_id=None, outfn=print,
                         nonzero_found = True
                         break
                 if not nonzero_found:
-                    # There is no need to write the line. 0,0,0,0 is the default.
+                    # There is no need to write the line. 0,0,0,0 is the
+                    # default.
                     continue
             if try_attr == 'md_bg_color':
                 if value == [1, 1, 1, 0]:

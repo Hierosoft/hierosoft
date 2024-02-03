@@ -123,7 +123,7 @@ class SimpleArgs:
                     "The types dictionary must use the finalized"
                     " options key as they dictionary key, not the"
                     " argument (do arg.lstrip('-') on first)."
-                    "".format()
+                    "".format(key)
                 )
         if flags is None:
             flags = []

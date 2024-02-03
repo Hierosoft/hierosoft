@@ -740,9 +740,6 @@ def get_hexdigest(path):
         return hasher.hexdigest()
 
 
-
-
-
 def same_hash(path1, path2):
     # Based on https://stackoverflow.com/a/36873550/4541104 by unutbu
     digests = []

@@ -79,7 +79,7 @@ else:
                                 stderr=errs)
     subprocess.run = sp_run
 
-from hierosoft.morelogging import (
+from hierosoft.morelogging import (  # noqa F401
     echo0,
     echo1,
     echo2,
@@ -760,8 +760,8 @@ def s2or3(s):
 def no_enclosures(
         s,
         openers=["(", "[", "{", '"', "'"],
-        closers=[")", "]", "}", '"', "'"]
-        ):
+        closers=[")", "]", "}", '"', "'"],
+):
     """Remove the enclosures from a string.
 
     For example, change "(12-22-2022)" to "12-22-2022".
