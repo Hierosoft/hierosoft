@@ -31,7 +31,8 @@ from hierosoft import (
     get_subdir_names,
     get_missing_paths,
     # HOME,
-    USER_PROGRAMS,
+    # USER_PROGRAMS,
+    sysdirs,
     CACHES,
     ASSETS_DIR,
     which_python,
@@ -175,7 +176,7 @@ class HierosoftUpdate(object):
         self.enable_install = None
         self.remove_download = None
         self.luid = None
-        self.programs = USER_PROGRAMS
+        self.programs = sysdirs['PROGRAMS']
         self.installed_path = None
         self.action = None
         self.uninstall = None  # TODO: move this to the event
