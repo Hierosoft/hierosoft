@@ -9,5 +9,32 @@
 		"flake8.args": [
 			"--ignore=N816,N806,N803,N802,E226,W503"
 		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "run.py --upgrade",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "run.py",
+				"console": "integratedTerminal",
+				"justMyCode": true,
+				"args": [
+					"--upgrade",
+				]
+			},
+			{
+				"name": "Launch --upgrade",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${file}",
+				"console": "integratedTerminal",
+				"justMyCode": true,
+				"args": [
+					"--upgrade",
+				]
+			}
+		]
 	}
 }
