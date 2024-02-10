@@ -38,7 +38,8 @@ import copy
 import sys
 
 from collections import OrderedDict
-from pprint import pformat
+# from pprint import pformat
+from hierosoft.morelogging import pformat
 from xml.dom.minidom import (
     # parse,  # accepts a file handle
     parseString,

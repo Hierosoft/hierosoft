@@ -7,7 +7,9 @@ import sys
 import re
 import tempfile
 
-from pprint import pformat
+# from pprint import pformat
+
+from hierosoft.morelogging import pformat
 
 from hierosoft import (
     echo0,

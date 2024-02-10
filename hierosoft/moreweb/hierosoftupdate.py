@@ -12,7 +12,8 @@ import time
 # import zlib
 # import zipfile
 
-from pprint import pformat
+# from pprint import pformat
+from hierosoft.morelogging import pformat
 
 # if __name__ == "__main__":
 #     sys.path.insert(0, REPO_DIR)
@@ -1264,9 +1265,9 @@ def prepare_and_run_launcher(self_install_options):
         if error is None:
             root.destroy()
 
+    # Keep splash a moment, not scare user with flashing screen.
     root.after(2000, close)
     root.mainloop()
-    # Keep splash a moment, not scare user with flashing screen:
     # time.sleep(2)
 
     return 0

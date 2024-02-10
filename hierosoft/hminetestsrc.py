@@ -35,9 +35,6 @@ import platform
 # import stat
 import sys
 
-from pprint import pformat
-
-
 # if __name__ == "__main__":
 #     submodule_dir = os.path.dirname(os.path.realpath(__file__))
 #     module_dir = os.path.dirname(submodule_dir)
@@ -53,6 +50,9 @@ from hierosoft import (
     write0,
     # get_happ_path,
 )
+
+# from pprint import pformat
+from hierosoft.morelogging import pformat
 
 # from hierosoft.moreplatform import (
 #     get_dir_size,
