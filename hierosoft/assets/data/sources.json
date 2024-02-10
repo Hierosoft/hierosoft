@@ -1,12 +1,12 @@
 {
   "sources_urls": [
-    "https://github.com/Hierosoft/hierosoft/blob/main/hierosoft/assets/data/default_sources.json"
+    "https://github.com/Hierosoft/hierosoft/blob/main/hierosoft/assets/data/sources.json"
   ],
   "sources_urls.comment": "If GitHub sources_urls is down, try https://minetest.io/launcherapi/sources.json",
   "news": [
     {
-      "date": "2023-09-09 19:27",
-      "text": "Now with awesomesauce!",
+      "date": "2024-02-10 15:03",
+      "text": "Launcher GUI development has resumed!",
       "url": "https://minetest.io"
     }
   ],
