@@ -369,7 +369,7 @@ class MoreSVG(object):  # Must be new-style class (object) for get/set in Py 2
                 node.attributes.get('style') if available as per SVG
                 spec, otherwise 1 (default in SVG spec).
         """
-        prefix = "[_draw_svg_path] "
+        prefix = "[_draw_svg_path] "  # noqa F841
         if node.tagName != "path":
             raise ValueError("This function can only draw a path node.")
         parts = node.attributes['d'].value.split()
