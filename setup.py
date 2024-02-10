@@ -45,7 +45,7 @@ setuptools.setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
-        ('License :: OSI Approved :: MIT License'), # See also: license=
+        ('License :: OSI Approved :: MIT License'),  # See also: license=
         'Operating System :: POSIX :: Linux',
         'Operating System :: Microsoft :: Windows'
         'Operating System :: MacOS :: MacOS X'

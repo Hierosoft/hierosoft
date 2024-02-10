@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import re
+# import re
 import sys
 import os
 import platform
@@ -9,7 +9,7 @@ REPO_USER = "Hierosoft"
 REPO_NAME = "hierosoft"
 MODULE_NAME = "hierosoft"  # See also import hierosoft statements
 
-GIT_SERVER= "https://github.com"
+GIT_SERVER = "https://github.com"
 
 CALLER_NAME = os.path.split(sys.argv[0])[1]
 profile = os.environ.get('HOME')

@@ -3,7 +3,7 @@
 import re
 import sys
 import os
-import platform
+# import platform
 
 SCRIPTS_DIR = os.path.dirname(os.path.realpath(__file__))
 # ^ Without realpath, . will be included as a separate directory
@@ -12,7 +12,7 @@ REPO_DIR = os.path.dirname(SCRIPTS_DIR)
 if os.path.isfile(os.path.join(REPO_DIR, "hierosoft", "__init__.py")):
     sys.path.insert(0, REPO_DIR)
 
-from hierosoft.moreweb.hierosoftupdate import main
+from hierosoft.moreweb.hierosoftupdate import main  # noqa E402
 
 if __name__ == '__main__':
     sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])

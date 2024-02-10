@@ -2,7 +2,7 @@
 import sys
 import re
 
-from find_hierosoft import hierosoft
+from find_hierosoft import hierosoft  # noqa E401
 # ^ works for submodules since changes path
 
 from hierosoft.checkversion import main
