@@ -176,8 +176,18 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
             # data=transparent_png,
             # data=hierosoft_16px_png,
             data=hierosoft_16px_png,
+            master=root,
         )
+        if not photo:
+            echo0("Error: Tcl Failed to load packed hierosoft_16px_png.")
+        # try:
         root.iconphoto(False, photo)
+        # NOTE: 'can't use "pyimage2" as iconphoto: not a photo image'
+        #   is apparently caused by having two instances of Tk! Use toplevel:
+        #   https://stackoverflow.com/a/26110583/4541104
+        #   - another solution: Set master: PhotoImage(master=..., ...)
+        # except tk.TclError:
+        #     echo0("Error: Tcl failed to load packed hierosoft_16px_png")
 
         self.root.geometry("1000x600")
         self.root.minsize(600, 400)
