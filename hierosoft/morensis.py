@@ -77,7 +77,7 @@ def rewrite_python_var(path, key, value):
                       ' {} was not found, so it will be added to the end!'
                       ''.format(path, lineN, key))
                 ostream.write("\n{} = {}\n".format(key, value))
-                        
+
         shutil.move(tmpPath, path)
 
 

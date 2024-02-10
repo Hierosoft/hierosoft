@@ -294,8 +294,10 @@ def install_zip(archive, dst, remove_archive=False,
         echo0(delete_msg)
         try:
             os.remove(archive)
-        except PermissionError as ex:
-            permission_msg = "Cannot delete %s. Delete the faulty file manually."
+        except PermissionError:
+            permission_msg = ("Cannot delete %s."
+                              " Delete the faulty file manually."
+                              % archive)
             echo0(permission_msg)
             evt['error'] + "\n" + permission_msg
     return evt
