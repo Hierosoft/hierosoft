@@ -3,12 +3,12 @@ import sys
 import os
 import subprocess
 import shlex
-import threading
+# import threading
 import time
 
 if sys.version_info.major >= 3:
     import tkinter as tk
-    import tkinter.font as tkFont
+    from tkinter import font
     import tkinter.ttk as ttk
     from tkinter import messagebox
 else:
@@ -16,10 +16,10 @@ else:
     FileNotFoundError = IOError
     ModuleNotFoundError = ImportError
     NotADirectoryError = OSError
-    import Tkinter as tk
-    import tkFont
-    import ttk
-    import tkMessageBox as messagebox
+    import Tkinter as tk  # noqa N813
+    import tkFont as font  # noqa F401,N813
+    import ttk  # noqa F401,N813
+    import tkMessageBox as messagebox  # noqa F401
 
 
 def echo0(*args):
@@ -40,7 +40,8 @@ class MainForm(tk.Frame):
         self.read_delay = 1
 
     def set_startup_program(self, cmd):
-        # self.thread = threading.Thread(target=self._set_startup_program, args=(cmd,))
+        # self.thread = threading.Thread(target=self._set_startup_program,
+        #                                args=(cmd,))
         # self.thread.start()
         self.run_parts = cmd
         self.parent.after(self.read_delay, self._run_startup_program)
@@ -68,7 +69,6 @@ class MainForm(tk.Frame):
 
         self.parent.after(self.read_delay, self._check_startup_program)
 
-
     def _set_startup_program(self, cmd):
         self.run_parts = cmd
         if cmd is None:
@@ -83,7 +83,8 @@ class MainForm(tk.Frame):
         py_cmd = None
         if cmd[0].lower().endswith("py") or cmd[0].lower().endswith("pyw"):
             py_cmd = ["/usr/bin/python3"] + cmd
-        # "In Python 3.8, open() emits RuntimeWarning if buffering=1 for binary mode.
+        # "In Python 3.8, open() emits RuntimeWarning if buffering=1 for
+        # binary mode.
         # Because we never write to this file, pass 0 to switch buffering off."
         # ^ See <https://github.com/benoitc/gunicorn/pull/2146/files>
         #   found via <https://askubuntu.com/a/1216809>.
@@ -143,6 +144,7 @@ def main():
     echo0("mainloop is starting.")
     root.mainloop()
     echo0("mainloop is over.")
+
 
 if __name__ == "__main__":
     sys.exit(main())

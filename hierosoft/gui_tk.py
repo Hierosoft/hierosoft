@@ -16,13 +16,13 @@ Options:
 from __future__ import print_function
 import sys
 import os
-import shutil
+# import shutil
 import threading
-import tarfile
-import zipfile
+# import tarfile
+# import zipfile
 # import platform
 import copy
-import time
+# import time
 
 from pprint import pformat
 
@@ -32,16 +32,16 @@ if sys.version_info.major >= 3:  # try:
     from tkinter import simpledialog
     # ^ such as name = simpledialog.askstring('Name', 'What is your name?')
     import tkinter as tk
-    import tkinter.font as tkFont
+    from tkinter import font
     from tkinter import ttk
     # from tkinter import tix
 else:  # except ImportError:
     # Python 2
-    import tkMessageBox as messagebox
-    import tkFileDialog as filedialog
-    import tkSimpleDialog as simpledialog
-    import Tkinter as tk
-    import tkFont
+    import tkMessageBox as messagebox  # noqa F401,N813
+    import tkFileDialog as filedialog  # noqa F401,N813
+    import tkSimpleDialog as simpledialog  # noqa F401,N813
+    import Tkinter as tk  # noqa F401,N813
+    import tkFont as font  # noqa F401,N813
     import ttk
     # import Tix as tix
 

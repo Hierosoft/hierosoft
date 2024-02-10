@@ -4,7 +4,7 @@ Collect command-line interface (CLI) arguments.
 '''
 from __future__ import print_function
 import sys
-from hierosoft import (
+from hierosoft import (  # noqa F401
     echo0,
     echo1,
     echo2,

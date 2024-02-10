@@ -26,12 +26,12 @@ def diff(file1, file2):
 
     # Find and print the diff:
     for line in difflib.unified_diff(
-                file_1_text,
-                file_2_text,
-                fromfile=file1,
-                tofile=file2,
-                lineterm='',
-            ):
+        file_1_text,
+        file_2_text,
+        fromfile=file1,
+        tofile=file2,
+        lineterm='',
+    ):
         results.append(line)
     return results
 
@@ -108,7 +108,8 @@ def shinra_tensei(source_paths, grandparent, subdirectories=None):
                     if src_path == dst_path:
                         continue
                     if not has_diff(src_path, dst_path):
-                        print('# no diff: "{}" "{}"'.format(src_path, dst_path))
+                        print('# no diff: "{}" "{}"'
+                              ''.format(src_path, dst_path))
                         continue
                     print('cp "{}" "{}"'.format(src_path, dst_path))
                     shutil.copy(src_path, dst_path)

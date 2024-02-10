@@ -9,7 +9,7 @@ MODULE = os.environ.get('MODULE')
 if MODULE is None:
     MODULE = "hierosoft"
 
-from hierosoft import (
+from hierosoft import (  # noqa E402
     echo0,
     write0,
     which,
