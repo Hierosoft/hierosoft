@@ -97,6 +97,8 @@ MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 ASSETS_DIR = os.path.join(MODULE_DIR, "assets")
 assets_dirs = [ASSETS_DIR]
 
+__version__ = "0.1.0"
+
 
 def resource_add_path(path):
     """Add a new directory for resource_find.

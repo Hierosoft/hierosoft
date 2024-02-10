@@ -24,8 +24,6 @@ import threading
 import copy
 # import time
 
-from pprint import pformat
-
 if sys.version_info.major >= 3:  # try:
     from tkinter import messagebox
     from tkinter import filedialog
@@ -71,9 +69,6 @@ from hierosoft import (  # noqa E402
 THEME_DIR = os.path.join(ASSETS_DIR, "Forest-ttk-theme")
 resource_add_path(THEME_DIR)
 
-# from hierosoft.morelogging import (
-#     view_traceback,
-# )
 from hierosoft.moreplatform import (  # noqa E402
     make_shortcut,
     install_archive,
@@ -87,7 +82,9 @@ from hierosoft.moreweb.hierosoftupdate import HierosoftUpdate  # noqa E402
 
 from hierosoft.moreweb.downloadmanager import DownloadManager  # noqa E402
 
+# from pprint import pformat
 from hierosoft.morelogging import (  # noqa E402
+    pformat,
     view_traceback,
 )
 
@@ -187,7 +184,8 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
 
         title_s = options.get('title')
         if title_s is None:
-            title_s = "Hierosoft Launcher"
+            # title_s = "Hierosoft Launcher"
+            title_s = "Hierosoft Launcher {}".format(hierosoft.__version__)
         self.root.title(title_s)
         self.root.wm_title(title_s)
         self.parent = parent

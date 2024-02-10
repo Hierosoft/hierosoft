@@ -12,8 +12,10 @@ import tarfile
 import tempfile
 import zipfile
 
-from pprint import pformat
+# from pprint import pformat
 from zipfile import ZipFile
+
+from hierosoft.morelogging import pformat
 
 from hierosoft import (
     echo0,
