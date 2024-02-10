@@ -781,6 +781,7 @@ def neatMetaTags(path, makeAllValidPathChars=True):
 
     if not os.path.isfile(path):
         raise RuntimeError("not a file: " + str(path))
+    _, subName = os.path.split(path)
     try:
         newName = os.path.basename(path)
         ext = os.path.splitext(path)[1]
