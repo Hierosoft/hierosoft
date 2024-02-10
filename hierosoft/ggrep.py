@@ -832,7 +832,8 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
         if not isinstance(ignore_root, str):
             raise ValueError("ignore requires ignore_root")
         else:
-            ig_path = join_if_exists(ignore_root, [".gitignore", ".grepignore"])
+            ig_path = join_if_exists(ignore_root,
+                                     [".gitignore", ".grepignore"])
     sub = os.path.split(path)[1]
     # Do not ignore if "" even if .git, so let sub  ""--isdir("")==False
     if os.path.isdir(path):
@@ -925,7 +926,7 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
                                 # If inverse and matches, keep it. Stop
                                 # checking it against ignore strings.
                                 break
-            except ValueError as ex:
+            except ValueError:
                 igs = ignore_s
                 rig = rawIgnore
                 echo0(

@@ -158,8 +158,7 @@ urlencode(params)
 # ^ 'q=Python+URL+encoding&message=hi+there' (uses '+' on Python 2 or 3)
 '''
 
-
-from hierosoft import (
+from hierosoft import (  # noqa F401
     echo0,
     echo1,
     echo2,
@@ -168,6 +167,7 @@ from hierosoft import (
     write2,
     number_to_place,
 )
+
 
 def valid_ip_address(value, allow_broadcast=False, allow_netmask=False):
     '''
@@ -646,6 +646,7 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
         evt['status'] = STATUS_DONE
     cb_done(evt)
     err = ""
+
 
 def download(stream, url, cb_progress=None, cb_done=None,
              chunk_size=16*1024, evt=None, path=None):

@@ -72,12 +72,13 @@ default_bad_enabled = True
 if platform.system() == "Windows":
     default_bad_enabled = False
 
-from hierosoft.morelogging import (
+from hierosoft.morelogging import (  # noqa F401,E402
     echo0,
     echo1,
     echo2,
     set_verbosity,
 )
+
 
 def show_truncations(new_path, enable_stdout=True, comment=None):
     '''
@@ -134,11 +135,13 @@ def show_truncations(new_path, enable_stdout=True, comment=None):
             if new_path != trunc_new_path:
                 echo0("(truncated to {})".format(len(trunc_new_path)))
             else:
-                echo0("(not truncated, {} char(s))".format(len(trunc_new_path)))
+                echo0("(not truncated, {} char(s))"
+                      "".format(len(trunc_new_path)))
         echo0("Make sure you run setx /M commands in Command Prompt"
               " (Administrator). Without /M, it will affect"
               " only the user PATH and if that is present"
-              " then this script will not be able to diagnose the system PATH.")
+              " then this script will not be able"
+              " to diagnose the system PATH.")
     else:
         echo0("operating system: {} shouldn't have problems,"
               " but if there is a PATH limit,"

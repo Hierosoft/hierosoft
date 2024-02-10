@@ -7,16 +7,12 @@ import platform
 import shutil
 import sys
 import time
-import tempfile
-import base64
-import zlib
-import zipfile
+# import tempfile
+# import base64
+# import zlib
+# import zipfile
 
 from pprint import pformat
-
-MOREWEB_SUBMODULE_DIR = os.path.dirname(os.path.realpath(__file__))
-MODULE_DIR = os.path.dirname(MOREWEB_SUBMODULE_DIR)
-REPO_DIR = os.path.dirname(MODULE_DIR)
 
 # if __name__ == "__main__":
 #     sys.path.insert(0, REPO_DIR)
@@ -65,6 +61,10 @@ from hierosoft.hierosoftpacked import (
     white_png,
 )
 
+MOREWEB_SUBMODULE_DIR = os.path.dirname(os.path.realpath(__file__))
+MODULE_DIR = os.path.dirname(MOREWEB_SUBMODULE_DIR)
+# REPO_DIR = os.path.dirname(MODULE_DIR)
+
 
 enable_tk = False
 
@@ -77,17 +77,17 @@ try:
         # ^ such as name = simpledialog.askstring('Name',
         #                                         'What is your name?')
         import tkinter as tk
-        import tkinter.font as tkFont
+        from tkinter import font
         from tkinter import ttk
         # from tkinter import tix
     else:  # except ImportError:
         # Python 2
-        import tkMessageBox as messagebox
-        import tkFileDialog as filedialog
-        import tkSimpleDialog as simpledialog
-        import Tkinter as tk
-        import tkFont
-        import ttk
+        import tkMessageBox as messagebox  # noqa N813
+        import tkFileDialog as filedialog  # noqa F401,N813
+        import tkSimpleDialog as simpledialog  # noqa F401,N813
+        import Tkinter as tk  # noqa F401,N813
+        import tkFont as font  # noqa F401,N813
+        import ttk  # noqa F401,N813
         # import Tix as tix
     enable_tk = True
 except ImportError as ex:

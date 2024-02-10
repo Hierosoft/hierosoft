@@ -5,8 +5,8 @@ Detect files that need to be signed and call an available signtool.
 from __future__ import print_function
 import os
 import sys
-import shlex
-from getpass import getpass
+# import shlex
+# from getpass import getpass
 import glob
 import platform
 import subprocess
@@ -27,21 +27,25 @@ def echo0(*args, **kwargs):
 
 
 if sys.version_info.major < 3:
-    input = raw_input
+    input = raw_input  # noqa F821
 
 SIGN_CMD_FMT = (
-    "{signtool} sign /tr {timestamp_server} /td sha256 /fd sha256 /a {sign_this_file}"
+    "{signtool} sign /tr {timestamp_server}"
+    " /td sha256 /fd sha256 /a {sign_this_file}"
     # "{signtool} /P {password} /TR {timestamp_server} /a {sign_this_file}"
-    # "{signtool} /F {pfx_path} /P {password} /TR {timestamp_server} {sign_this_file}"
+    # "{signtool} /F {pfx_path} /P {password}^
+    #   /TR {timestamp_server} {sign_this_file}"
     # ^ /T is deprecated. See doc/development/signing.md.
     # ^ /F may not be necessary. PFX can be generated from PVK/other format
     # ^ /debug would have to go directly after "sign" to diagnose failures.
 )
 # ^ such as `SIGNTOOL.EXE /F tcs.pfx /P <password>
 # Sectigo support says:
-# - signtool sign /tr http://timestamp.sectigo.com /td sha256 /fd sha256 /a "c:\path\to\file_to_sign.exe"
+# - signtool sign /tr http://timestamp.sectigo.com /td sha256 /fd sha256^
+#    /a "c:\path\to\file_to_sign.exe"
 # - <https://sectigo.com/resource-library/time-stamping-server>
-# - <https://docs.microsoft.com/en-us/windows/win32/appxpkg/how-to-sign-a-package-using-signtool>
+# - <https://docs.microsoft.com/en-us/windows/win32/appxpkg/
+#    how-to-sign-a-package-using-signtool>
 
 
 KNOWN_SIGNTOOLS_PER_SYSTEM = {}
