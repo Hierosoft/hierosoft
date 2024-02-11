@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [git] - 2024-02-11
+### Added
+- WIP new GUI (Status: planning)
+- Icons (Widget graphics, packed)
+
+### Removed
+- Single-app GUI (moved to deprecated `_init_single_app` method)
+
+
 ## [git] - 2024-02-02
 ### Added
 - `HInstaller` (install, upgrade, and uninstall features)

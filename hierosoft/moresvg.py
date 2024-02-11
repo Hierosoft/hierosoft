@@ -2,6 +2,7 @@
 Support Tk versions below 8.7 (alpha June 18, 2021)
 that don't have SVG (such as in Python 2 or
 some copies of Python 3 included with early macs).
+- For Tk 8.7 or higher, you could use tksvg instead.
 
 Why not use <https://github.com/TkinterEP/python-tksvg/tree/master>:
 - Requires a C module (disadvantage due to cross-platform issues
