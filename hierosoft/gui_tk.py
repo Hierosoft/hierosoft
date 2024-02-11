@@ -10,10 +10,14 @@ options = {}
 show_update_window(options)
 # returns: 0 if ok, 1 if no UI
 
-Options:
+Options (dict):
+- 'title' (str): Title of Window.
+- 'news' (str): News to show in Window.
+- other keys: See HierosoftUpdate (superclass).
 
 '''
 from __future__ import print_function
+import io
 import sys
 import os
 # import shutil
@@ -42,6 +46,13 @@ else:  # except ImportError:
     import tkFont as font  # noqa F401,N813
     import ttk
     # import Tix as tix
+
+from PIL import Image, ImageEnhance, ImageTk
+
+# from tkfontawesome import icon_to_image
+# NOTE: Don't use tkfontawesome. It requires Cython or libxml2 and
+#   libxslt development packages, which may cause hassles building on
+#   Windows etc.
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
@@ -94,6 +105,9 @@ from hierosoft.ggrep import (  # noqa E402
 
 from hierosoft.hierosoftpacked import (  # noqa E402
     hierosoft_16px_png,
+    icon_library_png,
+    icon_app_empty_png,
+    icon_download_png,
 )
 
 
@@ -189,8 +203,10 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         # except tk.TclError:
         #     echo0("Error: Tcl failed to load packed hierosoft_16px_png")
 
-        self.root.geometry("1000x600")
         self.root.minsize(600, 400)
+        # self.root.geometry("1000x600")  # See later call below instead
+
+        self.container = self.root
 
         title_s = options.get('title')
         if title_s is None:
@@ -208,11 +224,108 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
             'pady': 10,
             'sticky': "nsew",
         }
+        # self._init_single_app(options)  # old blendernightly style
+        screen_w = root.winfo_screenwidth()
+        screen_h = root.winfo_screenheight()
+        max_w = screen_w
+        max_h = screen_h
+        screen_count = 1
+        projected_w = round(max_h / 9 * 16)
+        if max_w / 16 > max_h / 9:
+            # multi-monitor setup or ultra-wide, so skip extra space.
+            max_w = projected_w
+            if screen_w > 2 == projected_w:
+                screen_count = 2
+            elif screen_w > 2 * projected_w:
+                screen_count = 3
+        elif max_h / 16 > max_w / 9:
+            # tall aspect ratio > HD (such as rotatable monitor or mobile)
+            projected_h = round(max_w / 9 * 16)
+            max_h = projected_h
+        base_w = round(max_w / 3 * 2)
+        base_h = round(max_h / 3 * 2)
+        if screen_count == 1 or screen_count > 2:
+            left = round((screen_w - base_w) / 2)
+            # ^ Use screen_w so screen doesn't end up on 1st monitor
+            #   if 3 monitors.
+            #   - Also works if there is only one monitor and is better
+            #     for ultra-wide than using max_w since using screen_w
+            #     will cause it to be centered
+        else:
+            # use left monitor (2 monitors)
+            left = round((max_w - base_w) / 2)
+        top = round((max_h - base_h) / 2)
+        geometry = '{}x{}+{}+{}'.format(base_w, base_h, left, top)
+        print("geometry='{}'".format(geometry))
+        self.root.geometry(geometry)
+        # self._init_single_app(options)
 
+        # NOTE: "PhotoImage has problem with garbage collector which
+        #   removes image if it is assigned to local variable."
+        #   -https://stackoverflow.com/a/41863403/4541104
+        # tk.PhotoImage  # use the PIL one (ImageTk) instead:
+        self.download_image = self.get_photoimage(icon_download_png)
+        # ^ 'PhotoImage' object has no attribute 'convert'
+        #   (when ImageEnhance.Contrast is used)
+        # alternatives to Image.open(path, ...):
+        self.gray_download_image = self.get_gray_photoimage(icon_download_png)
+        self.library_image = self.get_gray_photoimage(icon_library_png)
+        # download_icon =
+        ttk.Label(root, image=self.gray_download_image).grid(padx=10, pady=10)
+        ttk.Button(
+            root,
+            text="This version is a work in progress.",
+            # image=self.library_image,
+        ).grid(padx=10, pady=10)
+        # ,
+        # TODO: Download sources.json
+        # TODO: Show app_meta.get('news')
+
+    def get_photoimage(self, png_data):
+        """Get an image, generally a hierosoft packed image.
+        For use with ImageEnhance see the get_gray_photoimage method instead.
+
+        Args:
+            png_data (bytes): File data loaded into bytes, without any
+                processing.
+
+        Returns:
+            PhotoImage: You *must* use return to set a variable in
+                object or higher scope or garbage collection will
+                destruct the image!
+                - The return is not compatible with ImageEnhance
+                  ("no attribute 'convert'")--see get_gray_photoimage
+                  method.
+        """
+        return ImageTk.PhotoImage(
+            data=png_data,
+            master=self.root,
+        )
+
+    def get_gray_photoimage(self, png_data):
+        image_io = io.BytesIO(png_data)
+        # self.download_image = Image.frombuffer(...)
+        with Image.open(image_io) as white_image:
+            contrast = ImageEnhance.Contrast(white_image)
+        # imgMod = contrast.enhance((contrast_val-50)/25. +0.5)
+        # Contrast: See <https://stackoverflow.com/a/64993814/4541104>
+        imgMod = contrast.enhance(.25)
+        # Now convert to PIL Image to a Tk PhotoImage:
+        return ImageTk.PhotoImage(imgMod)
+
+    def _init_single_app(self, options):
+        """This method is deprecated,
+        but may be used to create a single-app multi-version installer
+        GUI (code is from old blendernightly interface).
+        - Widgets generated here are added to self.container (formerly
+          self.root)
+
+        Args:
+            options (dict): downloader and parser options
+        """
         # Formerly before functions (which are now methods):
-
-        base_height = 300
-        self.root.geometry('300x' + str(base_height))
+        base_h = 300
+        # self.root.geometry('300x' + str(base_h))
         # self.option_entries['']
         self.version_e = None
         self.del_arc_var = tk.IntVar()
@@ -220,25 +333,25 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         # ^ contains self.mgr.profile_path
 
         # Formerly before main:
-        self.version_e = ttk.Entry(self.root)
+        self.version_e = ttk.Entry(self.container)
         self.addRow(self.version_e)
 
-        self.pflag_e = ttk.Entry(self.root)
+        self.pflag_e = ttk.Entry(self.container)
         self.addRow(self.pflag_e)
 
-        self.arch_e = ttk.Entry(self.root)
+        self.arch_e = ttk.Entry(self.container)
         self.addRow(self.arch_e)
 
-        self.refresh_btn = ttk.Button(self.root, text="Refresh",
+        self.refresh_btn = ttk.Button(self.container, text="Refresh",
                                       command=self.refresh_click)
         self.addRow(self.refresh_btn, sticky='we')
         # ^ sticky='we' is like pack with fill='w'
 
-        self.pbar = ttk.Progressbar(self.root)
+        self.pbar = ttk.Progressbar(self.container)
         # orient="horizontal", length=200, mode="determinate"
         self.addRow(self.pbar, sticky='we')
 
-        self.count_label = ttk.Label(self.root, text="")  # at bottom
+        self.count_label = ttk.Label(self.container, text="")  # at bottom
         self.addRow(self.count_label, sticky='we')
 
         news = options.get('news')
@@ -248,15 +361,15 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                 news_text = article.get('text')
                 news_url = article.get('url')
                 if news_date_str:
-                    label = ttk.Label(self.root, text=news_date_str)
+                    label = ttk.Label(self.container, text=news_date_str)
                     self.addRow(label, sticky="we")
                 if news_text:
-                    label = ttk.Label(self.root, text=news_text)
+                    label = ttk.Label(self.container, text=news_text)
                     self.addRow(label, sticky="we")
                 if news_url:
                     import webbrowser
                     button = ttk.Button(
-                        self.root,
+                        self.container,
                         text=news_text,
                         command=lambda url=news_url: webbrowser.open(
                             url,
@@ -267,7 +380,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                     self.addRow(button, sticky="we")
 
         self.del_arc_cb = ttk.Checkbutton(
-            self.root, text="Delete archive after install",
+            self.container, text="Delete archive after install",
             variable=self.del_arc_var,
         )
         # self.addRow(self.del_arc_cb, sticky='we')  # not implemented
@@ -278,7 +391,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         ttk.Frame.__init__(self, parent, *args, **kwargs)
 
     def push_label(self, s):
-        new_label = ttk.Label(self.root, text=s)
+        new_label = ttk.Label(self.container, text=s)
         self.addRow(new_label, pady=0)
         self.msg_labels.append(new_label)
         self.root.update()
@@ -401,7 +514,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
             # see https://stackoverflow.com/questions/17677649/\
             # tkinter-assign-button-command-in-loop-with-lambda
             user_button = ttk.Button(
-                self.root,
+                self.container,
                 text="Install "+meta['luid'],
                 command=lambda meta=meta: self.d_click(meta)
             )
@@ -415,7 +528,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                 self.dl_buttons.append(user_button)
                 self.addRow(user_button)  # row=row, column=0
             uninstall_button = ttk.Button(
-                self.root,
+                self.container,
                 text=uninstall_caption+" "+meta['luid'],
                 command=lambda meta=meta: self.uninstall_click(meta)
             )
@@ -455,7 +568,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                     continue
                 # print("  # not installed: " + meta['filename'])
                 user_button = ttk.Button(
-                    self.root,
+                    self.container,
                     text="Install "+meta['luid'],
                     command=lambda meta=meta: self.d_click(meta)
                 )
@@ -468,7 +581,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                     continue
                 # print("  # not installed: " + meta['filename'])
                 remove_button = ttk.Button(
-                    self.root,
+                    self.container,
                     text="Delete "+meta['luid'],
                     command=lambda meta=meta: self.remove_ar_click(meta)
                 )

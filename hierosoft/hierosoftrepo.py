@@ -115,7 +115,11 @@ def _pack_binary(stream, name, path):
 
 def pack_text():
     prefix = "[pack_text] "
+
+    # First get file paths.
+    # (For actual packing see _pack_binary calls)
     ASSETS_DIR = os.path.join(MODULE_DIR, "assets")
+    PROJECTS_DIR = os.path.join(REPO_DIR, "projects")
     DATA_DIR = os.path.join(ASSETS_DIR, "data")
     pack_path = os.path.join(MODULE_DIR, "hierosoftpacked.py")
     CLOUD_DIR = os.path.join(HOME, "Nextcloud")
@@ -169,6 +173,40 @@ def pack_text():
             "path": json_path,
         },
     )
+    binary_metas = [
+        {
+            'name': "transparent_png",
+            'path': transparent_path,
+        },
+        {
+            'name': "white_png",
+            'path': white_path,
+        },
+        {
+            'name': "hierosoft_16px_png",
+            'path': hierosoft_16_path,
+        },
+    ]
+    icons_dir = os.path.join(PROJECTS_DIR, "icons")
+    for sub in sorted(os.listdir(icons_dir)):
+        # ^ sorted to reduce git diffs
+        sub_path = os.path.join(icons_dir, sub)
+        if not os.path.isfile(sub_path):
+            continue
+        if not sub.endswith(".png"):
+            continue
+        name = "icon_" + sub.replace("-", "_").replace(".", "_")
+        # ^ *Python variable* name such as:
+        # - icon_app_empty_png
+        # - icon_app_unknown_png
+        # - icon_chat_hex_png
+        # - icon_chat_round_png
+        # - icon_download_png
+        # - icon_library_png
+        binary_metas.append({
+            'name': name,
+            'path': sub_path,
+        })
     me = os.path.basename(__file__)
     with open(pack_path, 'w') as stream:
         print("# -*- coding: utf-8 -*-", file=stream)
@@ -193,6 +231,5 @@ def pack_text():
                 pformat(relative_path(info['path'])),
                 pformat(relative_path(pack_path))
             ))
-        _pack_binary(stream, "transparent_png", transparent_path)
-        _pack_binary(stream, "white_png", white_path)
-        _pack_binary(stream, "hierosoft_16px_png", hierosoft_16_path)
+        for binary_meta in binary_metas:
+            _pack_binary(stream, binary_meta['name'], binary_meta['path'])
