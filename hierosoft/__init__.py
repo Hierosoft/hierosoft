@@ -975,6 +975,7 @@ WIN_EXECUTABLE_DOT_EXTS = [".exe", ".ps1", ".bat", ".com"]
 
 def which(program_name, more_paths=[]):
     '''Get the full path to a given executable.
+    This avoids shutil.which which requires Python 3.3 (not backported to 2)
 
     If a full path is provided,
     return it if executable. Otherwise, if there isn't an executable one
@@ -1002,6 +1003,13 @@ def which(program_name, more_paths=[]):
         if os.path.splitext(program_name)[1] == "":
             for dot_ext in WIN_EXECUTABLE_DOT_EXTS:
                 filenames.append(program_name+dot_ext)
+        if more_paths is None:
+            more_paths = []
+        title = program_name.title()
+        more_paths.append("C:\\Program Files\\{}".format(title))
+        more_paths.append("C:\\Program Files\\{}\\bin".format(title))
+        more_paths.append("C:\\Program Files (x86)\\{}".format(title))
+        more_paths.append("C:\\Program Files (x86)\\{}\\bin".format(title))
     for filename in filenames:
         if os.path.split(filename)[0] and is_exe(filename):
             return filename
