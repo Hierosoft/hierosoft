@@ -8,7 +8,9 @@
 		"files.trimFinalNewlines": true,
 		"flake8.args": [
 			"--ignore=N816,N806,N803,N802,E226,W503"
-		]
+		],
+		"editor.wordWrapColumn": 79,
+		"rewrap.wrappingColumn": 72
 	},
 	"launch": {
 		"version": "0.2.0",
