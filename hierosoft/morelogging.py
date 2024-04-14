@@ -106,7 +106,7 @@ else:
         # def removeHandler(self, ):
         # endregion methods in upstream not implemented here yet
 
-        def isEnabledFor(self, level):
+        def isEnabledFor(self, level):  # noqa: N802
             return False if level < self.level else True
 
         def handle(self, record):
@@ -117,7 +117,7 @@ else:
             # TODO: check own formatter instead of code below
             print(default_formatter.format(record), file=self._log)
 
-        def getEffectiveLevel(self):
+        def getEffectiveLevel(self):  # noqa: N802
             if self.level >= CRITICAL:
                 return CRITICAL
             if self.level >= ERROR:
@@ -172,7 +172,7 @@ else:
             self._log.write("%s" % (msg) + "\n")
             self._log.flush()
 
-        def setLevel(self, level):
+        def setLevel(self, level):  # noqa: N802
             self.level = level
 
         def warn(self, msg):
@@ -195,13 +195,13 @@ else:
     filename = None
     encoding = 'utf-8'
 
-    def getLogger(self, name=None):
+    def getLogger(self, name=None):  # noqa: N802
         logger = loggers.get(name)  # None is allowed (root of hierarchy)
         if logger is not None:
             return logger
         return Logger(name)
 
-    def basicConfig(**kwargs):
+    def basicConfig(**kwargs):  # noqa: N802
         global filename
         global encoding
         string_keys = ['filename', 'encoding']
@@ -219,19 +219,20 @@ else:
 
 
 to_log_level = {
-    3: 10,
-    2: 20,
-    1: 30,
-    True: 30,
-    0: 40,
-    False: 40,
-}
+    4: 10,  # logging.DEBUG
+    3: 20,  # logging.INFO
+    2: 30,  # logging.WARNING (logging default)
+    # True: 30,  # logging.WARNING
+    1: 40,  # logging.ERROR
+    # False: 50,  # logging.ERROR
+    0: 50,  # logging.CRITICAL
+}  # NOTE: True and False are cast to int when used as keys!
 
 verbosity_levels = [False, True, 0, 1, 2, 3]
 
-verbosity = 0
-for argI in range(1, len(sys.argv)):
-    arg = sys.argv[argI]
+verbosity = 2  # 2 to mimic Python 3 logging default WARNING (30)
+for _argi in range(1, len(sys.argv)):
+    arg = sys.argv[_argi]
     if arg.startswith("--"):
         if arg == "--verbose":
             verbosity = 1
@@ -436,12 +437,12 @@ def set_verbosity(verbosity_level):
     """
     global verbosity
     if verbosity_level not in verbosity_levels:
-        vMsg = verbosity_levels
-        if isinstance(vMsg, str):
-            vMsg = '"{}"'.format(vMsg)
+        v_msg = verbosity_levels
+        if isinstance(v_msg, str):
+            v_msg = '"{}"'.format(v_msg)
         raise ValueError(
             "verbosity_levels must be one of {} not {}."
-            "".format(verbosity_levels, vMsg)
+            "".format(verbosity_levels, v_msg)
         )
     verbosity = verbosity_level
 
@@ -497,33 +498,33 @@ def set_syntax_error_fmt(fmt):
     syntax_error_fmt = fmt
 
 
-def to_syntax_error(path, lineN, msg, col=None):
-    '''
-    Convert the error to a syntax error that specifies the file and line
-    number that has the bad syntax.
+def to_syntax_error(path, line_n, msg, col=None):
+    '''Convert the error to a syntax error
+    that specifies the file and line number that has the bad syntax.
 
-    Keyword arguments:
-    col -- is the character index relative to the start of the line,
-        starting at 1 for compatibility with outputinspector (which will
-        subtract 1 if using editors that start at 0).
+    Args:
+        col (int, optional): is the character index relative to the
+            start of the line, starting at 1 for compatibility with
+            outputinspector (which will subtract 1 if using editors that
+            start at 0).
     '''
     this_fmt = syntax_error_fmt
 
     if col is None:
         part = "{column}"
-        removeI = this_fmt.find(part)
-        if removeI > -1:
-            suffixI = removeI + len(part) + 1
+        remove_i = this_fmt.find(part)
+        if remove_i > -1:
+            suffix_i = remove_i + len(part) + 1
             # ^ +1 to get punctuation!
-            this_fmt = this_fmt[:removeI] + this_fmt[suffixI:]
-    if lineN is None:
+            this_fmt = this_fmt[:remove_i] + this_fmt[suffix_i:]
+    if line_n is None:
         part = "{row}"
-        removeI = this_fmt.find(part)
-        if removeI > -1:
-            suffixI = removeI + len(part) + 1
+        remove_i = this_fmt.find(part)
+        if remove_i > -1:
+            suffix_i = remove_i + len(part) + 1
             # ^ +1 to get punctuation!
-            this_fmt = this_fmt[:removeI] + this_fmt[suffixI:]
-    return this_fmt.format(path=path, row=lineN, column=col, message=msg)
+            this_fmt = this_fmt[:remove_i] + this_fmt[suffix_i:]
+    return this_fmt.format(path=path, row=line_n, column=col, message=msg)
     # ^ Settings values not in this_fmt is ok.
 
 
