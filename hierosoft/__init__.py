@@ -45,9 +45,8 @@ else:
                 raise err
             return self.returncode
 
-    # subprocess.run doesn't exist in Python 2, so create a substitute.
     def sp_run(*popenargs, **kwargs):
-        '''
+        '''subprocess.run substitute for Python 2
         CC BY-SA 4.0
         by Martijn Pieters
         https://stackoverflow.com/a/40590445
@@ -157,13 +156,13 @@ HOME = None  # formerly profile
 APPDATA = None  # formerly APPDATA
 LOCALAPPDATA = None  # formerly local
 # myLocal = None
-SHORTCUTS_DIR = None  # formerly SHORTCUTS_DIR
+_SHORTCUTS = None  # formerly SHORTCUTS
 replacements = None
 USER = None  # formerly username
 PROFILES = None  # formerly profiles
 LOGS = None  # formerly logsDir
 CACHES = None
-PIXMAPS = None
+_PIXMAPS = None
 PREFIX = os.environ.get('PREFIX')
 SHARE = None  # formerly share
 USER_PROGRAMS = None
@@ -178,12 +177,14 @@ if platform.system() == "Windows":
     USER_PROGRAMS = os.path.join(LOCALAPPDATA, "Programs")
     del _data_parent_
     SHARE = LOCALAPPDATA  # It is synonymous
-    SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
+    _SHORTCUTS = os.path.join(HOME, "Desktop")
     PROFILES = os.environ.get("PROFILESFOLDER")
-    temporaryFiles = os.path.join(LOCALAPPDATA, "Temp")
+    if not PROFILES:
+        PROFILES = os.path.dirname(HOME)
+    _TMP = os.path.join(LOCALAPPDATA, "Temp")
     if PREFIX is None:
         PREFIX = LOCALAPPDATA
-    PIXMAPS = PREFIX
+    _PIXMAPS = PREFIX
     CACHES = os.path.join(LOCALAPPDATA, "cache")
 else:
     USER = os.environ.get("USER")
@@ -199,7 +200,7 @@ else:
         SHORTCUT_EXT = "command"
         # See also <https://github.com/poikilos/world_clock>
 
-        SHORTCUTS_DIR = os.path.join(HOME, "Desktop")
+        _SHORTCUTS = os.path.join(HOME, "Desktop")
         Library = os.path.join(HOME, "Library")
         APPDATA = os.path.join(Library, "Application Support")
         USER_PROGRAMS = os.path.join(APPDATA, "Programs")  # FIXME nonstandard
@@ -233,7 +234,7 @@ else:
         #   ". . . Users can also view these logs using the
         #   Console app."
         PROFILES = "/Users"
-        temporaryFiles = os.environ.get("TMPDIR")
+        _TMP = os.environ.get("TMPDIR")
         if PREFIX is None:
             PREFIX = Library   # TODO: Consider whether this is best.
         SHARE = LOCALAPPDATA  # synonymous
@@ -242,7 +243,7 @@ else:
             PREFIX = os.path.join(HOME, ".local")
         # GNU+Linux Systems
         SHARE = os.path.join(PREFIX, "share")
-        SHORTCUTS_DIR = os.path.join(SHARE, "applications")
+        _SHORTCUTS = os.path.join(SHARE, "applications")
         _default_localappdata = LOCALAPPDATA
         # region based on <developers.redhat.com/blog/2018/11/07
         #   /dotnet-special-folder-api-linux>
@@ -260,13 +261,11 @@ else:
         # LOCALAPPDATA = APPDATA
         LOGS = os.path.join(HOME, ".var", "log")
         PROFILES = "/home"
-        temporaryFiles = "/tmp"
+        _TMP = "/tmp"
 
+_PIXMAPS = os.path.join(SHARE, "pixmaps")
 
-PIXMAPS = os.path.join(SHARE, "pixmaps")
-
-
-localBinPath = os.path.join(PREFIX, "bin")
+_LOCAL_BIN = os.path.join(PREFIX, "bin")  # formerly localBinPath
 
 if CACHES is None:
     CACHES = os.path.join(HOME, ".cache")
@@ -276,7 +275,6 @@ if HOME != os.path.expanduser('~'):
     echo0("[moreplatform] Warning:")
     echo0('  HOME="{}"'.format(HOME))
     echo0('  != os.path.expanduser("~")="{}"'.format(os.path.expanduser('~')))
-
 
 USER_DIR_NAME = os.path.split(HOME)[1]
 # ^ may differ from os.getlogin() getpass.getuser()
@@ -289,9 +287,9 @@ try:
             echo1('  != os.getlogin()="{}"'.format(os.getlogin()))
     else:
         pass
-        # echo0("There is no os.getlogin (normally not present for Python 2),"
-        #       " so USER_DIR_NAME not validated: %s. Using instead."
-        #       % USER_DIR_NAME)
+        # echo0("There is no os.getlogin (normally not present for"
+        #       " Python 2), so USER_DIR_NAME not validated: %s. Using"
+        #       " instead." % USER_DIR_NAME)
 except OSError:
     # os.getlogin() causes:
     # "OSError: [Errno 6] No such device or address"
@@ -319,19 +317,20 @@ except ModuleNotFoundError as ex:
 
 
 # statedCloud = "owncloud"
-myCloudName = None
-myCloudPath = None
+_CLOUD_NAME = None  # formerly myCloudName
+_CLOUD = None  # formerly myCloudPath
 
-CLOUD_DIR_NAMES = ["Nextcloud", "ownCloud", "owncloud"]
+CLOUD_DIR_NAMES = ["Nextcloud", "ownCloud", "owncloud", "OneDrive"]
 
-for tryCloudName in CLOUD_DIR_NAMES:
+for try_cloud_name in CLOUD_DIR_NAMES:
     # ^ The first one must take precedence if more than one exists!
-    tryCloudPath = os.path.join(HOME, tryCloudName)
-    if os.path.isdir(tryCloudPath):
-        myCloudName = tryCloudName
-        myCloudPath = tryCloudPath
-        echo1('* detected "{}"'.format(myCloudPath))
+    _try_cloud_path = os.path.join(HOME, try_cloud_name)
+    if os.path.isdir(_try_cloud_path):
+        _CLOUD_NAME = try_cloud_name
+        _CLOUD = _try_cloud_path
+        echo1('* detected "{}"'.format(_CLOUD))
         break
+    del _try_cloud_path
 
 
 # NOTE: PATH isn't necessary to split with os.pathsep (such as ":", not
@@ -351,7 +350,7 @@ substitutions = {
     "%PROFILESFOLDER%": PROFILES,
     "%USER%": USER,
     "%USERPROFILE%": HOME,
-    "%TEMP%": temporaryFiles,
+    "%TEMP%": _TMP,
     "~": HOME,
     "$CLOUD": None,
     "%CLOUD%": None,
@@ -397,7 +396,9 @@ sysdirs = Constants()  # Call .readonly() after vars are set below.
 if platform.system() == "Windows":
     # HOME = os.environ['USERPROFILE']
     sysdirs['HOME'] = HOME
-    sysdirs['SHORTCUTS_DIR'] = os.path.join(HOME, "Desktop")
+    sysdirs['USER'] = os.environ.get("USERNAME")
+    sysdirs['SHORTCUTS'] = os.path.join(HOME, "Desktop")
+    # 'SHORTCUTS' was formerly 'SHORTCUTS'
     sysdirs['APPDATA'] = os.environ['APPDATA']
     sysdirs['LOCALAPPDATA'] = os.environ['LOCALAPPDATA']
     sysdirs['PROGRAMS'] = os.path.join(sysdirs['LOCALAPPDATA'], "Programs")
@@ -408,7 +409,7 @@ elif platform.system() == "Darwin":
     #   WhereToPutFiles.html>
     # HOME = os.environ['HOME']
     sysdirs['HOME'] = HOME
-    sysdirs['SHORTCUTS_DIR'] = os.path.join(HOME, "Desktop")
+    sysdirs['SHORTCUTS'] = os.path.join(HOME, "Desktop")
     # APPDATA = os.path.join(HOME, "Library", "Preferences")
     # ^ Don't use Preferences: It only stores plist format files
     #   generated using the macOS Preferences API.
@@ -426,7 +427,7 @@ elif platform.system() == "Darwin":
 else:
     # HOME = os.environ['HOME']
     sysdirs['HOME'] = HOME
-    sysdirs['SHORTCUTS_DIR'] = os.path.join(HOME, ".local", "share",
+    sysdirs['SHORTCUTS'] = os.path.join(HOME, ".local", "share",
                                             "applications")
     sysdirs['APPDATA'] = os.path.join(HOME, ".config")
     sysdirs['LOCALAPPDATA'] = os.path.join(HOME, ".local",
@@ -434,7 +435,18 @@ else:
     sysdirs['CACHES'] = os.path.join(HOME, ".cache")
     sysdirs['PROGRAMS'] = os.path.join(HOME, ".local", "lib")
 
+if not sysdirs.get('USER'):
+    # sysdirs['USER'] = os.environ.get("USER")
+    sysdirs['USER'] = os.getlogin()
+
+if not sysdirs.get('PROFILESFOLDER'):
+    sysdirs['PROFILESFOLDER'] = os.path.dirname(sysdirs['HOME'])
+
+sysdirs['CLOUD'] = _CLOUD
 # del HOME
+sysdirs['LOCAL_BIN'] = _LOCAL_BIN
+sysdirs['PIXMAPS'] = _PIXMAPS
+sysdirs['TMP'] = _TMP  # formerly temporaryFiles
 
 sysdirs.readonly()
 
@@ -488,11 +500,10 @@ def appstates_dir(org_name, app_name, version):
 
 
 class TextStream:
-    '''
-    Collect streamed strings or bytes. This class behaves like an
-    opened file in whatever ways are appropriate for the hierosoft
-    module such as for the download method of hierosoft.moreweb
-    submodule's DownloadManager class.
+    '''Collect streamed strings or bytes
+    This class behaves like an opened file in whatever ways are
+    appropriate for the hierosoft module such as for the download method
+    of hierosoft.moreweb submodule's DownloadManager class.
     '''
     def __init__(self):
         self.data = ""
@@ -504,47 +515,46 @@ class TextStream:
 
 
 def check_cloud(cloud_path=None, cloud_name=None):
-    '''
-    This will check whether there is a "HOME" directory in your
-    cloud path (such as ~/Nextcloud). It will not modify the global
-    detected myCloudPath nor myCloudName (if not present, both are None)
-    unless you specify a cloud_path.
+    '''Check for "HOME" directory in cloud path (such as ~/Nextcloud)
+    It will not modify the global detected myCloudPath nor myCloudName
+    (if not present, both are None) unless you specify a cloud_path.
 
     Update the substitutions if the cloud exists or is specified,
     whether or not a "HOME" folder exists there.
 
-    Keyword arguments:
-    cloud_path -- Set the global myCloudPath. (If None, use the one
-        discovered on load, that being any subfolders in Home named
-        using any string in the global CLOUD_DIR_NAMES).
-    cloud_name -- Set the global cloud name (If None, use the folder
-        name of cloud_path if cloud_path was set). This will only be set
-        if cloud_path is also set.
+    Args:
+        cloud_path (str, optional): Set the global myCloudPath. (If
+            None, use the one discovered on load, that being any
+            subfolders in Home named using any string in the global
+            CLOUD_DIR_NAMES).
+        cloud_name (str, optional): Set the global cloud name (If None,
+            use the folder name of cloud_path if cloud_path was set).
+            This will only be set if cloud_path is also set.
     '''
     global CLOUD_PROFILE
-    global myCloudPath
-    global myCloudName
+    global _CLOUD
+    global _CLOUD_NAME
     if cloud_path is not None:
-        myCloudPath = cloud_path
+        _CLOUD = cloud_path
         if cloud_name is not None:
-            myCloudName = cloud_name
+            _CLOUD_NAME = cloud_name
         else:
-            myCloudName = os.path.split(cloud_path)[1]
+            _CLOUD_NAME = os.path.split(cloud_path)[1]
 
-    if myCloudPath is not None:
+    if _CLOUD is not None:
         # Update substitutions whether or not the HOME path exists:
-        if myCloudPath is not None:
-            substitutions['%CLOUD%'] = myCloudPath
-            substitutions['$CLOUD'] = myCloudPath
+        if _CLOUD is not None:
+            substitutions['%CLOUD%'] = _CLOUD
+            substitutions['$CLOUD'] = _CLOUD
         # Set the HOME path if it exists:
-        tryCloudProfileDir = os.path.join(myCloudPath, "profile")
+        try_cloud_profile_dir = os.path.join(_CLOUD, "profile")
         # ^ Yes, LITERALLY a subdir named "profile",
         #   not profile variable.
-        if os.path.isdir(tryCloudProfileDir):
-            CLOUD_PROFILE = tryCloudProfileDir
+        if os.path.isdir(try_cloud_profile_dir):
+            CLOUD_PROFILE = try_cloud_profile_dir
         else:
             print('  * Manually create "{}" to enable cloud saves.'
-                  ''.format(tryCloudProfileDir))
+                  ''.format(try_cloud_profile_dir))
 
 
 check_cloud()
@@ -558,45 +568,43 @@ non_cloud_warning_shown = False
 
 
 def get_unique_path(luid, key, extension=".conf", allow_cloud=False):
-    '''
-    Get a unique path for your program within a special folder. This
-    function exists since in some cases, the extension of the file
-    depends on the platform.
+    '''Get a unique path for your program within a special folder.
+    Purpose: In some cases the extension of the file depends on the
+    platform.
 
     A key that is a plural word (before the colon if present) returns a
     directory and singular return a file.
 
-    Sequential arguments:
-    luid -- a locally-unique identifier. In other words, this is a name
-        that is expected to be unique and not the name of any other
-        program installed on the computer in the specified key's
-        special folder. The luid shouldn't contain spaces or capital
-        letters, but can be a plain text version of the program name,
-        such as com.example.MyNameApp on macOS where MyName is the
-        program's name and example.com is the domain that is indicated
-        in reverse order.
+    Args:
+        luid (str): a locally-unique identifier. In other words, this is a name
+            that is expected to be unique and not the name of any other
+            program installed on the computer in the specified key's
+            special folder. The luid shouldn't contain spaces or capital
+            letters, but can be a plain text version of the program name,
+            such as com.example.MyNameApp on macOS where MyName is the
+            program's name and example.com is the domain that is indicated
+            in reverse order.
 
-    key -- Provide a key that is implemented here:
-        'Share:Unique': Get your program's path where it may have static
-            data.
-        'Desktop:Unique': Get your program's platform-specific desktop
-            filename. It is your responsibility to create the icon in
-            the format designated by the returned file path's extension.
-        'Configs:Unique': Get a directory where you can store metadata
-            for only your program. You are responsible for creating the
-            directory if it doesn't exist. Generally, it is a folder
-            within .config (but differs by platform following the
-            standards of each platform such as %APPDATA%).
-        'Cache:Unique': A directory in the user's cache directory such
-            as .cache/{luid}, {LOCALAPPDATA}/cache/{luid} on Windows
-            (such as, like on other OSs, not to interfere with the
-            install if the program is installed at
-            {LOCALAPPDATA}/{luid}).
-
-    Keyword arguments:
-    allow_cloud -- Use the 'Configs:Unique' directory in the cloud,
-        but only if a known cloud directory already exists (otherwise
-        fall back to 'Configs:Unique' as described.
+        key (str): Provide a key that is implemented here:
+            'Share:Unique': Get your program's path where it may have static
+                data.
+            'Desktop:Unique': Get your program's platform-specific desktop
+                filename. It is your responsibility to create the icon in
+                the format designated by the returned file path's extension.
+            'Configs:Unique': Get a directory where you can store metadata
+                for only your program. You are responsible for creating the
+                directory if it doesn't exist. Generally, it is a folder
+                within .config (but differs by platform following the
+                standards of each platform such as %APPDATA%).
+            'Cache:Unique': A directory in the user's cache directory such
+                as .cache/{luid}, {LOCALAPPDATA}/cache/{luid} on Windows
+                (such as, like on other OSs, not to interfere with the
+                install if the program is installed at
+                {LOCALAPPDATA}/{luid}).
+        allow_cloud (bool, optional): Use the 'Configs:Unique' directory
+            in the cloud, but only if a known cloud directory already
+            exists (otherwise fall back to 'Configs:Unique' as
+            described.
     '''
     global non_cloud_warning_shown
     if key == 'Share:Unique':
@@ -609,29 +617,29 @@ def get_unique_path(luid, key, extension=".conf", allow_cloud=False):
         # TODO: Consider using https://github.com/newville/pyshortcuts
         #   to generate shortcut files on Windows/Darwin/Linux.
         if platform.system() == "Windows":
-            return os.path.join(SHORTCUTS_DIR, luid+".blnk")
+            return os.path.join(_SHORTCUTS, luid+".blnk")
         elif platform.system() == "Darwin":
-            return os.path.join(SHORTCUTS_DIR, luid+".desktop")
+            return os.path.join(_SHORTCUTS, luid+".desktop")
             # TODO: ^ Use ".command", applescript, or something else.
         else:
-            return os.path.join(SHORTCUTS_DIR, luid+".desktop")
+            return os.path.join(_SHORTCUTS, luid+".desktop")
     elif key == 'Configs:Unique':
-        localUniqueDir = os.path.join(APPDATA, luid)
+        local_unique_dir = os.path.join(APPDATA, luid)
         if allow_cloud:
             check_cloud()
             if CLOUD_PROFILE is not None:
                 echo1('* CLOUD_PROFILE="{}"'.format(CLOUD_PROFILE))
-                cloudUniqueDir = os.path.join(CLOUD_PROFILE, luid)
-                if os.path.isdir(localUniqueDir):
+                cloud_unique_dir = os.path.join(CLOUD_PROFILE, luid)
+                if os.path.isdir(local_unique_dir):
                     if not non_cloud_warning_shown:
                         echo0('Warning: You can merge (then delete) the old'
                               ' "{}" with the new "{}".'
-                              ''.format(localUniqueDir, cloudUniqueDir))
+                              ''.format(local_unique_dir, cloud_unique_dir))
                         non_cloud_warning_shown = True
-                return cloudUniqueDir
+                return cloud_unique_dir
         echo1('* APPDATA="{}"'.format(APPDATA))
-        echo1('* localUniqueDir="{}"'.format(localUniqueDir))
-        return localUniqueDir
+        echo1('* localUniqueDir="{}"'.format(local_unique_dir))
+        return local_unique_dir
     else:
         raise KeyError(
             "[hierosoft] The key '{}' is not valid for get_unique_path."
@@ -668,9 +676,8 @@ def join_if_exists(parent, sub):
 
 
 def replace_isolated(path, old, new, case_sensitive=True):
-    '''
-    Replace old only if it is at the start or end of a path or is
-    surrounded by os.path.sep.
+    '''Replace old only if it is at the start or end of a path
+    or is enclosed by a os.path.sep character on each end.
     '''
     if case_sensitive:
         if path.startswith(old):
@@ -678,24 +685,24 @@ def replace_isolated(path, old, new, case_sensitive=True):
         elif path.endswith(old):
             path = path[:-len(old)] + new
         else:
-            wrappedNew = os.path.sep + new + os.path.sep
-            wrappedOld = os.path.sep + old + os.path.sep
-            path = path.replace(wrappedOld, wrappedNew)
+            enclosed_new = os.path.sep + new + os.path.sep
+            enclosed_old = os.path.sep + old + os.path.sep
+            path = path.replace(enclosed_old, enclosed_new)
     else:
         if path.lower().startswith(old.lower()):
             path = new + path[len(old):]
         elif path.lower().endswith(old.lower()):
             path = path[:-len(old)] + new
         else:
-            wrappedNew = os.path.sep + new + os.path.sep
-            wrappedOld = os.path.sep + old + os.path.sep
+            enclosed_new = os.path.sep + new + os.path.sep
+            enclosed_old = os.path.sep + old + os.path.sep
             at = 0
             while at >= 0:
                 at = path.lower().find(old.lower())
                 if at < 0:
                     break
-                restI = at + len(old)
-                path = path[:at] + new + path[restI:]
+                rest_i = at + len(old)
+                path = path[:at] + new + path[rest_i:]
     return path
 
 
@@ -846,21 +853,21 @@ def run_and_get_lists(cmd_parts, collect_stderr=True):
         sp = subprocess.Popen(cmd_parts, stdout=subprocess.PIPE)
 
     if sp.stdout is not None:
-        for rawL in sp.stdout:
-            line = rawL.decode()
+        for raw_ in sp.stdout:
+            line = raw_.decode()
             # TODO: is .decode('UTF-8') ever necessary?
             outs.append(line.rstrip("\n\r"))
     if sp.stderr is not None:
-        for rawL in sp.stderr:
-            line = rawL.decode()
+        for raw_ in sp.stderr:
+            line = raw_.decode()
             while True:
-                bI = line.find("\b")
-                if bI < 0:
+                back_i = line.find("\b")
+                if back_i < 0:
                     break
-                elif bI == 0:
+                elif back_i == 0:
                     print("WARNING: Removing a backspace from the"
                           " start of \"{}\".".format(line))
-                line = line[:bI-1] + line[bI+1:]
+                line = line[:back_i-1] + line[back_i+1:]
                 # -1 to execute the backspace not just remove it
             errs.append(line.rstrip("\n\r"))
     # MUST finish to get returncode
@@ -881,12 +888,12 @@ def run_and_get_lists(cmd_parts, collect_stderr=True):
     # (See <https://stackoverflow.com/questions/10683184/
     # piping-popen-stderr-and-stdout/10683323>)
     # if out is not None:
-    #     for rawL in out.splitlines():
-    #         line = rawL.decode()
+    #     for raw_ in out.splitlines():
+    #         line = raw_.decode()
     #         outs.append(line.rstrip("\n\r"))
     # if err is not None:
-    #     for rawL in err.splitlines():
-    #         line = rawL.decode()
+    #     for raw_ in err.splitlines():
+    #         line = raw_.decode()
     #         errs.append(line.rstrip("\n\r"))
 
     return outs, errs, sp.returncode
@@ -1063,9 +1070,9 @@ def which_python():
 def get_pyval(name, py_path):
     line_n = 0
     with open(py_path, 'r') as f:
-        for rawL in f:
+        for raw_ in f:
             line_n += 1  # counting starts at 1
-            line = rawL.strip()
+            line = raw_.strip()
             parts = line.split("=")
             for i in range(len(parts)):
                 parts[i] = parts[i].strip()
@@ -1095,14 +1102,14 @@ def generate_caption(project_meta, variant):
             like 'Minetest ({}) (minetest.org build)'.
             The "{}" will be replaced with the variant.
     """
-    Name = project_meta['name']
+    name = project_meta['name']
     if variant is not None:
         name_and_variant_fmt = project_meta.get('name_and_variant_fmt')
         if name_and_variant_fmt is not None:
-            Name = name_and_variant_fmt.format(variant)
+            name = name_and_variant_fmt.format(variant)
         else:
-            Name += " (" + project_meta['variant'] + ")"  # raise if None
-    return Name
+            name += " (" + project_meta['variant'] + ")"  # raise if None
+    return name
 
 
 # Date variables below are borrowed from enissue.py in
