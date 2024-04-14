@@ -92,6 +92,8 @@ from hierosoft.morelogging import (  # noqa F401
     # verbosity,
 )
 
+from hierosoft.sysdirs import sysdirs
+
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 ASSETS_DIR = os.path.join(MODULE_DIR, "assets")
 assets_dirs = [ASSETS_DIR]
@@ -149,306 +151,6 @@ def get_missing_paths(destination, good_flag_files):
         if not os.path.isfile(flag_path):
             missing_paths.append(flag_path)
     return missing_paths
-
-
-SHORTCUT_EXT = "desktop"
-HOME = None  # formerly profile
-APPDATA = None  # formerly APPDATA
-LOCALAPPDATA = None  # formerly local
-# myLocal = None
-_SHORTCUTS = None  # formerly SHORTCUTS
-replacements = None
-USER = None  # formerly username
-PROFILES = None  # formerly profiles
-LOGS = None  # formerly logsDir
-CACHES = None
-_PIXMAPS = None
-PREFIX = os.environ.get('PREFIX')
-SHARE = None  # formerly share
-USER_PROGRAMS = None
-# For the rationales behind the values see get_unique_path documentation
-if platform.system() == "Windows":
-    SHORTCUT_EXT = "bat"
-    USER = os.environ.get("USERNAME")
-    HOME = os.environ.get("USERPROFILE")
-    _data_parent_ = os.path.join(HOME, "AppData")
-    APPDATA = os.path.join(_data_parent_, "Roaming")
-    LOCALAPPDATA = os.path.join(_data_parent_, "Local")
-    USER_PROGRAMS = os.path.join(LOCALAPPDATA, "Programs")
-    del _data_parent_
-    SHARE = LOCALAPPDATA  # It is synonymous
-    _SHORTCUTS = os.path.join(HOME, "Desktop")
-    PROFILES = os.environ.get("PROFILESFOLDER")
-    if not PROFILES:
-        PROFILES = os.path.dirname(HOME)
-    _TMP = os.path.join(LOCALAPPDATA, "Temp")
-    if PREFIX is None:
-        PREFIX = LOCALAPPDATA
-    _PIXMAPS = PREFIX
-    CACHES = os.path.join(LOCALAPPDATA, "cache")
-else:
-    USER = os.environ.get("USER")
-    HOME = os.environ.get("HOME")
-    LOCALAPPDATA = os.path.join(HOME, ".local", "share")
-    # ^ "home/.local/share" -<developers.redhat.com/blog/2018/11/07
-    #   /dotnet-special-folder-api-linux>
-    # ^ Or os.path.join(HOME, ".var") maybe??
-    USER_PROGRAMS = os.path.join(HOME, ".local", "lib")
-    # ^ Or os.path.join(HOME, ".local", "share") maybe??
-    SHARE = LOCALAPPDATA  # synonymous; generally written on install
-    if platform.system() == "Darwin":
-        SHORTCUT_EXT = "command"
-        # See also <https://github.com/poikilos/world_clock>
-
-        _SHORTCUTS = os.path.join(HOME, "Desktop")
-        Library = os.path.join(HOME, "Library")
-        APPDATA = os.path.join(Library, "Application Support")
-        USER_PROGRAMS = os.path.join(APPDATA, "Programs")  # FIXME nonstandard
-        # LOCALAPPDATA = APPDATA
-        '''
-        ^ According to <https://forum.unity.com/threads/
-          solved-special-folder-path-in-mac.23686/#post-157339>.
-          There are also the following:
-          ~/Library/Preferences/<[appname]>/ [edit using NSUserDefaults]
-          ~/Library/<application name>/
-          and those and Application Support without ~ making 3 in the
-          root directory according to
-          <https://apple.stackexchange.com/a/28930> and according to
-          McLawrence' comment if the app is from the app store it will
-          be in ~/Library/Containers/<application name>/
-          According to the File System Programming guide cited above,
-          <https://developer.apple.com/library/archive/documentation/
-          FileManagement/Conceptual/FileSystemProgrammingGuide/
-          MacOSXDirectories/MacOSXDirectories.html>, the files
-          required for the app to run should be in something like:
-          ~/Library/Application Support/com.example.MyApp/
-          caches should be in:
-          ~/Library/Caches/com.example.MyApp
-        '''
-        CACHES = os.path.join(Library, "Caches")
-        LOGS = os.path.join(HOME, "Library", "Logs")
-        # ^ Ensure it is ok to be written manually & unstructured since
-        #   <https://developer.apple.com/library/archive/documentation/
-        #   FileManagement/Conceptual/FileSystemProgrammingGuide/
-        #   MacOSXDirectories/MacOSXDirectories.html> says,
-        #   ". . . Users can also view these logs using the
-        #   Console app."
-        PROFILES = "/Users"
-        _TMP = os.environ.get("TMPDIR")
-        if PREFIX is None:
-            PREFIX = Library   # TODO: Consider whether this is best.
-        SHARE = LOCALAPPDATA  # synonymous
-    else:
-        if PREFIX is None:
-            PREFIX = os.path.join(HOME, ".local")
-        # GNU+Linux Systems
-        SHARE = os.path.join(PREFIX, "share")
-        _SHORTCUTS = os.path.join(SHARE, "applications")
-        _default_localappdata = LOCALAPPDATA
-        # region based on <developers.redhat.com/blog/2018/11/07
-        #   /dotnet-special-folder-api-linux>
-        LOCALAPPDATA = os.environ.get('XDG_DATA_HOME')
-        if not LOCALAPPDATA:
-            LOCALAPPDATA = _default_localappdata  # ~/.local/share
-        APPDATA = os.environ.get('XDG_CONFIG_HOME')
-        if not APPDATA:
-            APPDATA = os.path.join(HOME, ".config")
-        CommonApplicationData = "/usr/share"
-        CommonTemplates = "/usr/share/templates"
-
-        # endregion based on <developers.redhat.com/blog/2018/11/07
-        #   /dotnet-special-folder-api-linux>
-        # LOCALAPPDATA = APPDATA
-        LOGS = os.path.join(HOME, ".var", "log")
-        PROFILES = "/home"
-        _TMP = "/tmp"
-
-_PIXMAPS = os.path.join(SHARE, "pixmaps")
-
-_LOCAL_BIN = os.path.join(PREFIX, "bin")  # formerly localBinPath
-
-if CACHES is None:
-    CACHES = os.path.join(HOME, ".cache")
-
-# TODO: Consider using os.path.expanduser('~') to get HOME.
-if HOME != os.path.expanduser('~'):
-    echo0("[moreplatform] Warning:")
-    echo0('  HOME="{}"'.format(HOME))
-    echo0('  != os.path.expanduser("~")="{}"'.format(os.path.expanduser('~')))
-
-USER_DIR_NAME = os.path.split(HOME)[1]
-# ^ may differ from os.getlogin() getpass.getuser()
-try:
-    # doesn't matter. USER will be used (from env) anyway.
-    if hasattr(os, "getlogin"):
-        if USER_DIR_NAME != os.getlogin():
-            echo1("Verbose warning:")
-            echo1('  USER_DIR_NAME="{}"'.format(USER_DIR_NAME))
-            echo1('  != os.getlogin()="{}"'.format(os.getlogin()))
-    else:
-        pass
-        # echo0("There is no os.getlogin (normally not present for"
-        #       " Python 2), so USER_DIR_NAME not validated: %s. Using"
-        #       " instead." % USER_DIR_NAME)
-except OSError:
-    # os.getlogin() causes:
-    # "OSError: [Errno 6] No such device or address"
-    # Such as on Python 3.10.6 on Linux Mint 21
-    pass
-
-try:
-    import getpass  # optional
-    if USER_DIR_NAME != getpass.getuser():
-        echo1("Verbose warning:")
-        echo1('  USER_DIR_NAME="{}"'.format(USER_DIR_NAME))
-        echo1('  != getpass.getuser()="{}"'.format(getpass.getuser()))
-except ModuleNotFoundError as ex:
-    echo1(str(ex))
-
-try:
-    import pwd  # optional
-    if USER_DIR_NAME != pwd.getpwuid(os.getuid())[0]:
-        echo1("Verbose warning:")
-        echo1('  USER_DIR_NAME="{}"'.format(USER_DIR_NAME))
-        echo1('  != pwd.getpwuid(os.getuid())[0]="{}"'
-              ''.format(pwd.getpwuid(os.getuid())[0]))
-except ModuleNotFoundError as ex:
-    echo1('Skipping optional dependency: {}'.format(ex))
-
-
-# statedCloud = "owncloud"
-_CLOUD_NAME = None  # formerly myCloudName
-_CLOUD = None  # formerly myCloudPath
-
-CLOUD_DIR_NAMES = ["Nextcloud", "ownCloud", "owncloud", "OneDrive"]
-
-for try_cloud_name in CLOUD_DIR_NAMES:
-    # ^ The first one must take precedence if more than one exists!
-    _try_cloud_path = os.path.join(HOME, try_cloud_name)
-    if os.path.isdir(_try_cloud_path):
-        _CLOUD_NAME = try_cloud_name
-        _CLOUD = _try_cloud_path
-        echo1('* detected "{}"'.format(_CLOUD))
-        break
-    del _try_cloud_path
-
-
-# NOTE: PATH isn't necessary to split with os.pathsep (such as ":", not
-# os.sep or os.path.sep such as "/") since sys.path is split already.
-
-CLOUD_PROFILE = None  # formerly myCloudProfile; such as ~/Nextcloud/HOME
-# myCloudDir = None
-
-# The replacements are mixed since the blnk file may have come from
-#   another OS:
-substitutions = {
-    "%APPDATA%": APPDATA,
-    "$HOME": HOME,
-    "%LOCALAPPDATA%": LOCALAPPDATA,
-    "%MYDOCS%": os.path.join(HOME, "Documents"),
-    "%MYDOCUMENTS%": os.path.join(HOME, "Documents"),
-    "%PROFILESFOLDER%": PROFILES,
-    "%USER%": USER,
-    "%USERPROFILE%": HOME,
-    "%TEMP%": _TMP,
-    "~": HOME,
-    "$CLOUD": None,
-    "%CLOUD%": None,
-}
-
-# ^ For cloud, see check_cloud.
-# FIXME: Replace constants above with elements in sysdirs below.
-
-
-class Constants(dict):
-    """Read-only Dictionary.
-
-    based on https://stackoverflow.com/a/19023331/4541104
-    """
-    def __init__(self):
-        dict.__init__(self)
-        self.__readonly = False
-
-    def readonly(self, readonly=True):
-        """Allow or deny modifying dictionary"""
-        if readonly is None:
-            readonly = False
-        elif readonly not in (True, False):
-            raise TypeError("readonly shoul be True or False (got {})"
-                            "".format(readonly))
-        self.__readonly = readonly
-
-    def __setitem__(self, key, value):
-        if self.__readonly:
-            raise TypeError("__setitem__ is not supported")
-        return dict.__setitem__(self, key, value)
-
-    def __delitem__(self, key):
-        if self.__readonly:
-            raise TypeError("__delitem__ is not supported")
-        return dict.__delitem__(self, key)
-
-
-sysdirs = Constants()  # Call .readonly() after vars are set below.
-
-# For semi-standard folders on Windows and Darwin see
-# <johnkoerner.com/csharp/special-folder-values-on-windows-versus-mac/>
-if platform.system() == "Windows":
-    # HOME = os.environ['USERPROFILE']
-    sysdirs['HOME'] = HOME
-    sysdirs['USER'] = os.environ.get("USERNAME")
-    sysdirs['SHORTCUTS'] = os.path.join(HOME, "Desktop")
-    # 'SHORTCUTS' was formerly 'SHORTCUTS'
-    sysdirs['APPDATA'] = os.environ['APPDATA']
-    sysdirs['LOCALAPPDATA'] = os.environ['LOCALAPPDATA']
-    sysdirs['PROGRAMS'] = os.path.join(sysdirs['LOCALAPPDATA'], "Programs")
-    sysdirs['CACHES'] = os.path.join(sysdirs['LOCALAPPDATA'], "Caches")
-elif platform.system() == "Darwin":
-    # See <https://developer.apple.com/library/archive/
-    #   documentation/MacOSX/Conceptual/BPFileSystem/Articles/
-    #   WhereToPutFiles.html>
-    # HOME = os.environ['HOME']
-    sysdirs['HOME'] = HOME
-    sysdirs['SHORTCUTS'] = os.path.join(HOME, "Desktop")
-    # APPDATA = os.path.join(HOME, "Library", "Preferences")
-    # ^ Don't use Preferences: It only stores plist format files
-    #   generated using the macOS Preferences API.
-    # APPDATA = "/Library/Application Support" # .net-like
-    sysdirs['APPDATA'] = os.path.join(HOME, ".config")  # .net Core-like
-    sysdirs['LOCALAPPDATA'] = os.path.join(HOME, ".local",
-                                           "share")  # .net Core-like
-    sysdirs['CACHES'] = os.path.join(HOME, "Library",
-                                     "Caches")  # .net Core-like
-    # ^ APPDATA & LOCALAPPDATA & CACHES can also be in "/" not HOME
-    #   (.net-like)
-    # sysdirs['PROGRAMS'] = os.path.join(HOME, "Applications")
-    # ^ Should only be used for Application Bundle, so:
-    sysdirs['PROGRAMS'] = os.path.join(HOME, ".local", "lib")
-else:
-    # HOME = os.environ['HOME']
-    sysdirs['HOME'] = HOME
-    sysdirs['SHORTCUTS'] = os.path.join(HOME, ".local", "share",
-                                            "applications")
-    sysdirs['APPDATA'] = os.path.join(HOME, ".config")
-    sysdirs['LOCALAPPDATA'] = os.path.join(HOME, ".local",
-                                           "share")  # .net-like
-    sysdirs['CACHES'] = os.path.join(HOME, ".cache")
-    sysdirs['PROGRAMS'] = os.path.join(HOME, ".local", "lib")
-
-if not sysdirs.get('USER'):
-    # sysdirs['USER'] = os.environ.get("USER")
-    sysdirs['USER'] = os.getlogin()
-
-if not sysdirs.get('PROFILESFOLDER'):
-    sysdirs['PROFILESFOLDER'] = os.path.dirname(sysdirs['HOME'])
-
-sysdirs['CLOUD'] = _CLOUD
-# del HOME
-sysdirs['LOCAL_BIN'] = _LOCAL_BIN
-sysdirs['PIXMAPS'] = _PIXMAPS
-sysdirs['TMP'] = _TMP  # formerly temporaryFiles
-
-sysdirs.readonly()
 
 
 def app_version_dir(org_name, app_name, version):
@@ -514,52 +216,6 @@ class TextStream:
         self.data += data
 
 
-def check_cloud(cloud_path=None, cloud_name=None):
-    '''Check for "HOME" directory in cloud path (such as ~/Nextcloud)
-    It will not modify the global detected myCloudPath nor myCloudName
-    (if not present, both are None) unless you specify a cloud_path.
-
-    Update the substitutions if the cloud exists or is specified,
-    whether or not a "HOME" folder exists there.
-
-    Args:
-        cloud_path (str, optional): Set the global myCloudPath. (If
-            None, use the one discovered on load, that being any
-            subfolders in Home named using any string in the global
-            CLOUD_DIR_NAMES).
-        cloud_name (str, optional): Set the global cloud name (If None,
-            use the folder name of cloud_path if cloud_path was set).
-            This will only be set if cloud_path is also set.
-    '''
-    global CLOUD_PROFILE
-    global _CLOUD
-    global _CLOUD_NAME
-    if cloud_path is not None:
-        _CLOUD = cloud_path
-        if cloud_name is not None:
-            _CLOUD_NAME = cloud_name
-        else:
-            _CLOUD_NAME = os.path.split(cloud_path)[1]
-
-    if _CLOUD is not None:
-        # Update substitutions whether or not the HOME path exists:
-        if _CLOUD is not None:
-            substitutions['%CLOUD%'] = _CLOUD
-            substitutions['$CLOUD'] = _CLOUD
-        # Set the HOME path if it exists:
-        try_cloud_profile_dir = os.path.join(_CLOUD, "profile")
-        # ^ Yes, LITERALLY a subdir named "profile",
-        #   not profile variable.
-        if os.path.isdir(try_cloud_profile_dir):
-            CLOUD_PROFILE = try_cloud_profile_dir
-        else:
-            print('  * Manually create "{}" to enable cloud saves.'
-                  ''.format(try_cloud_profile_dir))
-
-
-check_cloud()
-
-
 non_cloud_warning_shown = False
 
 # Note that the enum module is new in Python 3.4, so it isn't used here.
@@ -608,28 +264,29 @@ def get_unique_path(luid, key, extension=".conf", allow_cloud=False):
     '''
     global non_cloud_warning_shown
     if key == 'Share:Unique':
-        return os.path.join(SHARE, luid)
+        return os.path.join(sysdirs['SHARE'], luid)
     elif key == 'Cache:Unique':
         # if platform.system() == "Windows":
         #     return os.path.join(LOCALAPPDATA, luid, "cache")
-        return os.path.join(CACHES, luid)
+        return os.path.join(sysdirs['CACHES'], luid)
     elif key == 'Desktop:Unique':
         # TODO: Consider using https://github.com/newville/pyshortcuts
         #   to generate shortcut files on Windows/Darwin/Linux.
         if platform.system() == "Windows":
-            return os.path.join(_SHORTCUTS, luid+".blnk")
+            return os.path.join(sysdirs['SHORTCUTS'], luid+".blnk")
         elif platform.system() == "Darwin":
-            return os.path.join(_SHORTCUTS, luid+".desktop")
+            return os.path.join(sysdirs['SHORTCUTS'], luid+".desktop")
             # TODO: ^ Use ".command", applescript, or something else.
         else:
-            return os.path.join(_SHORTCUTS, luid+".desktop")
+            return os.path.join(sysdirs['SHORTCUTS'], luid+".desktop")
     elif key == 'Configs:Unique':
-        local_unique_dir = os.path.join(APPDATA, luid)
+        local_unique_dir = os.path.join(sysdirs['APPDATA'], luid)
         if allow_cloud:
-            check_cloud()
-            if CLOUD_PROFILE is not None:
-                echo1('* CLOUD_PROFILE="{}"'.format(CLOUD_PROFILE))
-                cloud_unique_dir = os.path.join(CLOUD_PROFILE, luid)
+            sysdirs.check_cloud()
+            if sysdirs['CLOUD_PROFILE'] is not None:
+                echo1('* CLOUD_PROFILE="{}"'.format(sysdirs['CLOUD_PROFILE']))
+                cloud_unique_dir = os.path.join(sysdirs['CLOUD_PROFILE'],
+                                                luid)
                 if os.path.isdir(local_unique_dir):
                     if not non_cloud_warning_shown:
                         echo0('Warning: You can merge (then delete) the old'
@@ -637,7 +294,7 @@ def get_unique_path(luid, key, extension=".conf", allow_cloud=False):
                               ''.format(local_unique_dir, cloud_unique_dir))
                         non_cloud_warning_shown = True
                 return cloud_unique_dir
-        echo1('* APPDATA="{}"'.format(APPDATA))
+        echo1('* APPDATA="{}"'.format(sysdirs['APPDATA']))
         echo1('* localUniqueDir="{}"'.format(local_unique_dir))
         return local_unique_dir
     else:
@@ -714,7 +371,7 @@ def replace_vars(path):
     entire path and the value is blank (not detected by morefolders by
     any means).
     '''
-    for old, new in substitutions.items():
+    for old, new in sysdirs.substitutions().items():
         if new is None:
             # Ignore it. It is ok to be None, such as if no
             #   value for $CLOUD (or %CLOUD%) was found.
