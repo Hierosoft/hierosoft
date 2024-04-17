@@ -82,6 +82,7 @@ from hierosoft import (
     echo1,  # formerly debug
     echo2,  # formerly extra
     echo3,
+    echo4,
     set_verbosity,
     join_if_exists,
 )
@@ -110,6 +111,10 @@ default_includes = [
     "*.ini",
     "*.txt",
     "*.desktop",
+]
+
+default_excludes = [
+    ".git",
 ]
 
 GREP_DOC = '''
@@ -222,9 +227,18 @@ for word in GREP_DOC.split():
 
 
 class DontStopIteration(Exception):
+    '''End the recursive generator early without return
+    (which is the same as StopIteration) but allow iteration to
+    continue.
     '''
-    End the recursive generator early without return (which is the
-    same as StopIteration) but allow iteration to continue.
+    pass
+
+
+class DontStopIterationExclusion(DontStopIteration):
+    '''End the recursive generator early without return
+    (which is the same as StopIteration) but allow iteration to
+    continue. In this case, it was due to an exclusion, and exclusions
+    are allowed for children of explicitly-specified directories.
     '''
     pass
 
@@ -243,6 +257,7 @@ def is_grep_arg(arg):
 def usage():
     print(__doc__)
     print("Default types included: {}".format(default_includes))
+    print("Default patterns excluded: {}".format(default_excludes))
     print("")
 
 
@@ -642,7 +657,8 @@ def gitignore_to_rsync_pair(gitignore_path, rsync_from, tmp_dir,
     return paths[0], paths[1]
 
 
-def ggrep(pattern, path, more_args=None, include=None, recursive=True,
+def ggrep(pattern, path, more_args=None, include=None,
+          exclude=None, ex_by=None, recursive=True,
           quiet=True, ignore=None, ignore_root=None, gitignore=True,
           show_args_warnings=True, allow_non_regex_pattern=True,
           trace_ignore_files={}, follow_symlinks=True,
@@ -678,7 +694,9 @@ def ggrep(pattern, path, more_args=None, include=None, recursive=True,
     results['match_count'] = 0
     try:
         for sub in filter_tree(path, more_args=more_args,
-                               include=include, recursive=recursive,
+                               include=include,
+                               exclude=exclude, ex_by=ex_by,
+                               recursive=recursive,
                                quiet=quiet, ignore=ignore,
                                ignore_root=ignore_root,
                                gitignore=gitignore,
@@ -734,9 +752,15 @@ def ggrep(pattern, path, more_args=None, include=None, recursive=True,
                           ''.format(sub, str(ex)))
                     # return results
                     continue
+    # except DontStopIterationExclusion as ex:
+    #     # TODO: See if this is ok. This occurs since exclusions list is
+    #     #   allowed to be passed recursively for explicitly-included
+    #     #   paths.
+    #     pass
     except DontStopIteration as ex:
+        raise
         raise RuntimeError(
-            "The specified path itself was filtered"
+            "An explicitly specified search path itself was filtered"
             " (This should never happen): {}".format(str(ex))
         )
         pass
@@ -754,9 +778,9 @@ TRIVIAL_EXCEPTION_FLAGS = [
 ]
 
 
-def filter_tree(path, more_args=None, include=None, recursive=True,
-                quiet=True, ignore=None, ignore_root=None, gitignore=True,
-                show_args_warnings=True,
+def filter_tree(path, more_args=None, include=None, exclude=None, ex_by=None,
+                recursive=True, quiet=True, ignore=None, ignore_root=None,
+                gitignore=True, show_args_warnings=True,
                 trace_ignore_files={}, follow_symlinks=True,
                 followed_targets=[], root=None):
     '''Find the entire subtree of files and directories in a given path
@@ -771,13 +795,20 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
             include. It is a filename pattern not regex (See is_like
             documentation for details). It does not affect which
             directories are yielded (only ignore does).
+        exclude (Union[str,list[str]], optional): Specify a single
+            string or a list of strings that filter which files to
+            exclude. It is a filename pattern not regex (See is_like
+            documentation for details). It behaves like ignore but
+            exclude does *not* get reset by .gitignore files.
+        ex_by (str, optional): The exclude-from argument value
+            (file) only used for tracing here.
         recursive (bool, optional): Recursively search subdirectories
             (ignored if path is a file).
         quiet (bool, optional): Only return lines, do not print them.
         ignore (list[str], optional): Ignore a list of files
             (automatically changed to content of .gitignore or
             .grepignore if present and path is a directory and gitignore
-            is True).
+            is True). Therefore it is separate from exclude.
         ignore_root (str, optional): This is required when using ignore
             since .gitignore or .grepignore may have paths starting with
             "/" or having "/" before the end and, as per git's
@@ -825,6 +856,12 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
         include = ["*"]
     elif isinstance(include, str):
         include = [include]
+
+    if exclude is None:
+        exclude = []
+    elif isinstance(exclude, str):
+        exclude = [exclude]
+
     if isinstance(ignore, str):
         ignore = [ignore]
     ig_path = ".gitignore"
@@ -834,11 +871,24 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
         else:
             ig_path = join_if_exists(ignore_root,
                                      [".gitignore", ".grepignore"])
+    if exclude is not None:
+        if not isinstance(root, str):
+            raise ValueError("ignore requires ignore_root")
+        else:
+            if not ex_by:
+                ex_by = "exclude argument"
     sub = os.path.split(path)[1]
     # Do not ignore if "" even if .git, so let sub  ""--isdir("")==False
     if os.path.isdir(path):
         if sub == ".git":
             raise DontStopIteration('* ignored "{}"'.format(path))
+
+    if (exclude is not None) and is_like_any(sub, exclude):
+        verb = "excluded"
+        msg = ("* {} {} due to {}"
+               "".format(verb, path, ex_by))
+        # if verb == "excluded":
+        raise DontStopIterationExclusion(msg)
 
     if ignore is not None:
         before_ignore = []
@@ -937,23 +987,35 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
                 )
                 raise
             if path != checkPath:
-                echo2("- {} ({}) not {} by filter: {}"
+                echo4("- {} ({}) not {} by filter: {}"
                       "".format(checkPath, path, verb, ignore_s))
             else:
-                echo2("- {} not {} by filter: {}"
+                # such as "not ignored by filter"
+                echo4("- {} not {} by filter: {}"
                       "".format(path, verb, ignore_s))
+
     if os.path.isfile(os.path.realpath(path)):
         # ^ ALWAYS do realpath since could be ""
         # echo1('* checking "{}"'.format(path))
         if not is_like_any(sub, include):
             # ^ default is ["*"]
             raise DontStopIteration(
-                "* {} {}".format(sub, TRIVIAL_EXCLUSION_INCLUDES)
+                "* {} {} (*not* {} is_like_any of {})"
+                .format(sub, TRIVIAL_EXCLUSION_INCLUDES,
+                        sub, include)
+            )
+        elif exclude and is_like_any(sub, exclude):
+            raise DontStopIterationExclusion(
+                "{} {} ({} is_like_any of {})"
+                .format(path, TRIVIAL_INCLUSION_IN_INCLUDES,
+                        sub, exclude)
             )
         else:
             yield path
             raise DontStopIteration(
-                "{} {}".format(path, TRIVIAL_INCLUSION_IN_INCLUDES)
+                "{} {} ({} is_like_any of {}, exclude={})"
+                .format(path, TRIVIAL_INCLUSION_IN_INCLUDES,
+                        sub, include, exclude)
             )
         # ^ Either way, do not continue below if it is a file.
     else:
@@ -1061,6 +1123,8 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
                     subPath,
                     more_args=more_args,
                     include=include,
+                    exclude=exclude,
+                    ex_by=ex_by,
                     recursive=recursive,
                     quiet=quiet,
                     ignore=ignore,
@@ -1074,6 +1138,9 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
                 # ^ filter the files too
                 # ^ don't yield here, even if directory, since filtering
                 #   must occur (yield path before this loop instead)
+            # except DontStopIterationExclusion as ex:
+            #     # It is an explicit exclusion, so always honor it.
+            #     pass
             except DontStopIteration as ex:
                 if not contains_any(str(ex), TRIVIAL_EXCEPTION_FLAGS):
                     echo0(str(ex))
@@ -1104,26 +1171,55 @@ def quoted(path):
 # TODO: Ignore the .git directory.
 def main():
     start_dt = datetime.now()
-    include_args = default_includes.copy()
+    # include_args = default_includes.copy()
+    include_args = []
+    for default_include in default_includes:
+        include_args += ["--include", default_include]
+    exclude_args = []
+    for default_exclude in default_excludes:
+        exclude_args += ["--exclude", default_exclude]
+    default_excludes_args = exclude_args.copy()
     me = "ggrep"
     prev_var = ""
     _found_include = False
+    _found_exclude = False
     _recursive_arg = None
     _more_args = []
     # ^ defaults
     _n_arg = None
     _include_all = False
+    no_value_args = ("--include-all",)
     gitignore = True
     pattern = None
     # path = None
     paths = []
 
+    ex_bys = None  # TODO: trace --exclude-from paths
+    inline_k = None
+    inline_v = None
+    prev_is_inline = False
+    ex_by = None
     for argI in range(1, len(sys.argv)):
         arg = sys.argv[argI]
+        sign_i = arg.find("=")
+        inline_k = None
+        inline_v = None
+        if sign_i > 0:
+            inline_k = arg[:sign_i]
+            inline_v = arg[sign_i+1:]
+
         if arg == "--help":
             usage()
             return 0
         elif arg == "--include":
+            # This alt syntax (instead of --include=)
+            #   is allowed by grep, so allow it.
+            pass
+            # prev_var will be checked, so there is nothing to do yet.
+        elif arg == "--exclude":
+            # This alt syntax (instead of --exclude=)
+            #   is allowed by grep, so allow it.
+            ex_by = arg
             pass
             # prev_var will be checked, so there is nothing to do yet.
         elif arg == "-r":
@@ -1138,24 +1234,7 @@ def main():
         elif pattern is None:
             pattern = arg
         else:
-            if os.path.isfile(arg):
-                # _recursive_arg = False
-                # echo0('* turning off recursive mode'
-                #       ' (default in ggrep) since "{}" is a file'
-                #       ''.format(arg))
-                # ^ -r is never used anyway (ggrep is always recursive
-                #   unless a file is detected in paths)
-                paths.append(arg)
-                '''
-                if path is not None:
-                    raise ValueError(
-                        'Having more than one file parameter is not'
-                        ' implemented. "{}" was already before "{}"'
-                        ''.format(path, arg)
-                    )
-                path = arg
-                '''
-            elif arg == "--include-all":
+            if arg == "--include-all":
                 if _found_include:
                     raise ValueError(
                         "Error: '--include-all' isn't compatible with"
@@ -1171,7 +1250,7 @@ def main():
                 set_verbosity(1)
             elif arg == "--debug":
                 set_verbosity(2)
-            elif prev_var == "--include":
+            elif "--include" in (prev_var, inline_k):
                 if _include_all:
                     raise ValueError(
                         "Error: '--include' isn't compatible with"
@@ -1185,7 +1264,60 @@ def main():
                 # grep can accept more than one --include, so force the
                 # old one and the new one:
                 include_args.append("--include")
-                include_args.append(arg)
+                if inline_k is not None:
+                    if not inline_v:
+                        raise ValueError(
+                            "Expected pattern after {}= but got \"{}\""
+                            "".format(inline_k, inline_v)
+                        )
+                    if prev_var.startswith("--") and not prev_is_inline:
+                        raise ValueError("Expected value after {} but got {}"
+                                         "".format(prev_var, inline_k))
+                    include_args.append(inline_v)
+                else:
+                    include_args.append(arg)
+            elif "--exclude" in (prev_var, inline_k):
+                if prev_var == "--exclude":
+                    echo0("* EXCLUDING VALUE {}".format(arg))
+                else:
+                    echo0("* EXCLUDING {}".format(arg))
+                if _include_all:
+                    raise ValueError(
+                        "Error: '--exclude' isn't compatible with"
+                        " '--include-all'."
+                    )
+
+                if not _found_exclude:
+                    if exclude_args != default_excludes_args:
+                        raise RuntimeError(
+                            "Already got {}"
+                            .format(exclude_args[len(default_excludes_args):])
+                        )
+                    # echo0("* CLEARING default exclude_args {}"
+                    #       .format(exclude_args))
+                    exclude_args = []
+
+                _found_exclude = True
+                # grep can accept more than one --exclude, so force the
+                # old one and the new one:
+                exclude_args.append("--exclude")
+                if ex_bys is None:
+                    ex_bys = []
+                if inline_k is not None:
+                    if not inline_v:
+                        raise ValueError(
+                            "Expected pattern after {}= but got \"{}\""
+                            "".format(inline_k, inline_v)
+                        )
+                    if prev_var.startswith("--") and not prev_is_inline:
+                        raise ValueError("Expected value after {} but got {}"
+                                         "".format(prev_var, inline_k))
+                    exclude_args.append(inline_v)
+                    ex_bys.append(arg)
+                else:
+                    ex_bys.append("{} {}".format(ex_by, arg))
+                    exclude_args.append(arg)
+                ex_by = None
             elif os.path.isdir(arg):  # elif path is None:
                 paths.append(arg)
                 '''
@@ -1208,8 +1340,25 @@ def main():
                      " if not implemented.".format(arg))
                 )
             else:
+                # if os.path.isfile(arg):
+                #     # _recursive_arg = False
+                #     # echo0('* turning off recursive mode'
+                #     #       ' (default in ggrep) since "{}" is a file'
+                #     #       ''.format(arg))
+                #     # ^ -r is never used anyway (ggrep is always recursive
+                #     #   unless a file is detected in paths)
+                #     paths.append(arg)
+                #     '''
+                #     if path is not None:
+                #         raise ValueError(
+                #             'Having more than one file parameter is not'
+                #             ' implemented. "{}" was already before "{}"'
+                #             ''.format(path, arg)
+                #         )
+                #     path = arg
+                #     '''
                 _more_args.append(arg)
-
+        prev_is_inline = inline_k is not None
         if arg == "-n":
             echo0("* -n is already the default (required for"
                   " the functionality of {}).".format(me))
@@ -1219,12 +1368,21 @@ def main():
 
     if len(paths) == 0:
         paths.append("")  # Use the current directory but don't show it.
+    else:
+        echo0("paths={}".format(paths))
 
-    if prev_var == "--include":
+    if prev_var in ("--include", "--exclude"):
         raise ValueError(
             "Error: You must specify a filename pattern after"
-            " --include such as \"*.lua\""
+            " {} such as \"*.lua\""
             "(including quotes if using asterisk(s)!) ."
+            .format(prev_var)
+        )
+    elif (prev_var and prev_var.startswith("--") and (inline_k is None)
+            and (prev_var not in no_value_args)):
+        raise ValueError(
+            "Error: You must specify a value after {}."
+            .format(prev_var)
         )
 
     count = len(_more_args)
@@ -1234,6 +1392,12 @@ def main():
         echo0("* include_args count: {}".format(includeCount))
     else:
         echo0("* include_args: {}".format(include_args))
+
+    if exclude_args is not None:
+        excludeCount = len(exclude_args)
+        echo0("* exclude_args count: {}".format(excludeCount))
+    else:
+        echo0("* exclude_args: {}".format(exclude_args))
 
     if _n_arg is None:
         _n_arg = "-n"
@@ -1245,12 +1409,17 @@ def main():
 
     echo0("* _more_args: {}".format(_more_args))
     echo0("* include_args: {}".format(include_args))
+    echo0("* exclude_args: {}".format(exclude_args))
     _new_args = _more_args
 
     if not _found_include:
         echo0("  (using ggrep default types since not specified)")
     else:
         echo0("* _found_include: {}".format(_found_include))
+    if not _found_exclude:
+        echo0("  (using ggrep default excludes since not specified)")
+    else:
+        echo0("* _found_exclude: {}".format(_found_exclude))
 
     sys.stderr.write("grep")
     for value in _new_args:
@@ -1261,6 +1430,11 @@ def main():
         sys.stderr.flush()
     num = 0
     total_count = 0
+    # exclude = []
+    # for exclude_arg in exclude_args:
+    #     if exclude_arg == "--exclude":
+    #         continue
+    #     exclude.append(exclude_arg)
     for path in paths:
         num += 1
         echo0()
@@ -1275,9 +1449,16 @@ def main():
         current_inc = include_args
         if os.path.isfile(path):
             current_inc = None
-            # ^ don't filter an explicitly-set file!
+            # ^ don't filter an explicitly-searched file!
+        if is_like_any(path, exclude_args):
+            raise ValueError(
+                "{exclude_args} filters out {path} but you specified {path}"
+                .format(exclude_args=exclude_args, path=path)
+            )
         results = ggrep(pattern, path, more_args=_new_args,
-                        include=current_inc, gitignore=gitignore)
+                        include=current_inc,
+                        exclude=exclude_args, ex_by=ex_bys,
+                        gitignore=gitignore)
         files = results.get('files')
         mb = results.get('read_mb')
         for line in files:
