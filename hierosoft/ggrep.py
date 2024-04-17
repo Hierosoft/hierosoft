@@ -557,23 +557,22 @@ def is_like_any(haystack, needles, allow_blank=False, quiet=False):
 
 def gitignore_to_rsync_pair(gitignore_path, rsync_from, tmp_dir,
                             ignore_root=None):
-    '''
-    Get a pair of include and exclude files (one or both can be None if
-    not applicable) from the projects .gitignore file.
+    '''Get a pair of include and exclude files
+    (one or both can be None if not applicable) from the projects
+    .gitignore file.
+
     The --include-from must be used before --exclude-from since rsync uses
     the first matching pattern.
 
-    Sequential arguments:
-    gitignore_path -- Use this .gitignore file.
-    rsync_from -- Construct each include and exclude as if the rsync
-        source is this directory.
-    tmp_dir -- Place the zero to two files in this directory. The caller is
-        responsible for deleting the files at any paths returned when they
-        are done being used.
-
-    Keyword arguments:
-    ignore_root -- Construct each include and exclude as if the
-        .gitignore is in this directory.
+    Args:
+        gitignore_path (str): Use this .gitignore file.
+        rsync_from (str): Construct each include and exclude as if the
+            rsync source is this directory.
+        tmp_dir (str): Place the zero to two files in this directory.
+            The caller is responsible for deleting the files at any
+            paths returned when they are done being used.
+        ignore_root (str, optional): Construct each include and exclude
+            as if the .gitignore is in this directory.
     '''
     if rsync_from is not None:
         if len(rsync_from.strip()) == 0:
@@ -648,29 +647,29 @@ def ggrep(pattern, path, more_args=None, include=None, recursive=True,
           show_args_warnings=True, allow_non_regex_pattern=True,
           trace_ignore_files={}, follow_symlinks=True,
           followed_targets=[], result_file_fmt="{path}:{line_n}:{line}"):
-    '''
-    Find a pattern within files in a given path (or one file if path is
-    a file) and yield the next for each.
+    '''Find a pattern within files in a given path
+    (or one file if path is a file) and yield the next for each.
 
-    Sequential arguments:
-    path -- any path or no path that should be the start directory and
-        should be the prefix of each result. If blank, each result will
-        be a relative path.
-    pattern -- a regular expression or plain text substring
-
-    Keyword arguments:
-    allow_non_regex_pattern -- Allow the pattern to be in string even if
-        pattern is a substring rather than regex.
-    result_file_fmt -- The format for how to return each result in the
-        'files' list in the returned dictionary, where {path} is the
-        path to the file (beginning with path given as first sequential
-        argument), {line_n} is the line number in the file path, and
-        {line} is the string with the content (the line data itself
-        excluding the newline character).
+    Args:
+        path (str): any path or no path that should be the start
+            directory and should be the prefix of each result. If blank,
+            each result will be a relative path.
+        pattern (str): a regular expression or plain text substring
+        allow_non_regex_pattern (bool, optional): Allow the pattern to
+            be in string even if pattern is a substring rather than
+            regex.
+        result_file_fmt (str, optional): The format for how to return
+            each result in the 'files' list in the returned dictionary,
+            where {path} is the path to the file (beginning with path
+            given as first sequential argument), {line_n} is the line
+            number in the file path, and {line} is the string with the
+            content (the line data itself excluding the newline
+            character).
 
     Returns:
-    A dictionary with various information such as:
-    - 'files': The list of results (formatted using result_file_fmt)
+        dict: various information such as:
+            - 'files': The list of results (formatted using
+              result_file_fmt)
     '''
     results = {}
     results['files'] = []
@@ -760,51 +759,52 @@ def filter_tree(path, more_args=None, include=None, recursive=True,
                 show_args_warnings=True,
                 trace_ignore_files={}, follow_symlinks=True,
                 followed_targets=[], root=None):
-    '''
-    Find the entire subtree of files and directories in a given path and
-    yield the next for each.
+    '''Find the entire subtree of files and directories in a given path
+    and yield the next for each.
 
-    Sequential arguments:
-    path -- Search this file or directory (limited by arguments
-        described below). If "", the current directory will be searched
-        but excluded from the beginning of each result.
-
-    Keyword arguments:
-    include -- Specify a single string or a list of strings that filter
-        which files to include. It is a filename pattern not regex (See
-        is_like documentation for details). It does not affect which
-        directories are yielded (only ignore does).
-    recursive -- Recursively search subdirectories (ignored if path is a
-        file).
-    quiet -- Only return lines, do not print them.
-    ignore -- Ignore a list of files (automatically changed to content
-        of .gitignore or .grepignore if present and path is a directory
-        and gitignore is True).
-    ignore_root -- This is required when using ignore since .gitignore
-        or .grepignore may have paths starting with "/" or having "/"
-        before the end and, as per git's .gitignore spec, must be a
-        path relative to the gitignore file in those two cases.
-    gitignore -- Set to True to read .gitignore files recursively and to
-        ignore files and directories specified in those files. Git's
-        .gitignore spec (including exclusions using "!") is the format
-        spec used (Report issues where that is not followed).
-    show_args_warnings -- Show a warning for each command switch in
-        more_args that is not implemented. The value is True for only
-        one call. It will be automatically be changed to False before
-        another call.
-    trace_ignore_files -- Like ignore, this is generated automatically.
-        If you set ignore manually, you should also initialize
-        trace_ignore_files manually, but it will be updated
-        automatically in the same way as ignore (See ignore
-        documentation). Set the key to the ignore and the value to the
-        file so that an invalid pattern can be traced back to a file
-        for error reporting purposes.
-    follow_symlinks -- Follow symlinked directories.
-    followed_targets -- This is automatically generated. Any
-        symlink target that was followed already won't be followed
-        again, even if relative and recursive.
-    root -- Set the root directory upon which to add sub (only used for
-        tracking, and automatically set).
+    Args:
+        path (str): Search this file or directory (limited by arguments
+            described below). If "", the current directory will be
+            searched but excluded from the beginning of each result.
+        include (Union[str,list[str]], optional): Specify a single
+            string or a list of strings that filter which files to
+            include. It is a filename pattern not regex (See is_like
+            documentation for details). It does not affect which
+            directories are yielded (only ignore does).
+        recursive (bool, optional): Recursively search subdirectories
+            (ignored if path is a file).
+        quiet (bool, optional): Only return lines, do not print them.
+        ignore (list[str], optional): Ignore a list of files
+            (automatically changed to content of .gitignore or
+            .grepignore if present and path is a directory and gitignore
+            is True).
+        ignore_root (str, optional): This is required when using ignore
+            since .gitignore or .grepignore may have paths starting with
+            "/" or having "/" before the end and, as per git's
+            .gitignore spec, must be a path relative to the gitignore
+            file in those two cases.
+        gitignore (bool, optional): Set to True to read .gitignore files
+            recursively and to ignore files and directories specified in
+            those files. Git's .gitignore spec (including exclusions
+            using "!") is the format spec used (Report issues where that
+            is not followed).
+        show_args_warnings (bool, optional): Show a warning for each
+            command switch in more_args that is not implemented. The
+            value is True for only one call. It will be automatically be
+            changed to False before another call.
+        trace_ignore_files (list[str], optional): Like ignore, this is
+            generated automatically. If you set ignore manually, you
+            should also initialize trace_ignore_files manually, but it
+            will be updated automatically in the same way as ignore (See
+            ignore documentation). Set the key to the ignore and the
+            value to the file so that an invalid pattern can be traced
+            back to a file for error reporting purposes.
+        follow_symlinks (bool, optional): Follow symlinked directories.
+        followed_targets (list[str], optional): This is automatically
+            generated. Any symlink target that was followed already
+            won't be followed again, even if relative and recursive.
+        root (str, optional): Set the root directory upon which to add
+            sub (only used for tracking, and automatically set).
     '''
     # echo2('filter_tree("{}")'.format(path))
     if root is None:
