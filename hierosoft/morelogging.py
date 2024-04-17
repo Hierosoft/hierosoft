@@ -228,7 +228,7 @@ to_log_level = {
     0: 50,  # logging.CRITICAL
 }  # NOTE: True and False are cast to int when used as keys!
 
-verbosity_levels = [False, True, 0, 1, 2, 3]
+verbosity_levels = [False, True, 0, 1, 2, 3, 4]
 
 verbosity = 2  # 2 to mimic Python 3 logging default WARNING (30)
 for _argi in range(1, len(sys.argv)):
@@ -392,6 +392,14 @@ def write3(arg):
     return True
 
 
+def write4(arg):
+    if verbosity < 4:
+        return False
+    sys.stderr.write(arg)
+    sys.stderr.flush()
+    return True
+
+
 def echo0(*args, **kwargs):  # formerly prerr
     print(*args, file=sys.stderr, **kwargs)
     return True
@@ -413,6 +421,13 @@ def echo2(*args, **kwargs):  # formerly extra
 
 def echo3(*args, **kwargs):
     if verbosity < 3:
+        return False
+    print(*args, file=sys.stderr, **kwargs)
+    return True
+
+
+def echo4(*args, **kwargs):
+    if verbosity < 4:
         return False
     print(*args, file=sys.stderr, **kwargs)
     return True
