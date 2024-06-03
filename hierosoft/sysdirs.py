@@ -1,7 +1,7 @@
 
 import os
 import platform
-# import sys
+import sys
 
 from hierosoft.morelogging import (
     echo0,
@@ -9,6 +9,11 @@ from hierosoft.morelogging import (
     # echo2,
     # echo3,
 )
+
+if sys.version_info.major < 3:
+    FileNotFoundError = IOError
+    ModuleNotFoundError = ImportError
+    NotADirectoryError = OSError
 
 
 class Constants(dict):
