@@ -666,16 +666,28 @@ def which(program_name, more_paths=[]):
     preferred_path = None
     filenames = [program_name]
     if platform.system() == "Windows":
-        if os.path.splitext(program_name)[1] == "":
-            for dot_ext in WIN_EXECUTABLE_DOT_EXTS:
-                filenames.append(program_name+dot_ext)
+        if program_name == "libreoffice":
+            filenames.insert(0, "soffice")  # This is correct on Windows
+        new_filenames = []
+        for old_filename in filenames:
+            new_filenames.append(old_filename)
+            if os.path.splitext(program_name)[1] == "":  # if no ext
+                for dot_ext in WIN_EXECUTABLE_DOT_EXTS:
+                    new_filenames.append(old_filename+dot_ext)
+        filenames = new_filenames
         if more_paths is None:
             more_paths = []
+
         title = program_name.title()
+        # If it is LibreOffice, the folder name is still LibreOffice
+        #   (so only use program_name here):
         more_paths.append("C:\\Program Files\\{}".format(title))
         more_paths.append("C:\\Program Files\\{}\\bin".format(title))
+        more_paths.append("C:\\Program Files\\{}\\program".format(title))
         more_paths.append("C:\\Program Files (x86)\\{}".format(title))
         more_paths.append("C:\\Program Files (x86)\\{}\\bin".format(title))
+        more_paths.append("C:\\Program Files (x86)\\{}\\program".format(title))
+        # It's "C:\Program Files\LibreOffice\program\soffice.exe" in v24.2.1.2
     for filename in filenames:
         if os.path.split(filename)[0] and is_exe(filename):
             return filename
@@ -684,31 +696,31 @@ def which(program_name, more_paths=[]):
 
         paths_str = os.environ.get('PATH')
         if paths_str is None:
-            echo0("Warning: There is no PATH variable, so returning {}"
+            echo2("Warning: There is no PATH variable, so returning {}"
                   "".format(filename))
             return filename
 
         paths = paths_str.split(os.path.pathsep)
         fallback_path = None
         for path in (paths + more_paths):
-            echo1(prefix+"looking in {}".format(path))
+            echo3(prefix+"looking in {}".format(path))
             try_path = os.path.join(path, filename)
             if is_exe(try_path):
                 return try_path
             elif os.path.isfile(try_path):
-                echo0(prefix+'Warning: "{}" exists'
+                echo2(prefix+'Warning: "{}" exists'
                       ' but is not executable.'.format(try_path))
                 fallback_path = try_path
             else:
-                echo1(prefix+"There is no {}".format(try_path))
+                echo3(prefix+"There is no {}".format(try_path))
         result = None
         if preferred_path is not None:
-            echo0(prefix+'Warning: "{}" will be returned'
+            echo2(prefix+'Warning: "{}" will be returned'
                   ' since given as filename="{}" but is not executable.'
                   ''.format(preferred_path, filename))
             result = fallback_path
         elif fallback_path is not None:
-            echo0(prefix+'Warning: "{}" will be returned'
+            echo2(prefix+'Warning: "{}" will be returned'
                   ' but is not executable.'.format(fallback_path))
             result = fallback_path
     return result
