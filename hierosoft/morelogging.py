@@ -401,11 +401,13 @@ def write4(arg):
 
 
 def echo0(*args, **kwargs):  # formerly prerr
+    # This level is like logging.CRITICAL
     print(*args, file=sys.stderr, **kwargs)
     return True
 
 
 def echo1(*args, **kwargs):  # formerly debug
+    # This level is like logging.ERROR
     if verbosity < 1:
         return False
     print(*args, file=sys.stderr, **kwargs)
@@ -413,6 +415,7 @@ def echo1(*args, **kwargs):  # formerly debug
 
 
 def echo2(*args, **kwargs):  # formerly extra
+    # This level is like logging.WARNING
     if verbosity < 2:
         return False
     print(*args, file=sys.stderr, **kwargs)
@@ -420,6 +423,7 @@ def echo2(*args, **kwargs):  # formerly extra
 
 
 def echo3(*args, **kwargs):
+    # This level is like logging.INFO
     if verbosity < 3:
         return False
     print(*args, file=sys.stderr, **kwargs)
@@ -427,6 +431,7 @@ def echo3(*args, **kwargs):
 
 
 def echo4(*args, **kwargs):
+    # This level is like logging.DEBUG
     if verbosity < 4:
         return False
     print(*args, file=sys.stderr, **kwargs)
