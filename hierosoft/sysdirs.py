@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 import os
 import platform
 import sys
@@ -38,8 +38,8 @@ class Constants(dict):
         if readonly is None:
             readonly = False
         elif readonly not in (True, False):
-            raise TypeError("readonly shoul be True or False (got {})"
-                            "".format(readonly))
+            raise TypeError("readonly should be True or False (got %s)"
+                            % (readonly))
         self.__readonly = readonly
 
     def __setitem__(self, key, value):
@@ -71,9 +71,9 @@ class Constants(dict):
         # TODO: Consider using os.path.expanduser('~') to get HOME.
         if self['HOME'] != os.path.expanduser('~'):
             echo0("[moreplatform] Warning:")
-            echo0('  HOME="{}"'.format(self['HOME']))
-            echo0('  != os.path.expanduser("~")="{}"'
-                  .format(os.path.expanduser('~')))
+            echo0('  HOME="%s"' % (self['HOME']))
+            echo0('  != os.path.expanduser("~")="%s"'
+                  % (os.path.expanduser('~')))
 
         user_dir_name = os.path.split(self['HOME'])[1]
         # ^ may differ from os.getlogin() getpass.getuser()
@@ -83,8 +83,8 @@ class Constants(dict):
             if hasattr(os, "getlogin"):
                 if user_dir_name != os.getlogin():
                     echo1("Verbose warning:")
-                    echo1('  USER_DIR_NAME="{}"'.format(user_dir_name))
-                    echo1('  != os.getlogin()="{}"'.format(os.getlogin()))
+                    echo1('  USER_DIR_NAME="%s"' % (user_dir_name))
+                    echo1('  != os.getlogin()="%s"' % (os.getlogin()))
             else:
                 pass
                 # echo0("There is no os.getlogin (normally not present for"
@@ -100,8 +100,8 @@ class Constants(dict):
             import getpass  # optional
             if user_dir_name != getpass.getuser():
                 echo1("Verbose warning:")
-                echo1('  USER_DIR_NAME="{}"'.format(user_dir_name))
-                echo1('  != getpass.getuser()="{}"'.format(getpass.getuser()))
+                echo1('  USER_DIR_NAME="%s"' % (user_dir_name))
+                echo1('  != getpass.getuser()="%s"' % (getpass.getuser()))
         except ModuleNotFoundError as ex:
             echo1(str(ex))
 
@@ -109,11 +109,11 @@ class Constants(dict):
             import pwd  # optional
             if user_dir_name != pwd.getpwuid(os.getuid())[0]:
                 echo1("Verbose warning:")
-                echo1('  USER_DIR_NAME="{}"'.format(user_dir_name))
-                echo1('  != pwd.getpwuid(os.getuid())[0]="{}"'
-                      .format(pwd.getpwuid(os.getuid())[0]))
+                echo1('  USER_DIR_NAME="%s"' % (user_dir_name))
+                echo1('  != pwd.getpwuid(os.getuid())[0]="%s"'
+                      % (pwd.getpwuid(os.getuid())[0]))
         except ModuleNotFoundError as ex:
-            echo1('Skipping optional dependency: {}'.format(ex))
+            echo1('Skipping optional dependency: %s' % (ex))
 
     def init_platform(self, os_name):
 
@@ -313,7 +313,7 @@ class Constants(dict):
             if os.path.isdir(_try_cloud_path):
                 self['CLOUD_NAME'] = try_cloud_name
                 self['CLOUD'] = _try_cloud_path
-                echo1('* detected "{}"'.format(self['CLOUD']))
+                echo1('* detected "%s"' % (self['CLOUD']))
                 break
             del _try_cloud_path
 
@@ -361,8 +361,8 @@ class Constants(dict):
             if os.path.isdir(try_cloud_profile_dir):
                 self['CLOUD_PROFILE'] = try_cloud_profile_dir
             else:
-                print('  * Manually create "{}" to enable cloud saves.'
-                      ''.format(try_cloud_profile_dir))
+                print('  * Manually create "%s" to enable cloud saves.'
+                      % (try_cloud_profile_dir))
 
 
 sysdirs = Constants()  # Call .readonly() after vars are set below.
