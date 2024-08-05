@@ -7,18 +7,13 @@ This module can't import hierosoft or it would be a circular dependency
 (It would cause an incomplete module error and stop the program).
 '''
 from __future__ import print_function
+from __future__ import division
 import sys
 import traceback
 import os
 
 from collections import OrderedDict
 
-CRITICAL = 50
-ERROR = 40
-WARNING = 30
-INFO = 20
-DEBUG = 10
-NOTSET = 0
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
 
@@ -34,189 +29,44 @@ if sys.version_info.major >= 3:
         Logger,
         Handler,
         getLogger,
+        basicConfig,
+        critical,
+        debug,
+        error,
+        exception,
+        fatal,
+        info,
+        warn,
+        warning,
     )
 else:
     # Polyfills for Python 2
-    FORMAT_STYLES = ['%', '{', '$']
+    import hierosoft.logging2 as logging
+    from hierosoft.logging2 import (
+        Formatter,
+        Logger,
+        Handler,
+        getLogger,
+        basicConfig,
+        critical,
+        debug,
+        error,
+        exception,
+        fatal,
+        info,
+        warn,
+        warning,
+    )
 
-    class Formatter:
-        def __init__(self, fmt=None, datefmt=None, style='%',
-                     validate=True, defaults=None):
-            # FIXME  validate=True, *, defaults=None):  what? (upstream code)
-            if fmt is None:
-                fmt = '%(message)s'
-            self.fmt = fmt
-            if style not in FORMAT_STYLES:
-                raise ValueError("style was %s but should be one in %s"
-                                 % (style, FORMAT_STYLES))
-            self.style = style
-            self.t = None
-            if style == "$":
-                import string
-                self.t = string.Template(fmt)
-            # region attributes in upstream not implemented here yet
-            self.datefmt = datefmt
-            self.validate = validate
-            self.defaults = defaults
-            # endregion attributes in upstream not implemented here yet
-
-        def format(self, message):
-            if self.style == "%":
-                return self.fmt % {'message': message}
-            elif self.style == "{":
-                return self.fmt.format(message=message)
-            elif self.style == "$":
-                # such as "Error: $message in some method"
-                return self.t.substitute(message=message)
-            else:
-                raise ValueError("style was %s but should be one in %s"
-                                 % (self.style, FORMAT_STYLES))
-    default_formatter = Formatter()
-
-    class Logger:
-        def __init__(self, name):
-            self.name = name
-            self.level = 30
-            # region attributes in upstream not implemented here yet
-            # (via logger = logging.getLogger(); dir(logger)
-            #   in Python 3.11 on Windows)
-            # self._cache = None
-            self._log = sys.stderr
-            self.disabled = False
-            # self.filter
-            # self.filters
-            self.handlers = []
-            # self.hasHandlers
-            # self.manager
-            # self.parent
-            # self.propogate = True
-            # ^ if propogate, pass events to higher level handlers too
-            # self.root
-            # endregion attributes in upstream not implemented here yet
-
-        # region methods in upstream not implemented here yet
-        # def addFilter(self, ):
-        # def addHandler(self, ):
-        # def callHandlers(self, ):
-        # def findCaller(self, ):
-        # def getChild(self, ):
-        # def log(self, ):
-        # def makeRecord(self, ):
-        # def removeFilter(self, ):
-        # def removeHandler(self, ):
-        # endregion methods in upstream not implemented here yet
-
-        def isEnabledFor(self, level):  # noqa: N802
-            return False if level < self.level else True
-
-        def handle(self, record):
-            # TODO: make a record class??
-            for handler in self.handlers:
-                handler.format(record)
-                handler.emit(record)
-            # TODO: check own formatter instead of code below
-            print(default_formatter.format(record), file=self._log)
-
-        def getEffectiveLevel(self):  # noqa: N802
-            if self.level >= CRITICAL:
-                return CRITICAL
-            if self.level >= ERROR:
-                return ERROR
-            if self.level >= WARNING:
-                return WARNING
-            if self.level >= INFO:
-                return INFO
-            if self.level >= DEBUG:
-                return DEBUG
-            return NOTSET
-
-        def critical(self, msg):
-            if CRITICAL < self.level:
-                return
-            # prefix = "" if self.name is None else "[%s] " % self.name
-            self._log.write("%s\n" % msg)
-            self._log.flush()
-
-        def debug(self, msg):
-            if DEBUG < self.level:
-                return
-            # prefix = "" if self.name is None else "[%s] " % self.name
-            self._log.write("%s\n" % msg)
-            self._log.flush()
-
-        def error(self, msg):
-            if ERROR < self.level:
-                return
-            # prefix = "" if self.name is None else "[%s] " % self.name
-            self._log.write("%s\n" % msg)
-            self._log.flush()
-
-        def exception(self, ex):
-            # if ERROR < self.level:
-            #     return
-            # prefix = "" if self.name is None else "[%s] " % self.name
-            self._log.write("%s: %s\n" % (type(ex).__name__, ex))
-            self._log.flush()
-
-        def fatal(self, msg):
-            # if ERROR < self.level:
-            #     return
-            # prefix = "" if self.name is None else "[%s] " % self.name
-            self._log.write("%s" % (msg) + "\n")
-            self._log.flush()
-
-        def info(self, msg):
-            if INFO < self.level:
-                return
-            # prefix = "" if self.name is None else "[%s] " % self.name
-            self._log.write("%s" % (msg) + "\n")
-            self._log.flush()
-
-        def setLevel(self, level):  # noqa: N802
-            self.level = level
-
-        def warn(self, msg):
-            print("<stdin>:1: DeprecationWarning:"
-                  " The 'warn' method is deprecated, use 'warning' instead")
-            self.warning(msg)
-
-        def warning(self, msg):
-            if WARNING < self.level:
-                return
-            # prefix = "" if self.name is None else "[%s] " % self.name
-            self._log.write("%s" % (msg) + "\n")
-            self._log.flush()
-
-    class Handler:
-        def __init__(self, level=NOTSET):
-            raise NotImplementedError("Handler")
-    loggers = {}
-    # class logging:
-    filename = None
-    encoding = 'utf-8'
-
-    def getLogger(self, name=None):  # noqa: N802
-        logger = loggers.get(name)  # None is allowed (root of hierarchy)
-        if logger is not None:
-            return logger
-        return Logger(name)
-
-    def basicConfig(**kwargs):  # noqa: N802
-        global filename
-        global encoding
-        string_keys = ['filename', 'encoding']
-        for key, value in kwargs.items():
-            if key in string_keys:
-                if type(value).__name__ not in ("str", "unicode"):
-                    # ^ Do not use isinstance, since unicode is not in Python 3
-                    #   (every str is unicode)
-                    raise TypeError("Expected str/unicode for %s but got %s %s"
-                                    % (key, type(value).__name__, value))
-            if key == "filename":
-                filename = value
-            elif key == "encoding":
-                encoding = value
-
+from hierosoft.logging2 import (
+    FATAL,
+    CRITICAL,
+    ERROR,
+    WARNING,
+    INFO,
+    DEBUG,
+    NOTSET,
+)
 
 to_log_level = {
     4: 10,  # logging.DEBUG
@@ -557,3 +407,29 @@ def echo_SyntaxWarning(path, lineN, msg, col=None):
 def raise_SyntaxError(path, lineN, msg, col=None):
     echo_SyntaxWarning(path, lineN, msg, col=col)
     raise SyntaxError(msg)
+
+def human_readable(bytes_size):
+    """Convert bytes to smallest number in TB, GB, MB, or KB"""
+    # NOTE: .format requires Python 2.6 or newer.
+    endings = ["bytes", "KB", "MB", "GB", "TB"]
+    ending_i = 0
+    size = bytes_size
+    while size >= 1024.0:
+        if ending_i >= len(endings) - 1:
+            # already on the largest denominator
+            break
+        ending_i += 1
+        size /= 1024.0
+    rounded = round(size, 1)
+    # num_str = '%.1g' % (rounded)
+    # %.1: 1 decimal
+    # g: remove insignificant decimals
+    # ^ for some reason returns exponential notation for 512.
+    #   There is no way to round and remove insignificant decimals
+    #   without Python 3.6, so for backward compatibility:
+    if rounded == int(rounded):
+        num_str = str(int(rounded))
+    else:
+        num_str = '%.1f' % (rounded)
+
+    return "%s%s" % (num_str, endings[ending_i])
