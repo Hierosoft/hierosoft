@@ -26,17 +26,22 @@ from hierosoft.morelogging import (
     set_verbosity,
     to_syntax_error,
     pformat,
+    human_readable,
 )
 
 
 class TestLogging(unittest.TestCase):
 
-    def __init__(self):
-        if sys.version_info.major >=3:
-            super().__init__()
-        else:
-            # unittest.TestCase.__init__(self)
-            super(TestLogging, self).__init__()
+    # def __init__(self):
+    #     if sys.version_info.major >=3:
+    #         super().__init__()
+    #     else:
+    #         # unittest.TestCase.__init__(self)
+    #         # super(TestLogging, self).__init__()
+    #         # Python 2.7.18 says:
+    #         # ValueError: no such test method in <class '__main__.TestLogging'>: runTest
+    #         # in either case!
+    #         pass
 
     def test_to_syntax_error(self):
 
@@ -71,6 +76,9 @@ class TestLogging(unittest.TestCase):
             # TODO: Seek column if compatible w/ Geany etc. & test
         )
 
+    def test_mimic_logging_module(self):
+        self.assertEqual(logging.CRITICAL, 50)
+
     def test_logging(self):
         """Test using morelogging in the same way as Python 3 logging.
 
@@ -103,11 +111,21 @@ class TestLogging(unittest.TestCase):
         self.assertEqual(pformat("Hello\r\n"), '"Hello\\r\\n"')
         self.assertEqual(pformat("Hello\t"), '"Hello\\t"')
 
+    def test_human_readable(self):
+        self.assertEqual(human_readable(512), "512bytes")
+        self.assertEqual(human_readable(1024), "1KB")
+        self.assertEqual(human_readable(1024*1024), "1MB")
+        self.assertEqual(human_readable(1024*1024*1024), "1GB")
+        self.assertEqual(human_readable(1024*1024*1024*1024), "1TB")
+        self.assertEqual(human_readable(8192), "8KB")
+        self.assertEqual(human_readable(8192*1024), "8MB")
+        self.assertEqual(human_readable(8192*1024*1024), "8GB")
+        self.assertEqual(human_readable(8192*1024*1024*1024), "8TB")
 
 if __name__ == "__main__":
-    # unittest.main()
-    testcase = TestLogging()
-    for name in dir(testcase):
-        if name.startswith("test"):
-            fn = getattr(testcase, name)
-            fn()  # Look at def test_* for the code if tracebacks start here
+    unittest.main()
+    # testcase = TestLogging()
+    # for name in dir(testcase):
+    #     if name.startswith("test"):
+    #         fn = getattr(testcase, name)
+    #         fn()  # Look at def test_* for the code if tracebacks start here
