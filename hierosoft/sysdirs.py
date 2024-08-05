@@ -79,6 +79,7 @@ class Constants(dict):
         # ^ may differ from os.getlogin() getpass.getuser()
         try:
             # doesn't matter. USER will be used (from env) anyway.
+            # May differ if using `su` in a graphical terminal window!
             if hasattr(os, "getlogin"):
                 if user_dir_name != os.getlogin():
                     echo1("Verbose warning:")
@@ -262,6 +263,8 @@ class Constants(dict):
             self['LOGS'] = os.path.join(self['HOME'], ".var", "log")
             # 'LOGS' was formerly logsDir
 
+        # Any OS:
+
         if not self['PROFILES']:
             self['PROFILES'] = os.path.dirname(self['HOME'])
 
@@ -273,7 +276,19 @@ class Constants(dict):
 
         if not sysdirs.get('USER'):
             # self['USER'] = os.environ.get("USER")
-            self['USER'] = os.getlogin()
+            # try:
+            #     self['USER'] = os.getlogin()
+            # except OSError:
+            # ^ getlogin may differ if using `su` in a graphical terminal!
+            if os_name == "Windows":
+                self['USER'] = os.environ.get("USERNAME")
+            else:
+                self['USER'] = os.environ.get("USER")
+            # "OSError: [Errno 6] No such device or address"
+            #   can happen for some reason with Python 3.10.12
+            #   on Linux Mint 21.3
+            if not self['USER']:
+                print("Warning: couldn't detect USER.", file=sys.stderr)
 
         if not sysdirs.get('PROFILESFOLDER'):
             self['PROFILESFOLDER'] = os.path.dirname(self['HOME'])
