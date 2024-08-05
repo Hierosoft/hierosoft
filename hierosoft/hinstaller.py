@@ -35,6 +35,9 @@ from hierosoft.moreplatform import (
     zip_dir,
 )
 
+from hierosoft.morelogging import (
+    utcnow,
+)
 
 def best_timer_ms():
     return time.time_ns() / 1000000
@@ -207,8 +210,7 @@ class HInstaller:
         if callback is None:
             callback = console_callback
         self.callback = callback
-
-        start_dt = datetime.utcnow()
+        start_dt = utcnow()
         install_meta = {}
         install_meta['install_date'] = hierosoft.dt_str(start_dt)
         self.meta['install_date'] = install_meta['install_date']
