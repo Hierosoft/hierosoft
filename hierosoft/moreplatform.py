@@ -20,8 +20,6 @@ from hierosoft.morelogging import pformat
 from hierosoft import (
     echo0,
     write0,
-    SHORTCUT_EXT,
-    CACHES,
     get_subdir_names,
     sysdirs,
 )
@@ -30,6 +28,37 @@ from hierosoft.morebytes import (
     rewrite_conf,
     rewrite_conf_str,
 )
+
+
+enable_gi = False
+
+DEFAULT_SIZE_SUB = "48x48"
+DEFAULT_CONTEXT = "apps"
+
+APP_ICONS_PATHS = [  # which_pixmap checks others beyond DEFAULT_CONTEXT
+    os.path.join("/usr/share/icons/hicolor", DEFAULT_SIZE_SUB,
+                 DEFAULT_CONTEXT),
+    os.path.join("/usr/local/share/icons/hicolor", DEFAULT_SIZE_SUB,
+                 DEFAULT_CONTEXT),
+    os.path.join(sysdirs['LOCALAPPDATA'], "icons"),
+    os.path.join(sysdirs['LOCALAPPDATA'], "icons", "hicolor", DEFAULT_SIZE_SUB,
+                 DEFAULT_CONTEXT),
+    # NOTE: ^ hierosoft LOCALAPPDATA is ~/.local/share like .NET framework
+    sysdirs['PIXMAPS'],
+    os.path.join("/usr/share/icons/hicolor/scalable", DEFAULT_CONTEXT),
+    os.path.join("/usr/local/share/icons/hicolor/scalable", DEFAULT_CONTEXT),
+]
+
+try:
+    import gi
+    gi.require_version('Gtk', '3.0')
+    from gi.repository import Gtk
+    enable_gi = True
+except ModuleNotFoundError:
+    print("gi is not installed. Icon checks will use {}"
+          .format(APP_ICONS_PATHS))
+    pass
+
 
 if sys.version_info.major < 3:
     FileNotFoundError = IOError
@@ -53,6 +82,56 @@ else:
         return result
     shlex.join = shlex_join
 """
+
+
+def which_pixmap(name, context=DEFAULT_CONTEXT, size=48):
+    """Find an icon file in XDG-like locations.
+
+    Args:
+        name (str): Icon name (A well-known application name or
+            any application with an icon installed).
+        context (str, optional): The icon category to check, as in the
+            subfolder under /usr/share/icons/hicolor/48x48/ and similar
+            XDG-like paths in APP_ICONS_PATHS that end with an "apps"
+            (which is the DEFAULT_CONTEXT). Defaults to DEFAULT_CONTEXT.
+
+    Returns:
+        str: Path to the icon or None
+    """
+    # a.k.a. icon_exists, icon_path, or which_icon_image
+    if enable_gi:
+        icon_theme = Gtk.IconTheme.get_default()
+        # return icon_theme.has_icon(name)
+        icon_info = icon_theme.lookup_icon(name, size, 0)
+        if icon_info:
+            # gi gets the one actually used such as
+            #   os.path.join(HOME, "/.local/share/icons/ePapirus-Dark/"
+            #                      "48x48/categories/gimp.svg")
+            return icon_info.get_filename()
+    size_sub = "{}x{}".format(size, size)
+    for raw_parent in APP_ICONS_PATHS:
+        parent = raw_parent
+        grandparent, constant_context = os.path.split(parent)
+        ggparent, constant_size_sub = os.path.split(grandparent)
+        # ^ ggparent is great-grandparent such as /usr/share/icons/hicolor
+        if ((constant_size_sub == DEFAULT_SIZE_SUB)
+                and (size_sub != DEFAULT_SIZE_SUB)):
+            grandparent = os.path.join(ggparent, size_sub)
+            parent = os.path.join(grandparent, constant_context)
+            # ^ must set parent here too in case using DEFAULT_CONTEXT
+        if constant_context == DEFAULT_CONTEXT:
+            if context != DEFAULT_CONTEXT:
+                parent = os.path.join(grandparent, context)
+        dot_exts = [".png", ".svg", ".xpm"]
+        # "supported image file formats are PNG, XPM and SVG"
+        # -<https://specifications.freedesktop.org/icon-theme-spec/latest/>
+        # 2024-08-20
+        try_no_ext_path = os.path.join(parent, name)
+        for dot_ext in dot_exts:
+            try_path = try_no_ext_path + dot_ext
+            if os.path.isfile(try_path):
+                return try_path
+    return None
 
 
 def install_folder(src, dst, event_template=None):
@@ -369,7 +448,7 @@ def make_shortcut(meta, program_name, mgr, push_label=echo0,
     installed_path = meta['Path']  # *required*--missing from earlier versions
     ret = True
     desktop_path = mgr.get_desktop_path()
-    sc_ext = SHORTCUT_EXT
+    sc_ext = sysdirs['SHORTCUT_EXT']
     bin_path = meta.get('Exec')
     action = "create"
     if uninstall:
