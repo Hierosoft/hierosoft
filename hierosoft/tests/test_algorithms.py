@@ -13,8 +13,8 @@ if __name__ == "__main__":
 
 
 from hierosoft import (
-    echo0,
-    set_verbosity,
+    # echo0,
+    # set_verbosity,
     find_by_value,
 )
 
@@ -63,4 +63,3 @@ if __name__ == "__main__":
         if name.startswith("test"):
             fn = getattr(testcase, name)
             fn()  # Look at def test_* for the code if tracebacks start here
-

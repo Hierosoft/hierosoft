@@ -30,8 +30,8 @@ from tinytag import TinyTagException
 
 dataDirName = "data"
 dataDirPath = dataDirName
-similarsDirName = "similar"
-similarsDirPath = os.path.join(dataDirPath, similarsDirName)
+alternatesDirName = "similar"
+alternatesDirPath = os.path.join(dataDirPath, alternatesDirName)
 similarLists = {}  # formerly artists and albums
 
 
@@ -126,7 +126,7 @@ def getSimilar(needle, haystack):
 def getAndCollectSimilar(name, what):
     global similarLists
     whatName = what + ".txt"
-    whatPath = os.path.join(similarsDirPath, whatName)
+    whatPath = os.path.join(alternatesDirPath, whatName)
     if similarLists.get(what) is None:
         similarLists[what] = []
         if os.path.isfile(whatPath):
@@ -145,10 +145,10 @@ def getAndCollectSimilar(name, what):
         if name not in similarLists[what]:
             similarLists[what].append(name)
             outs = None
-            if not os.path.isdir(similarsDirPath):
+            if not os.path.isdir(alternatesDirPath):
                 if not os.path.isdir(dataDirPath):
                     os.mkdir(dataDirPath)
-                os.mkdir(similarsDirPath)
+                os.mkdir(alternatesDirPath)
             if os.path.isfile(whatPath):
                 outs = open(whatPath, 'a')
             else:
@@ -754,7 +754,7 @@ def neatMetaTags(path, makeAllValidPathChars=True):
 
     Usage:
     tag = TinyTag.get(subPath)
-    filenName = fileNameFromStats(tag.__dict__)
+    fileName = fileNameFromStats(tag.__dict__)
 
 
     Args:

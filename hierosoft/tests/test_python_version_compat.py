@@ -10,13 +10,13 @@ repo_dir = os.path.dirname(module_dir)
 if __name__ == "__main__":
     sys.path.insert(0, repo_dir)
 
-from hierosoft.morelogging import (
-    echo0,
-    echo1,
-    echo2,
-    set_verbosity,
-    to_syntax_error,
-)
+# from hierosoft.morelogging import (
+#     echo0,
+#     echo1,
+#     echo2,
+#     set_verbosity,
+#     to_syntax_error,
+# )
 
 from hierosoft import (
     s2or3,

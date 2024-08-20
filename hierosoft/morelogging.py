@@ -22,52 +22,6 @@ if __name__ == "__main__":
 
 # import hierosoft.moreweb  # avoid this--circular import
 
-if sys.version_info.major >= 3:
-    import logging  # noqa F401
-    from logging import (
-        Formatter,
-        Logger,
-        Handler,
-        getLogger,
-        basicConfig,
-        critical,
-        debug,
-        error,
-        exception,
-        fatal,
-        info,
-        warn,
-        warning,
-    )
-else:
-    # Polyfills for Python 2
-    import hierosoft.logging2 as logging
-    from hierosoft.logging2 import (
-        Formatter,
-        Logger,
-        Handler,
-        getLogger,
-        basicConfig,
-        critical,
-        debug,
-        error,
-        exception,
-        fatal,
-        info,
-        warn,
-        warning,
-    )
-
-from hierosoft.logging2 import (
-    FATAL,
-    CRITICAL,
-    ERROR,
-    WARNING,
-    INFO,
-    DEBUG,
-    NOTSET,
-    utcnow,
-)
 
 to_log_level = {
     4: 10,  # logging.DEBUG
@@ -82,8 +36,8 @@ to_log_level = {
 verbosity_levels = [False, True, 0, 1, 2, 3, 4]
 
 verbosity = 2  # 2 to mimic Python 3 logging default WARNING (30)
-for _argi in range(1, len(sys.argv)):
-    arg = sys.argv[_argi]
+for _arg_i in range(1, len(sys.argv)):
+    arg = sys.argv[_arg_i]
     if arg.startswith("--"):
         if arg == "--verbose":
             verbosity = 1
@@ -125,7 +79,7 @@ def pformat(value, quote_if_like_str=None, escape_if_like_str=None):
 
     Args:
         value: any value that can convert to str. Values in
-            an iterable will be processed resursively first.
+            an iterable will be processed recursively first.
         quote_if_like_str (Optional[bool]): Do not use this option, or
             your pformat calls will be incompatible with
             pprint.pformat--This option is only for recursion. Add
@@ -408,6 +362,7 @@ def echo_SyntaxWarning(path, lineN, msg, col=None):
 def raise_SyntaxError(path, lineN, msg, col=None):
     echo_SyntaxWarning(path, lineN, msg, col=col)
     raise SyntaxError(msg)
+
 
 def human_readable(bytes_size):
     """Convert bytes to smallest number in TB, GB, MB, or KB"""

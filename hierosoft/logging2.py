@@ -22,7 +22,7 @@ However, basicConfig has changed as follows:
 getLevelName changed as follows:
 > Changed in version 3.4: In Python versions earlier than 3.4, this
 > function could also be passed a text level, and would return the
-> corresponding numeric value of the level. This undocumented behaviour
+> corresponding numeric value of the level. This undocumented behavior
 > was considered a mistake, and was removed in Python 3.4, but
 > reinstated in 3.4.2 due to retain backward compatibility.
 -<https://docs.python.org/3/library/logging.html>
@@ -71,6 +71,7 @@ try:
 except ImportError:
     def utcnow():
         return datetime.utcnow()
+
 
 FATAL = 50  # same as CRITICAL
 CRITICAL = 50
@@ -205,8 +206,8 @@ class Logger:
         # self.hasHandlers
         # self.manager
         # self.parent
-        # self.propogate = True
-        # ^ if propogate, pass events to higher level handlers too
+        # self.propagate = True
+        # ^ if propagate, pass events to higher level handlers too
         # self.root
         # endregion attributes in upstream not implemented here yet
 

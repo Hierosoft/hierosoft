@@ -157,7 +157,7 @@ def widget_to_kv(widget, indent, widget_id=None, outfn=print,
                      'width, height', 'source', 'icon', 'icon_size',
                      'active', 'disabled', 'icon_color', 'orientation',
                      'padding', 'spacing',
-                     'width_mult', 'halign', 'valign',
+                     'width_mult', 'halign', 'valign',  # TODO: width_mult is deprecated
                      'position',  # Not verified to exist (may be in KivyMD)
                      'pos_hint']:  # pos_hint is a dict (*not* list) Property
         # NOTE: id is done differently further up.

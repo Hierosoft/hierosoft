@@ -9,16 +9,16 @@ Options:
 from __future__ import print_function
 
 import argparse
-import copy
+# import copy
 import json
 import os
-import platform
+# import platform
 import shutil
 import stat
 import sys
 
-from collections import OrderedDict
-from datetime import datetime, timedelta
+# from collections import OrderedDict
+# from datetime import datetime, timedelta
 
 if sys.version_info.major >= 3:
     import urllib.request
@@ -26,7 +26,7 @@ if sys.version_info.major >= 3:
 else:
     # python2
     print("* detected Python " + str(sys.version_info.major))
-    import urllib2 as urllib
+    import urllib2 as urllib  # noqa: F401 # type: ignore
     request = urllib
 
 if sys.version_info.major >= 3:
@@ -46,12 +46,12 @@ if sys.version_info.major >= 3:
 else:
     # Python 2
     # See <https://docs.python.org/2/howto/urllib2.html>
-    from urlparse import urlparse
-    # from urlparse import quote_plus
-    from urllib import urlencode
-    from urllib import quote
-    from urllib import unquote
-    from urllib2 import HTTPError
+    from urlparse import urlparse  # noqa: F401 # type: ignore
+    # from urlparse import quote_plus  # noqa: F401 # type: ignore
+    from urllib import urlencode  # noqa: F401 # type: ignore
+    from urllib import quote  # noqa: F401 # type: ignore
+    from urllib import unquote  # noqa: F401 # type: ignore
+    from urllib2 import HTTPError  # noqa: F401 # type: ignore
     # ^ urllib.error.HTTPError doesn't exist in Python 2
     try:
         import requests
@@ -119,14 +119,16 @@ def stream_urlopen(outs, ins, total=None, chunk_size=8192):
         pw.write(size, total)
     return size
 
+
 class RepoState:
     def __init__(self, user, project):
         moregit_cache_dir = os.path.join(sysdirs['CACHES'], "moregit")
         self.user = user
         self.project = project
         self._latest_release_meta = None
-        self._latest_releas_meta_src = None
-        self.latest_release_url_fmt = "https://api.github.com/repos/{user}/{project}/releases/latest"
+        self._latest_release_meta_src = None
+        self.latest_release_url_fmt = \
+            "https://api.github.com/repos/{user}/{project}/releases/latest"
 
     def latest_release_url(self):
         return self.latest_release_url_fmt.format(
@@ -257,7 +259,8 @@ class RepoState:
         # documented way:
         # curl -L \
         #     -H "Accept: application/vnd.github+json" \
-        #     https://api.github.com/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest \
+        #     https://api.github.com/repos/yt-dlp/yt-dlp-nightly-builds/
+        #     releases/latest \
         #     > yt-dlp-nightly-builds-latest.json
         url = self.latest_release_url()
         results = self.get_download(url, text=True)  # token = ...
@@ -270,7 +273,7 @@ class RepoState:
 
         self._latest_release_meta = json.loads(results['text'])
         logger.warning("OK (decoded JSON from {})".format(url))
-        self._latest_releas_meta_src = url
+        self._latest_release_meta_src = url
 
         return results
 
@@ -291,10 +294,10 @@ class RepoState:
                 - 'path' of downloaded file will be set if no 'error'
         """
         results = {}
-        sha2_256sums_name = 'SHA2-256SUMS'
-        sha2_256sums_sig_name = "SHA2-256SUMS.sig"
-        sha2_512sums_name = 'SHA2-512SUMS'
-        sha2_512sums_sig_name= "SHA2-512SUMS.sig"
+        # sha2_256sums_name = 'SHA2-256SUMS'
+        # sha2_256sums_sig_name = "SHA2-256SUMS.sig"
+        # sha2_512sums_name = 'SHA2-512SUMS'
+        # sha2_512sums_sig_name = "SHA2-512SUMS.sig"
         asset_name = asset.get('name')
         if not destination_name or not destination_name.strip():
             if not asset_name or not asset_name.strip():
@@ -399,17 +402,18 @@ class RepoState:
         assets = self._latest_release_meta.get('assets')
         if not assets:
             results['error'] = \
-                "No 'assets' in {}".format(self._latest_releas_meta_src)
+                "No 'assets' in {}".format(self._latest_release_meta_src)
             return results
         if not name_pattern:
             results['assets'] = assets
             return results
         results['assets'] = []
         for asset in assets:
-            # Examples: "yt-dlp", "yt-dlp.exe", "yt-dlp.tar.gz", "yt-dlp_linux",
-            #   "yt-dlp_linux_aarch64", "yt-dlp_linux_armv7l", "yt-dlp_macos",
-            #   "yt-dlp_macos.zip", "yt-dlp_macos_legacy", "yt-dlp_min.exe",
-            #   "yt-dlp_win.zip", "yt-dlp_x86.exe", "_update_spec"
+            # Examples: "yt-dlp", "yt-dlp.exe", "yt-dlp.tar.gz",
+            #   "yt-dlp_linux", "yt-dlp_linux_aarch64", "yt-dlp_linux_armv7l",
+            #   "yt-dlp_macos", "yt-dlp_macos.zip", "yt-dlp_macos_legacy",
+            #   "yt-dlp_min.exe", "yt-dlp_win.zip", "yt-dlp_x86.exe",
+            #   "_update_spec"
             asset_name = asset.get('name')
             if not asset_name:
                 print("Warning: Unnamed asset listed: {}"
@@ -498,7 +502,6 @@ def main():
     shutil.move(path, dst_path)
     print("dst_path=\"%s\"" % dst_path)
     return 0
-
 
 
 if __name__ == "__main__":

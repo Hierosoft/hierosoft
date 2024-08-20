@@ -22,7 +22,7 @@ Differences from grep:
 
 You can install it such as via:
   python3 -m pip install --user linux-preinstall
-
+# NOTE: the word preinstall is already in the git version of cspell-dicts
 
 Then you can use it any time.
 For example, if you run:
@@ -75,11 +75,11 @@ import json
 import platform
 from datetime import (
     datetime,
-    timedelta,
+    # timedelta,
 )
 from hierosoft import (
-    echo0,  # formerly prerr as error
-    echo1,  # formerly debug
+    echo0,
+    echo1,
     echo2,  # formerly extra
     echo3,
     echo4,
@@ -181,9 +181,10 @@ Context control:
       --group-separator=SEP use SEP as a group separator
       --no-group-separator  use empty string as a group separator
       --color[=WHEN],
+                        # cspell:disable-next-line
       --colour[=WHEN]       use markers to highlight the matching strings;
                             WHEN is 'always', 'never', or 'auto'
-  -U, --binary              do not strip CR characters at EOL (MSDOS/Windows)
+  -U, --binary              do not strip CR characters at EOL (MS-DOS/Windows)
 
 When FILE is '-', read standard input.  With no FILE, read '.' if
 recursive, '-' otherwise.  With fewer than two FILEs, assume -h.
@@ -533,15 +534,20 @@ def is_like(haystack, needle, allow_blank=False, quiet=False,
                         echo3(tab+"    * True")
                         # The rest may match from ANY starting point of
                         # the character after *, such as:
+                        # cspell:disable-next-line
                         # abababc is like *ababc (should be True)
                         # - If next_needle_c were used, that wouldn't
                         #   return True as it should.
                         # - To return True, the recursion will occur
                         #   twice:
+                        # cspell:disable-next-line
                         #   - (abababc, ababc) -> False
+                        # cspell:disable-next-line
                         #   - (ababc, ababc) -> True
                         #   - or:
+                        # cspell:disable-next-line
                         #     - (abababc, a*c) -> False
+                        # cspell:disable-next-line
                         #     - (ababc, a*c) -> True
                         return True
                     else:
