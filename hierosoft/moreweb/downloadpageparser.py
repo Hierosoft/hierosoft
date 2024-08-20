@@ -45,7 +45,7 @@ class DownloadPageParser(HTMLParser):
         return self.options.get(key)
 
     def __init__(self, options):
-        # avoid "...instance has no attribute rawdata":
+        # avoid "...instance has no attribute raw_data":
         #   Old way:
         #     HTMLParser.__init__(self)
         #   On the next commented line, python2 would say:

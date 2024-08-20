@@ -92,7 +92,7 @@ class DownloadManager:
         dat = response.read()
         # echo0("GOT:" + dat)
         # Decode dat to avoid error on Python 3:
-        #   htmlparser self.rawdata  = self.rawdata + data
+        #   htmlparser self.raw_data  = self.raw_data + data
         #   TypeError: must be str not bytes
         self.parser.feed(dat.decode("UTF-8"))
         return self.parser.urls
