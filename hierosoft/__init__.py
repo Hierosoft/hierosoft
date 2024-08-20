@@ -269,7 +269,7 @@ def get_unique_path(luid, key, extension=".conf", allow_cloud=False):
         return os.path.join(sysdirs['SHARE'], luid)
     elif key == 'Cache:Unique':
         # if platform.system() == "Windows":
-        #     return os.path.join(LOCALAPPDATA, luid, "cache")
+        #     return os.path.join(sysdirs['LOCALAPPDATA'], luid, "cache")
         return os.path.join(sysdirs['CACHES'], luid)
     elif key == 'Desktop:Unique':
         # TODO: Consider using https://github.com/newville/pyshortcuts

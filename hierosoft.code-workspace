@@ -11,7 +11,14 @@
 			"--ignore=N816,N806,N803,N802,E226,W503"
 		],
 		"editor.wordWrapColumn": 79,
-		"rewrap.wrappingColumn": 72
+		"rewrap.wrappingColumn": 72,
+		"cSpell.words": [
+			"LOCALAPPDATA",
+			"MYDOCS",
+			"MYDOCUMENTS",
+			"PIXMAPS",
+			"sysdirs"
+		]
 	},
 	"launch": {
 		"version": "0.2.0",
