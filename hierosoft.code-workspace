@@ -26,6 +26,7 @@
 			"Auml",
 			"autoraise",
 			"backported",
+			"besidethevoid",
 			"birthtime",
 			"blendernightly",
 			"blnk",
@@ -56,9 +57,11 @@
 			"Euml",
 			"examplefoo",
 			"EXIF",
+			"expertmultimedia",
 			"favoriteservers",
 			"filemanager",
 			"finetest",
+			"flac",
 			"frombuffer",
 			"Geany",
 			"getexif",
@@ -134,6 +137,7 @@
 			"pady",
 			"pathcheck",
 			"pbar",
+			"pcast",
 			"pflag",
 			"Pieters",
 			"PIXMAPS",
@@ -155,6 +159,7 @@
 			"rvalue",
 			"Saidani",
 			"serverlist",
+			"smil",
 			"snicaddr",
 			"soffice",
 			"squo",
@@ -174,7 +179,8 @@
 			"virtualenv",
 			"virtualenvs",
 			"webbot",
-			"xorg"
+			"xorg",
+			"xspf"
 		]
 	},
 	"launch": {
