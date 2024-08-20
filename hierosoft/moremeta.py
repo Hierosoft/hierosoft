@@ -816,7 +816,7 @@ def neatMetaTags(path, makeAllValidPathChars=True):
         if _eMusicFlag in artist:
             artist = artist.replace(_eMusicFlag, "")
             ret['eMusicFlag'] = _eMusicFlag
-            # Do NOT add to comment, since would aready have song URL.
+            # Do NOT add to comment, since would already have song URL.
 
         if makeAllValidPathChars:
             artist = cleanFileName(artist)
