@@ -5,13 +5,10 @@ from hierosoft import (  # noqa F401
     echo0,
     echo1,
     echo2,
+    sysdirs,
     write0,
     write1,
     write2,
-    HOME,
-    LOCALAPPDATA,
-    APPDATA,
-    SHORTCUT_EXT,
 )
 
 from hierosoft.moreweb import (
@@ -55,9 +52,9 @@ class DownloadManager:
     def __init__(self):
         self.options = {}
         # self.set_options(options)
-        self.profile_path = HOME
-        self.localappdata_path = LOCALAPPDATA
-        self.appdata_path = APPDATA
+        self.profile_path = sysdirs['HOME']
+        self.localappdata_path = sysdirs['LOCALAPPDATA']
+        self.appdata_path = sysdirs['APPDATA']
         self.parser = None
         self.download_thread = None
         self.url = None
@@ -81,7 +78,7 @@ class DownloadManager:
             self.options[key] = value
 
     def get_shortcut_ext(self):
-        return SHORTCUT_EXT
+        return sysdirs['SHORTCUT_EXT']
 
     def get_urls(self):
         if self.parser is None:
