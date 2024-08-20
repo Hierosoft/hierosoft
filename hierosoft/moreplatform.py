@@ -83,9 +83,17 @@ else:
     shlex.join = shlex_join
 """
 
+ICON_THEME = None
 
-def which_pixmap(name, context=DEFAULT_CONTEXT, size=48):
+
+def which_pixmap(name, context=DEFAULT_CONTEXT, size=48, refresh=True):
     """Find an icon file in XDG-like locations.
+
+    If moreplatform.enable_gi is True (starts as True if can be
+    imported), Gtk will be used to get the icon path. Gtk can get the
+    specific icon of the specific theme, but you should set
+    "Icon={name}" if found, since an XDG-compatible DE can find the icon
+    automatically and use the theme's when the theme changes.
 
     Args:
         name (str): Icon name (A well-known application name or
@@ -94,13 +102,21 @@ def which_pixmap(name, context=DEFAULT_CONTEXT, size=48):
             subfolder under /usr/share/icons/hicolor/48x48/ and similar
             XDG-like paths in APP_ICONS_PATHS that end with an "apps"
             (which is the DEFAULT_CONTEXT). Defaults to DEFAULT_CONTEXT.
+        refresh (bool, optional): Reload the theme. Ignored if not
+            moreplatform.enable_gi.
 
     Returns:
         str: Path to the icon or None
     """
+    global ICON_THEME
     # a.k.a. icon_exists, icon_path, or which_icon_image
     if enable_gi:
-        icon_theme = Gtk.IconTheme.get_default()
+        if not refresh:
+            if not ICON_THEME:
+                refresh = True
+        if refresh:
+            icon_theme = Gtk.IconTheme.get_default()
+            ICON_THEME = icon_theme
         # return icon_theme.has_icon(name)
         icon_info = icon_theme.lookup_icon(name, size, 0)
         if icon_info:
@@ -108,6 +124,7 @@ def which_pixmap(name, context=DEFAULT_CONTEXT, size=48):
             #   os.path.join(HOME, "/.local/share/icons/ePapirus-Dark/"
             #                      "48x48/categories/gimp.svg")
             return icon_info.get_filename()
+
     size_sub = "{}x{}".format(size, size)
     for raw_parent in APP_ICONS_PATHS:
         parent = raw_parent
@@ -502,7 +519,7 @@ def make_shortcut(meta, program_name, mgr, push_label=echo0,
         #   /blendernightly/versions/3.2.0-stable+v32.e05e1e369187.x86_64-release
         #   /blender > /home/owner/.cache/blender-nightly
         #   /blender-`date "+%Y-%m-%d"`-gl4.1-error.log 2>&1
-        CACHE = os.path.join(CACHES, program_name)
+        CACHE = os.path.join(sysdirs['CACHES'], program_name)
         if not os.path.isdir(CACHE):
             os.makedirs(CACHE)
         if bin_path is not None:
