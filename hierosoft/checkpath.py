@@ -7,7 +7,7 @@ Author: Jake "Poikilos" Gustafson
 
 Check the environment's PATH variable (not the sys.path which is just
 for Python). Get commands that can shorten your PATH if it has
-redundant or nonexistant directories. In most cases, if your user has
+redundant or nonexistent directories. In most cases, if your user has
 a PATH, it is wrong. However, you can get a copy of it safely using
 this program by running it with the redirect below.
 
@@ -40,9 +40,9 @@ python pathcheck.py [other paths] | tee -a path_history.bat
 
 Options:
 other paths            Specify another path as the first argument if you
-                       want to see what paths are not yet in the sytem
+                       want to see what paths are not yet in the system
                        path. The other paths, if more than one, should
-                       be separated by your operatings path separator
+                       be separated by your OS' path separator
                        character '{pathsep}' (*not* the directory
                        separator '{dirsep}').
                        - If you do not specify any arguments, only
@@ -52,7 +52,7 @@ other paths            Specify another path as the first argument if you
 --no-bad-parts         Exclude bad parts from the path (on by default in
                        Windows.
 
---include-bad-parts    Include even non-existant folders in the
+--include-bad-parts    Include even nonexistent folders in the
                        recommended PATH string.
 {command_prompt_requires_starting_with_python_or_loses_args}
 '''
@@ -87,15 +87,15 @@ def show_truncations(new_path, enable_stdout=True, comment=None):
         (If False, only write to stderr).
     comment -- Show this as a commented line before the statement.
     '''
-    thisp = print
+    outfn = print
     if not enable_stdout:
-        thisp = echo0
+        outfn = echo0
     setx_max = 1024
     if comment is not None:
-        thisp(NOOP+comment)
-    thisp(NOOP+"Non-commented generated paths below are")
-    thisp(NOOP+"recommended by checkpath (Python script by Poikilos).")
-    thisp(NOOP+"- checkpath excludes redundant and non-existant folders.")
+        outfn(NOOP+comment)
+    outfn(NOOP+"Non-commented generated paths below are")
+    outfn(NOOP+"recommended by checkpath (Python script by Poikilos).")
+    outfn(NOOP+"- checkpath excludes redundant and nonexistent folders.")
     if platform.system() == "Windows":
         echo0("setx truncates to 1024 characters.")
         trunc2048_new_path = new_path[:2048]
@@ -105,14 +105,14 @@ def show_truncations(new_path, enable_stdout=True, comment=None):
             echo0("Example (new_path, <={} chars):".format(max_len))
             prefix = ""
             if trunc_new_path != new_path:
-                thisp(NOOP+"WARNING: Truncated to {} characters:"
+                outfn(NOOP+"WARNING: Truncated to {} characters:"
                       "".format(max_len))
                 prefix = NOOP
             else:
-                thisp(NOOP+"{} character(s)".format(len(trunc_new_path)))
+                outfn(NOOP+"{} character(s)".format(len(trunc_new_path)))
             cmd_fmt = 'setx /M PATH "{}"'
             if len(trunc_new_path) > setx_max:
-                thisp(NOOP+"Error: You must use reg, regedit, or System,"
+                outfn(NOOP+"Error: You must use reg, regedit, or System,"
                       " Advanced System Settings,"
                       " Environment Variables editor to set a path as"
                       " long as the recommended one below."
@@ -130,7 +130,7 @@ def show_truncations(new_path, enable_stdout=True, comment=None):
                 #   EXCEPT "Session Manager" not "Sessions Manager".
                 # ^ tested via reg QUERY "HKLM\SYSTEM\CurrentControlSet\
                 #   Control\Session Manager\Environment" /v PATH
-            thisp('{}{}'.format(prefix, cmd_fmt.format(trunc_new_path)))
+            outfn('{}{}'.format(prefix, cmd_fmt.format(trunc_new_path)))
             # ^ /M: machine setting rather than user setting
             if new_path != trunc_new_path:
                 echo0("(truncated to {})".format(len(trunc_new_path)))
@@ -153,7 +153,7 @@ def show_truncations(new_path, enable_stdout=True, comment=None):
 def check_path(custom_path=None, bad_enabled=True):
     '''
     Keyword arguments:
-    bad_enabled -- Include non-existant directories in the recommended
+    bad_enabled -- Include nonexistent directories in the recommended
         PATH.
     '''
     original_path = os.environ['PATH']
@@ -188,7 +188,7 @@ def check_path(custom_path=None, bad_enabled=True):
         command_reason += " to change default for " + platform.system()
         command_reason += ")"
     if bad_enabled:
-        print(NOOP+"{} nonexistant path(s) included in recommended{}"
+        print(NOOP+"{} nonexistent path(s) included in recommended{}"
               "".format(len(bad_paths), command_reason))
         new_paths += bad_paths
     new_path = os.pathsep.join(new_paths)

@@ -278,7 +278,7 @@ def get_unique_path(luid, key, extension=".conf", allow_cloud=False):
             return os.path.join(sysdirs['SHORTCUTS'], luid+".blnk")
         elif platform.system() == "Darwin":
             return os.path.join(sysdirs['SHORTCUTS'], luid+".desktop")
-            # TODO: ^ Use ".command", applescript, or something else.
+            # TODO: ^ Use ".command", AppleScript, or something else.
         else:
             return os.path.join(sysdirs['SHORTCUTS'], luid+".desktop")
     elif key == 'Configs:Unique':
@@ -370,8 +370,8 @@ def replace_vars(path):
     Returns:
     The string with variables like $CLOUD or %CLOUD% or %USERPROFILE%
     replaced regardless of the operating system, or None if that is the
-    entire path and the value is blank (not detected by morefolders by
-    any means).
+    entire path and the value is blank (not detected by sysdirs
+    initialization by any means).
     '''
     for old, new in sysdirs.substitutions().items():
         if new is None:

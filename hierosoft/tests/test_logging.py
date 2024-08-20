@@ -19,11 +19,11 @@ else:
     print("[test_logging] using Python 3 logging.",
           file=sys.stderr)
     import logging
-from hierosoft.morelogging import (
-    echo0,
-    echo1,
-    echo2,
-    set_verbosity,
+from hierosoft.morelogging import (  # noqa: E402
+    # echo0,
+    # echo1,
+    # echo2,
+    # set_verbosity,
     to_syntax_error,
     pformat,
     human_readable,
@@ -39,7 +39,8 @@ class TestLogging(unittest.TestCase):
     #         # unittest.TestCase.__init__(self)
     #         # super(TestLogging, self).__init__()
     #         # Python 2.7.18 says:
-    #         # ValueError: no such test method in <class '__main__.TestLogging'>: runTest
+    #         # "ValueError: no such test method in
+    #         # <class '__main__.TestLogging'>: runTest"
     #         # in either case!
     #         pass
 
@@ -121,6 +122,7 @@ class TestLogging(unittest.TestCase):
         self.assertEqual(human_readable(8192*1024), "8MB")
         self.assertEqual(human_readable(8192*1024*1024), "8GB")
         self.assertEqual(human_readable(8192*1024*1024*1024), "8TB")
+
 
 if __name__ == "__main__":
     unittest.main()

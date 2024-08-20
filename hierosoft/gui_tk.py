@@ -469,12 +469,12 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         """Override superclass: load variables from GUI
         """
         # formerly load_user_settings
-        keyfields = {
+        key_fields = {
             "version": self.version_e,  # key used by only_v property
             "arch": self.arch_e,  # key used by only_a property
             "platform": self.pflag_e,  # key used by only_p property
         }
-        for key, field in keyfields.items():
+        for key, field in key_fields.items():
             value = field.get().strip()
             if len(value) == 0:
                 value = None
@@ -482,8 +482,8 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                 if " " in value:
                     # space-separated values
                     value = value.split()
-            keyfields[key] = value
-        self.set_all_options(keyfields, False)
+            key_fields[key] = value
+        self.set_all_options(key_fields, False)
 
     def refresh_ui(self):
         # prefix = "[refresh_ui] "
@@ -594,7 +594,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                 # print("  # installed: " + meta['filename'])
 
         self.thread1 = None
-        # self.addRow(self.refrech_btn, sticky="we")
+        # self.addRow(self.refresh_btn, sticky="we")
         # self.refresh_btn.config(fg='black')
         self.refresh_btn.config(state=tk.NORMAL)
         expand = 0

@@ -13,19 +13,19 @@ repo_dir = os.path.dirname(module_dir)
 if __name__ == "__main__":
     sys.path.insert(0, repo_dir)
 
-from hierosoft import moresvg
+from hierosoft import moresvg  # noqa E402
 
 from hierosoft.moresvg import (  # noqa E402
     SVGSegment,
 )
 
-from hierosoft.morelogging import (
+from hierosoft.morelogging import (  # noqa E402
     echo0,
     set_verbosity,
     pformat,
 )
 
-from hierosoft.morebytes import (
+from hierosoft.morebytes import (  # noqa E402
     find_not_quoted,
     without_comments,
 )
@@ -162,4 +162,7 @@ if __name__ == "__main__":
             count += 1
             fn = getattr(testcase, name)
             fn()  # Look at def test_* for the code if tracebacks start here
+            # ^ NOTE: traceback(s) is in my cspell-dicts PR:
+            #   https://github.com/streetsidesoftware/cspell-dicts/pull/3477
+            #   https://github.com/streetsidesoftware/cspell-dicts/issues/3472
     print("%s test(s) passed." % count)

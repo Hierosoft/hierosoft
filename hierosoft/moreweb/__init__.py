@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import sys
-import os
+# import copy
+import ipaddress
+# import os
 import platform
+# import psutil  # requires a Python package
+import subprocess
+import shlex
+# import shutil
+import sys
+# import threading
 import time
 import socket
-# import psutil  # requires a Python package
+
 from socket import (
     getaddrinfo,
     gethostname,
 )
-import ipaddress
-import subprocess
-import shlex
-import threading
-import shutil
-import copy
 
 if sys.version_info.major < 3:
     # FileNotFoundError = IOError
@@ -59,18 +60,19 @@ if sys.version_info.major >= 3:
     from urllib.parse import quote_plus as urllib_quote_plus
     from urllib.parse import urlencode
 else:
-    import urllib2 as urllib
+    # Python 2
+    import urllib2 as urllib  # type: ignore
     request = urllib
-    from urllib2 import (
+    from urllib2 import (  # type: ignore
         HTTPError,
         URLError,
     )
-    from HTMLParser import HTMLParser
+    from HTMLParser import HTMLParser  # noqa: F401 # type: ignore
     print("HTMLParser imported.", file=sys.stderr)
-    from urlparse import urlparse, parse_qs
-    from urllib import quote as urllib_quote
-    from urllib import quote_plus as urllib_quote_plus
-    from urllib import urlencode
+    from urlparse import urlparse, parse_qs  # noqa: F401 # type: ignore
+    from urllib import quote as urllib_quote  # noqa: F401 # type: ignore
+    from urllib import quote_plus as urllib_quote_plus  # noqa: F401,E501 # type: ignore
+    from urllib import urlencode  # noqa: F401 # type: ignore
 
 # The polyfills below are used in other file(s) in the module.
 

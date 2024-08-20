@@ -183,8 +183,8 @@ def main():
     elif len(sys.argv) == 2:
         pass  # 1st arg (arg [1]) is always handled further down
     else:
-        for argi in range(2, len(sys.argv)):
-            arg = sys.argv[argi]
+        for arg_i in range(2, len(sys.argv)):
+            arg = sys.argv[arg_i]
             if key_arg is not None:
                 if arg.startswith("--"):
                     usage()

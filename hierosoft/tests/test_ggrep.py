@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import unittest
-import sys
+# import sys
 import os
 
 from hierosoft import (
@@ -19,6 +19,7 @@ MY_DIR = os.path.dirname(os.path.realpath(__file__))
 TEST_DATA_DIR = os.path.join(MY_DIR, "data")
 
 assert os.path.isdir(TEST_DATA_DIR)
+
 
 class TestGrepStringMethods(unittest.TestCase):
 
@@ -68,22 +69,32 @@ class TestGrepStringMethods(unittest.TestCase):
         self.assertEqual(is_like("/home/foo/bar", "**/foo/bar"), True)
         self.assertEqual(is_like("/home/example/foo/bar", "**/foo/bar"), True)
         self.assertEqual(is_like("/home/example/foo/bar", "**/f*o/bar"), True)
-        self.assertEqual(is_like("/home/example/foo/bar", "/home/**/foo/bar"), True)
-        self.assertEqual(is_like("/home/examplefoo/bar", "/home/**/foo/bar"), False)
-        # self.assertEqual(is_like("/home/examplefoo/bar", "/home/**foo/bar"), False)
-        self.assertEqual(is_like("/home/example/foobar", "/home/**/foo/bar"), False)
+        self.assertEqual(
+            is_like("/home/example/foo/bar", "/home/**/foo/bar"), True)
+        self.assertEqual(
+            is_like("/home/examplefoo/bar", "/home/**/foo/bar"), False)
+        # self.assertEqual(
+        #    is_like("/home/examplefoo/bar", "/home/**foo/bar"), False)
+        self.assertEqual(
+            is_like("/home/example/foobar", "/home/**/foo/bar"), False)
         # set_verbosity(2)
-        self.assertEqual(is_like("/home/example/foo/bar", "/home/example/foo/**"), True)
+        self.assertEqual(
+            is_like("/home/example/foo/bar", "/home/example/foo/**"), True)
         # set_verbosity(1)
-        self.assertEqual(is_like("/home/example/foo/bar", "**/bar"), True)
-        self.assertEqual(is_like("/home/example/foo/bar", "**/bar/bar"), False)
+        self.assertEqual(
+            is_like("/home/example/foo/bar", "**/bar"), True)
+        self.assertEqual(
+            is_like("/home/example/foo/bar", "**/bar/bar"), False)
 
         # As per python gitignore such as in
         # python-lsp-server/.gitignore such as in spyder/external-deps/:
         self.assertEqual(is_like("/home/foo.vscode/", "**/*.vscode/"), True)
-        self.assertEqual(is_like("Examples/d/foo/example.d", "Examples/d/**/example.d"), True)
+        self.assertTrue(
+            is_like("Examples/d/foo/example.d", "Examples/d/**/example.d")
+        )
         set_verbosity(2)
-        self.assertEqual(is_like(".gitattributes", "Examples/d/**/example.d"), False)
+        self.assertEqual(
+            is_like(".gitattributes", "Examples/d/**/example.d"), False)
         # ^ Test for regression regarding issue #22:
         '''
         ValueError: More than one '*' in a row in needle isn't allowed
@@ -96,7 +107,10 @@ class TestGrepStringMethods(unittest.TestCase):
         try:
             self.assertEqual(is_like("/workspace.xml", None), False)
         except TypeError as ex:
-            self.assertTrue(str(ex) in ["'NoneType' object is not iterable", "'NoneType' object is not subscriptable"])
+            self.assertTrue(str(ex) in [
+                "'NoneType' object is not iterable",
+                "'NoneType' object is not subscriptable"
+            ])
             got_the_right_error = True
         self.assertEqual(got_the_right_error, True)
 
@@ -104,7 +118,10 @@ class TestGrepStringMethods(unittest.TestCase):
         try:
             self.assertEqual(is_like(None, "/workspace.xml"), False)
         except TypeError as ex:
-            self.assertTrue(str(ex)in ["object of type 'NoneType' has no len()", "'NoneType' object is not subscriptable"])
+            self.assertTrue(str(ex) in [
+                "object of type 'NoneType' has no len()",
+                "'NoneType' object is not subscriptable"
+            ])
             got_the_right_error = True
         self.assertEqual(got_the_right_error, True)
 
@@ -114,7 +131,6 @@ class TestGrepStringMethods(unittest.TestCase):
         except ValueError as ex:
             got_the_right_error = True
         self.assertEqual(got_the_right_error, True)
-
 
     def test_is_like_any(self):
         set_verbosity(True)
@@ -131,8 +147,10 @@ class TestGrepStringMethods(unittest.TestCase):
         try:
             self.assertEqual(is_like_any(None, "/home/1/abab"), False)
         except TypeError as ex:
-            self.assertTrue(str(ex) in ["object of type 'NoneType' has no len()",
-                                        "'NoneType' object is not subscriptable"])
+            self.assertTrue(str(ex) in [
+                "object of type 'NoneType' has no len()",
+                "'NoneType' object is not subscriptable"
+            ])
             got_the_right_error = True
         self.assertEqual(got_the_right_error, True)
 
@@ -161,6 +179,3 @@ class TestGrepStringMethods(unittest.TestCase):
                     found_not_filtered_file = True
         assert found_not_filtered_file
         assert found_exclusion
-
-
-
