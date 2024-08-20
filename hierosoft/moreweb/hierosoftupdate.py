@@ -30,7 +30,6 @@ from hierosoft import (
     # HOME,
     # USER_PROGRAMS,
     sysdirs,
-    CACHES,
     ASSETS_DIR,
     which_python,
     join_if_exists,
@@ -83,12 +82,12 @@ try:
         # from tkinter import tix
     else:  # except ImportError:
         # Python 2
-        import tkMessageBox as messagebox  # noqa N813
-        import tkFileDialog as filedialog  # noqa F401,N813
-        import tkSimpleDialog as simpledialog  # noqa F401,N813
-        import Tkinter as tk  # noqa F401,N813
-        import tkFont as font  # noqa F401,N813
-        import ttk  # noqa F401,N813
+        import tkMessageBox as messagebox  # noqa N813  # type:ignore
+        import tkFileDialog as filedialog  # noqa F401,N813  # type:ignore
+        import tkSimpleDialog as simpledialog  # noqa F401,N813  # type:ignore
+        import Tkinter as tk  # noqa F401,N813  # type:ignore
+        import tkFont as font  # noqa F401,N813  # type:ignore
+        import ttk  # noqa F401,N813  # type:ignore
         # import Tix as tix
     enable_tk = True
 except ImportError as ex:
@@ -113,19 +112,19 @@ def i_am_static_build():
         echo0(prefix+"Not static: Executing script %s is not %s"
               % (pformat(self_py), pformat(expected_self_py)))
         return False
-    mydir_name = os.path.basename(MOREWEB_SUBMODULE_DIR)
-    expected_mydir_name = "moreweb"
-    if mydir_name != expected_mydir_name:
+    this_dir_name = os.path.basename(MOREWEB_SUBMODULE_DIR)
+    expected_this_dir_name = "moreweb"
+    if this_dir_name != expected_this_dir_name:
         echo0(prefix+"Not static: %s's directory %s is not %s"
               % (pformat(__file__),
-                 pformat(mydir_name),
-                 pformat(expected_mydir_name)))
+                 pformat(this_dir_name),
+                 pformat(expected_this_dir_name)))
         return False
     module_dir_name = os.path.basename(MODULE_DIR)
     expected_module_dir_name = "hierosoft"
     if module_dir_name != expected_module_dir_name:
         echo0(prefix+"Not static: %s's parent directory %s is not %s"
-              % (pformat(mydir_name),
+              % (pformat(this_dir_name),
                  pformat(module_dir_name),
                  pformat(expected_module_dir_name)))
         return False
@@ -228,7 +227,7 @@ class HierosoftUpdate(object):
 
     @property
     def archives_path(self):
-        return os.path.join(CACHES, self.luid, "archives")  # zips
+        return os.path.join(sysdirs['CACHES'], self.luid, "archives")  # zips
 
     @property
     def versions_path(self):
@@ -416,8 +415,8 @@ class HierosoftUpdate(object):
                                            meta['filename'])
                 dst_dl_path = os.path.join(self.archives_path,
                                            meta['filename'])
-                if (os.path.isfile(try_dl_path) and
-                        not os.path.isfile(dst_dl_path)):
+                if (os.path.isfile(try_dl_path)
+                        and not os.path.isfile(dst_dl_path)):
                     shutil.move(try_dl_path, dst_dl_path)
                     msg = ("collected old download '{}'"
                            " from Downloads to '{}'"
@@ -975,8 +974,8 @@ def construct_gui(root, app):
     # - "" doesn't work for icon path, so generate a file
     #   (See <https://python-forum.io/thread-35274.html>)
     # BLANK_PAGE_ICON = zlib.decompress(base64.b64decode(
-    #     'eJxjYGAEQgEBBiDJwZDBy'
-    #     'sAgxsDAoAHEQCEGBQaIOAg4sDIgACMUj4JRMApGwQgF/ykEAFXxQRc='
+    #     'eJxjYGAEQgEBBiDJwZDBy'  # cspell:disable-line
+    #     'sAgxsDAoAHEQCEGBQaIOAg4sDIgACMUj4JRMApGwQgF/ykEAFXxQRc='  # cspell:disable-line  # noqa: E501
     # ))
 
     # _, ICON_PATH = tempfile.mkstemp()
@@ -984,10 +983,10 @@ def construct_gui(root, app):
     #     icon_file.write(BLANK_PAGE_ICON)
     # Instead, use "with" for the temp file
     #   (See <https://stackoverflow.com/a/30795252/4541104>):
-    # with tempfile.NamedTemporaryFile(delete=True) as iconfile:
-    #   # iconfile.write(BLANK_PAGE_ICON)
-    #   # iconfile.write(transparent_png)
-    #   # root.iconbitmap(default=iconfile.name)
+    # with tempfile.NamedTemporaryFile(delete=True) as icon_file:
+    #   # icon_file.write(BLANK_PAGE_ICON)
+    #   # icon_file.write(transparent_png)
+    #   # root.iconbitmap(default=icon_file.name)
     photo = tk.PhotoImage(
         # data=transparent_png,  # Doesn't work (black; tested on Windows 10)
         # data=hierosoft_16px_png,  # Only for main window not splash screen
@@ -1098,8 +1097,8 @@ def main():
     root = None
     offline = False
     upgrade = False  # Don't upgrade without --upgrade (but install if missing)
-    for argi, arg in enumerate(sys.argv):
-        if argi == 0:
+    for arg_i, arg in enumerate(sys.argv):
+        if arg_i == 0:
             continue
         if arg == "--upgrade":
             upgrade = True
@@ -1114,7 +1113,6 @@ def main():
         default_sources['programs']['hierosoft']['sources'][0]
     )
     # TODO: ^ Try another source if it fails, or random for load balancing.
-
     self_install_options['news'] = default_sources.get('news')
     app = HierosoftUpdate(None, root, self_install_options)
     # ^ root many be None
