@@ -117,6 +117,8 @@ def which_pixmap(name, context=DEFAULT_CONTEXT, size=48, refresh=True):
         if refresh:
             icon_theme = Gtk.IconTheme.get_default()
             ICON_THEME = icon_theme
+        else:
+            icon_theme = ICON_THEME
         # return icon_theme.has_icon(name)
         icon_info = icon_theme.lookup_icon(name, size, 0)
         if icon_info:
