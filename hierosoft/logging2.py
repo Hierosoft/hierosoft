@@ -65,6 +65,7 @@ try:
     # Also, it appears to be missing in Python 3.10.
     # Documentation says "Alias for the UTC time zone singleton
     # datetime.timezone.utc." so:
+
     def utcnow():
         return datetime.now(timezone.utc)
 except ImportError:
@@ -89,12 +90,14 @@ _nameToLevel = {'FATAL': 50, 'CRITICAL': 50, 'ERROR': 40, 'WARNING': 30,
 _level_names = {50: "CRITICAL", 40: "ERROR", 30: "WARNING", 20: "INFO",
                 10: "DEBUG", 0: "NOTSET"}  # manually set due to overlap!
 
+
 def getLevelName(level):
     """mimic logging.getLevelName"""
     name = _level_names.get(level)
     if not name:
         return "Level {}".format(level)
     return name
+
 
 def _conditional_message(*args, **kwargs):
     if '__level__' not in kwargs:
@@ -118,7 +121,9 @@ def _conditional_message(*args, **kwargs):
     kwargs['file'] = sys.stderr
     print(*args, **kwargs)
 
+
 FORMAT_STYLES = ['%', '{', '$']
+
 
 def get_effective_level(level):
     if level >= CRITICAL:
@@ -137,16 +142,18 @@ def get_effective_level(level):
         return WARNING
     return NOTSET
 
+
 class Formatter:
     def __init__(self, fmt=None, datefmt=None, style='%',
-                    validate=True, defaults=None):
+                 validate=True, defaults=None):
         # FIXME  validate=True, *, defaults=None):  what? (upstream code)
         if fmt is None:
             fmt = '%(message)s'
         self.fmt = fmt
         if style not in FORMAT_STYLES:
-            raise ValueError("style was %s but should be one in %s"
-                                % (style, FORMAT_STYLES))
+            raise ValueError(
+                "style was %s but should be one in %s"
+                % (style, FORMAT_STYLES))
         self.style = style
         self.t = None
         if style == "$":
@@ -167,10 +174,13 @@ class Formatter:
             # such as "Error: $message in some method"
             return self.t.substitute(message=message)
         else:
-            raise ValueError("style was %s but should be one in %s"
-                                % (self.style, FORMAT_STYLES))
+            raise ValueError(
+                "style was %s but should be one in %s"
+                % (self.style, FORMAT_STYLES))
+
 
 default_formatter = Formatter()
+
 
 class Logger:
     """A logger to mimic Python's logging.Logger
@@ -232,7 +242,9 @@ class Logger:
         print(default_formatter.format(record), file=self._log)
 
     def getEffectiveLevel(self):  # noqa: N802
-        get_effective_level(self.level)
+        if self.level == 0:
+            return root.level
+        return max(get_effective_level(self.level), root.level)
 
     def critical(self, *args):
         self._message(*args, __level__=CRITICAL)
@@ -259,36 +271,47 @@ class Logger:
         self.level = level
 
     def warn(self, msg):
-        print("<stdin>:1: DeprecationWarning:"
-                " The 'warn' method is deprecated, use 'warning' instead")
+        print(
+            "<stdin>:1: DeprecationWarning:"
+            " The 'warn' method is deprecated, use 'warning' instead")
         self.warning(msg)
 
     def warning(self, *args):
         self._message(*args, __level__=WARNING)
 
+
 class Handler:
     def __init__(self, level=NOTSET):
         raise NotImplementedError("Handler")
 
+
 loggers = {}
+
 
 class RootLogger(Logger):
     def __init__(self, level):
         Logger.__init__(self, 'root')
         self.level = level
 
+
 root = RootLogger(WARNING)  # mimic logging
+
+
 def critical(*args):
     root._message(*args, __level__=CRITICAL)
+
 
 def debug(*args):
     root._message(*args, __level__=DEBUG)
 
+
 def error(*args):
     root._message(*args, __level__=ERROR)
 
+
 def exception(ex):
     root.fatal("{}: {}".format(type(ex).__name__, ex))
+
 
 def fatal(*args):
     # NOTE: sys.maxint only in Python 2 (deprecated)
@@ -296,14 +319,18 @@ def fatal(*args):
     #   on the system's word size (such as int64 on 64-bit (?))
     root._message(*args, __level__=sys.maxsize)
 
+
 def info(*args):
     root._message(*args, __level__=INFO)
+
 
 def warn(*args):
     root._message(*args, __level__=WARNING)
 
+
 def warning(*args):
     root._message(*args, __level__=WARNING)
+
 
 # class Logging(Logger):
 #     self.__init__(self):
@@ -336,3 +363,13 @@ def basicConfig(**kwargs):  # noqa: N802
             filename = value
         elif key == "encoding":
             encoding = value
+        elif key == "level":
+            root.setLevel(value)
+            # NOTE: *Not* same as root's level (50 default somehow)
+            # NOTE: getEffectiveLevel is max(root.level, self.level),
+            #   and level stays at 0 unless setLevel is called
+        else:
+            print(
+                "[hierosoft.logging2] Warning: {} is not implemented."
+                .format(key),
+                file=sys.stderr)
