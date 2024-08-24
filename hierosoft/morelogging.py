@@ -11,6 +11,7 @@ from __future__ import division
 import sys
 import traceback
 import os
+import warnings
 
 from collections import OrderedDict
 
@@ -98,6 +99,10 @@ def pformat(value, quote_if_like_str=None, escape_if_like_str=None):
         str: string where only strings are quote_if_like_str (without
             leading b or u).
     """
+    warnings.warn(
+        "hierosoft.pformat is deprecated."
+        " For string continuation use pformat from prettyprint,"
+        " and for other cases use repr.")
     if escape_if_like_str is None:
         escape_if_like_str = True
     if quote_if_like_str is None:

@@ -274,7 +274,8 @@ class Logger:
     def warn(self, msg):
         print(
             "<stdin>:1: DeprecationWarning:"
-            " The 'warn' method is deprecated, use 'warning' instead")
+            " The 'warn' method is deprecated, use 'warning' instead",
+            file=sys.stderr)
         self.warning(msg)
 
     def warning(self, *args):
