@@ -39,8 +39,7 @@ import copy
 import sys
 
 from collections import OrderedDict
-# from pprint import pformat
-from hierosoft.morelogging import pformat
+
 from xml.dom.minidom import (
     # parse,  # accepts a file handle
     parseString,
@@ -252,7 +251,7 @@ def str_to_style(style_str):
     style = OrderedDict()
     start = 0
     style_str = without_comments(style_str)
-    # echo2("without_comments()=%s" % pformat(style_str))
+    # echo2("without_comments()=%s" % repr(style_str))
     while start < len(style_str):
         end = find_not_quoted(style_str, ";", start,
                               quote_mark="'",
@@ -267,7 +266,7 @@ def str_to_style(style_str):
         if ao_index < 0:
             if style_str[start:].strip():
                 echo0("Warning: stray %s in style=%s"
-                      % (pformat(style_str[start:]), pformat(style_str)))
+                      % (repr(style_str[start:]), repr(style_str)))
             break
         key = style_str[start:ao_index].strip()
         value = style_str[ao_index+1:value_end].strip()
@@ -565,7 +564,7 @@ class MoreSVG(object):  # Must be new-style class (object) for get/set in Py 2
                     raise ValueError(
                         "Error in SVG syntax: %s in relative mode"
                         "before any points (command=%s) at subfield %s"
-                        % (pformat(coords), segment.command, sub_field_i)
+                        % (repr(coords), segment.command, sub_field_i)
                     )
             self.prev_x = x
             self.prev_y = y

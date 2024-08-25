@@ -7,10 +7,6 @@ import sys
 import re
 import tempfile
 
-# from pprint import pformat
-
-from hierosoft.morelogging import pformat
-
 from hierosoft import (
     echo0,
     echo1,
@@ -178,7 +174,7 @@ def startswith_bytes(haystack, needle):
         raise TypeError(
             "Type mismatch: %s != %s (%s != %s)"
             % (type(haystack).__name__, type(needle).__name__,
-               pformat(haystack), pformat(needle))
+               repr(haystack), repr(needle))
         )
     if len(needle) < 1:
         return ValueError("needle is blank")
@@ -789,7 +785,7 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
     if spaceOpSpace is None:
         echo0("Warning: performance may be slow"
               " due to no precompiled regex for %s"
-              % pformat(sign))
+              % repr(sign))
         spaceOpSpace = re.compile(type(sign)(r"[^\S\r\n]*")
                                   + re.escape(sign)
                                   + type(sign)(r"[^\S\r\n]*"))
@@ -854,10 +850,10 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
                 "\n  value=%s"
                 "\n  comment=%s"
                 "\n  line_end=%s"
-                % (__, pformat(line_strip),
-                   pformat(name), pformat(sign_and_spacing),
-                   pformat(rvalue), pformat(value),
-                   pformat(comment), pformat(line_end))
+                % (__, repr(line_strip),
+                   repr(name), repr(sign_and_spacing),
+                   repr(rvalue), repr(value),
+                   repr(comment), repr(line_end))
             )
         post_value_spacing, line_end = split_before_newlines(entire_line_end)
     if None in (value, post_value_spacing, line_end):
@@ -875,10 +871,10 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
             "\n  value=%s"
             "\n  comment=%s"
             "\n  line_end=%s"
-            % (_, pformat(line_strip),
-               pformat(name), pformat(sign_and_spacing),
-               pformat(rvalue), pformat(value),
-               pformat(comment), pformat(line_end))
+            % (_, repr(line_strip),
+               repr(name), repr(sign_and_spacing),
+               repr(rvalue), repr(value),
+               repr(comment), repr(line_end))
         )
 
     return [indent, name, sign_and_spacing, value, post_value_spacing,
