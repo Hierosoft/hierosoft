@@ -19,11 +19,7 @@ from hierosoft.moresvg import (  # noqa E402
     SVGSegment,
 )
 
-from hierosoft.morelogging import (  # noqa E402
-    echo0,
-    set_verbosity,
-    pformat,
-)
+import hierosoft.logging2 as logging
 
 from hierosoft.morebytes import (  # noqa E402
     find_not_quoted,
@@ -146,9 +142,9 @@ class TestMoreSVG(unittest.TestCase):
         if got != expected:
             # This arg won't truncate the dicts like assertEqual does.
             raise AssertionError(
-                "\n" + str(pformat(got))
+                "\n" + repr(got)
                 + "\n!="
-                + "\n" + str(pformat(expected))
+                + "\n" + repr(expected)
             )
 
         self.assertEqual(got, expected)

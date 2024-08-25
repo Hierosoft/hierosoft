@@ -51,8 +51,7 @@ from hierosoft import (
     # get_happ_path,
 )
 
-# from pprint import pformat
-from hierosoft.morelogging import pformat
+from hierosoft.morelogging import hr_repr
 
 # from hierosoft.moreplatform import (
 #     get_dir_size,
@@ -226,13 +225,13 @@ def main():
             raise ValueError(
                 "Got %s but expected one from %s"
                 % (
-                    pformat(name_arg),
-                    pformat(list(arg_project_name.keys()))
+                    hr_repr(name_arg),
+                    hr_repr(list(arg_project_name.keys()))
                 )
             )
         if project_meta is not None:
             echo0(prefix+"reverting detected meta due to %s argument."
-                  % pformat(name_arg))
+                  % hr_repr(name_arg))
             project_meta = None
             why_meta = "cleared by %s argument" % name_arg
     elif project_meta is not None:
@@ -258,7 +257,7 @@ def main():
                 "You must either specify one of %"
                 " or the source must be a well-known project that can be"
                 " detected."
-                % pformat(list(hminetest.project_metas.keys()))
+                % hr_repr(list(hminetest.project_metas.keys()))
             )
         project_meta = hminetest.project_metas[project_name]
         project_meta['required_relpaths'] = []
@@ -272,19 +271,19 @@ def main():
                 try_relpath = relpath + suffix
                 project_meta['required_relpaths'].append(try_relpath)
         echo0("Generated relpaths: %s"
-              % pformat(project_meta['required_relpaths']))
+              % hr_repr(project_meta['required_relpaths']))
     else:
         if project_meta.get('required_relpaths') is None:
             raise NotImplementedError(
                 "Project %s was detected but required_relpaths was not set."
-                % pformat(project_meta.get('project_name'))
+                % hr_repr(project_meta.get('project_name'))
             )
         if len(project_meta['required_relpaths']) == 0:
             raise FileNotFoundError(
                 "None of the well-known executables for %s could be found: %s"
                 % (
                     project_name,
-                    pformat(project_meta.get('shortcut_exe_relpaths'))
+                    hr_repr(project_meta.get('shortcut_exe_relpaths'))
                 )
             )
     project_meta['build_options'] = set()
@@ -387,7 +386,7 @@ def install_minetest(src, project_meta, dst=None,
     project_name = project_meta.get('name')
     project_msg = project_name
     if project_msg is None:
-        project_msg = pformat(project_meta)
+        project_msg = hr_repr(project_meta)
     del project_name
     if os.path.isfile(os.path.join(src, ".saved_passwords")):
         raise ValueError("Source should not contain .saved_passwords")
@@ -404,7 +403,7 @@ def install_minetest(src, project_meta, dst=None,
         usage()
         error = ("There are no specified source files for %s"
                  " so whether it is intact can't be checked."
-                 "" % pformat(project_msg))
+                 "" % hr_repr(project_msg))
         raise NotImplementedError(error)
     elif not src_files:
         raise KeyError("'required_relpaths' was {}."
@@ -519,7 +518,7 @@ def install_minetest(src, project_meta, dst=None,
 
     if not os.path.isdir(dst):
         write0('Installing %s to %s...'
-               % (pformat(project_msg), pformat(dst)))
+               % (hr_repr(project_msg), hr_repr(dst)))
     else:
         warning = 'Upgrading "{}".'.format(dst)
         echo0('{}'.format(warning))

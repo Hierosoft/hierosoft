@@ -23,7 +23,7 @@ from __future__ import print_function
 import copy
 import os
 
-from hierosoft.morelogging import pformat
+from hierosoft.morelogging import hr_repr
 
 from hierosoft import (
     echo0,
@@ -189,6 +189,6 @@ def detect_project_meta(mt_share_path):
                 break  # only first entry will be used & get "server" added
     if len(matches) == 1:
         echo0(prefix+"found source files: %s"
-              % pformat(matches[0]['required_relpaths']))
+              % hr_repr(matches[0]['required_relpaths']))
         return matches[0]
     return None

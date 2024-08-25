@@ -12,10 +12,9 @@ import tarfile
 import tempfile
 import zipfile
 
-# from pprint import pformat
 from zipfile import ZipFile
 
-from hierosoft.morelogging import pformat
+from hierosoft.morelogging import hr_repr
 
 from hierosoft import (
     echo0,
@@ -169,7 +168,7 @@ def install_folder(src, dst, event_template=None):
     programs_dir = os.path.dirname(dst)
     if not os.path.isdir(programs_dir):
         echo0("Warning: creating programs directory %s"
-              % pformat(programs_dir))
+              % hr_repr(programs_dir))
         os.makedirs(programs_dir)
     if exists_action:
         if exists_action == "delete":
@@ -202,7 +201,7 @@ def install_folder(src, dst, event_template=None):
                 return evt
             else:
                 evt['error'] = ("The destination already exists: %s"
-                                % pformat(dst))
+                                % hr_repr(dst))
                 evt['installed_path'] = dst
                 return evt
     # shutil.copytree(src, dst, dirs_exist_ok=False,)
@@ -328,7 +327,7 @@ def install_tar(archive, dst, remove_archive=False,
                              " Previous error: %s" % event_template['error'])
         evt = copy.deepcopy(event_template)
     if not os.path.isfile(archive):
-        evt['error'] = "The file doesn't exist: %s" % pformat(archive)
+        evt['error'] = "The file doesn't exist: %s" % hr_repr(archive)
     try:
         with tempfile.TemporaryDirectory() as tmpdirname:
             extracted_path = os.path.join(tmpdirname, "extracted")
@@ -371,7 +370,7 @@ def install_zip(archive, dst, remove_archive=False,
                              " Previous error: %s" % event_template['error'])
         evt = copy.deepcopy(event_template)
     if not os.path.isfile(archive):
-        evt['error'] = "The file doesn't exist: %s" % pformat(archive)
+        evt['error'] = "The file doesn't exist: %s" % hr_repr(archive)
     try:
         with tempfile.TemporaryDirectory() as tmpdirname:
             extracted_path = os.path.join(tmpdirname, "extracted")
@@ -388,8 +387,8 @@ def install_zip(archive, dst, remove_archive=False,
             evt.update(installed)
     except zipfile.BadZipFile as ex:
         evt['error'] = "%s: %s" % (type(ex).__name__, ex)
-        echo0("Error extracting %s: %s" % (pformat(archive), ex))
-        delete_msg = "Deleting %s" % pformat(archive)
+        echo0("Error extracting %s: %s" % (hr_repr(archive), ex))
+        delete_msg = "Deleting %s" % hr_repr(archive)
         evt['error'] += "\n" + delete_msg
         echo0(delete_msg)
         try:
@@ -436,7 +435,7 @@ def install_archive(archive, dst, remove_dst=False,
             event_template=evt,
         )
     else:
-        evt['error'] = "Unknown archive extension: %s" % pformat(archive)
+        evt['error'] = "Unknown archive extension: %s" % hr_repr(archive)
         installed = evt
     if 'error' not in installed:
         installed['Path'] = dst

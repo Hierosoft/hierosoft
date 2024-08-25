@@ -6,7 +6,7 @@ import platform
 from collections import OrderedDict
 from hierosoft.morelogging import (
     # is_enclosed,
-    pformat,
+    hr_repr,
     echo0,
 )
 
@@ -63,8 +63,8 @@ def append_to_license(title, path):
                 outs.write(line + '\n')
             print(prefix+"%s %s with %s" % (
                 mode_words[mode],
-                pformat(relative_path(path)),
-                pformat(relative_path(generated_path)),
+                hr_repr(relative_path(path)),
+                hr_repr(relative_path(generated_path)),
             ))
     FIRST = False
 
@@ -82,7 +82,7 @@ def _pack_file(stream, name, path):
         data = ins.read()
         stream.write(data)
     print('"""', file=stream)
-    print("packed text %s" % pformat(path))
+    print("packed text %s" % hr_repr(path))
 
 
 def _pack_binary(stream, name, path):
@@ -110,7 +110,7 @@ def _pack_binary(stream, name, path):
     print("%s = zlib.decompress(base64.b64decode(\n"
           "    %s_str.encode('utf-8')\n))"
           % (name, name), file=stream)
-    print("packed binary %s" % pformat(path))
+    print("packed binary %s" % hr_repr(path))
 
 
 def pack_text():
@@ -137,7 +137,7 @@ def pack_text():
     if not os.path.isfile(svg_path):
         echo0("Warning: There is no %s. No packing will occur"
               " and %s will be left intact."
-              % (pformat(svg_path), pformat(pack_path)))
+              % (hr_repr(svg_path), hr_repr(pack_path)))
         return
     json_path = os.path.join(DATA_DIR, "sources.json")
     with open(json_path, 'r') as ins:
@@ -228,8 +228,8 @@ def pack_text():
                 print(pre_line, file=stream)
             _pack_file(stream, key, info['path'])
             print(prefix+"packed %s into %s" % (
-                pformat(relative_path(info['path'])),
-                pformat(relative_path(pack_path))
+                hr_repr(relative_path(info['path'])),
+                hr_repr(relative_path(pack_path))
             ))
         for binary_meta in binary_metas:
             _pack_binary(stream, binary_meta['name'], binary_meta['path'])

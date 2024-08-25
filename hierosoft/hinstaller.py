@@ -12,10 +12,6 @@ import time
 # import uuid
 import zipfile
 
-from datetime import datetime
-# from pprint import pformat
-# from collections import OrderedDict
-
 from hierosoft.moreplatform import (
     install_shortcut,
     get_dir_size,
