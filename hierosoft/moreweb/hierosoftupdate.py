@@ -12,9 +12,6 @@ import time
 # import zlib
 # import zipfile
 
-# from pprint import pformat
-from hierosoft.morelogging import pformat
-
 # if __name__ == "__main__":
 #     sys.path.insert(0, REPO_DIR)
 
@@ -99,7 +96,7 @@ def i_am_static_build():
     prefix = "[i_am_static_build] "
     nearby_init = os.path.join(MOREWEB_SUBMODULE_DIR, "__init__.py")
     if not os.path.isfile(nearby_init):
-        echo0(prefix+"Not static: no %s" % pformat(nearby_init))
+        echo0(prefix+"Not static: no %s" % repr(nearby_init))
         return False
     # If it exists, it still may be just a random file on the desktop,
     #   so check if I am myself *and* in the real directory:
@@ -110,23 +107,23 @@ def i_am_static_build():
     )
     if self_py != expected_self_py:
         echo0(prefix+"Not static: Executing script %s is not %s"
-              % (pformat(self_py), pformat(expected_self_py)))
+              % (repr(self_py), repr(expected_self_py)))
         return False
     this_dir_name = os.path.basename(MOREWEB_SUBMODULE_DIR)
     expected_this_dir_name = "moreweb"
     if this_dir_name != expected_this_dir_name:
         echo0(prefix+"Not static: %s's directory %s is not %s"
-              % (pformat(__file__),
-                 pformat(this_dir_name),
-                 pformat(expected_this_dir_name)))
+              % (repr(__file__),
+                 repr(this_dir_name),
+                 repr(expected_this_dir_name)))
         return False
     module_dir_name = os.path.basename(MODULE_DIR)
     expected_module_dir_name = "hierosoft"
     if module_dir_name != expected_module_dir_name:
         echo0(prefix+"Not static: %s's parent directory %s is not %s"
-              % (pformat(this_dir_name),
-                 pformat(module_dir_name),
-                 pformat(expected_module_dir_name)))
+              % (repr(this_dir_name),
+                 repr(module_dir_name),
+                 repr(expected_module_dir_name)))
         return False
     echo0(prefix+"Yes")
     return True
@@ -313,7 +310,7 @@ class HierosoftUpdate(object):
             elif key in HierosoftUpdate.get_option_keys():
                 self.options[key] = value
             else:
-                raise KeyError("Invalid option: %s=%s" % (key, pformat(value)))
+                raise KeyError("Invalid option: %s=%s" % (key, repr(value)))
         if require_bin:
             if self.bin_names is None:
                 raise ValueError(
@@ -780,7 +777,7 @@ class HierosoftUpdate(object):
             self.set_status("Error: Install is enabled but archive not set.")
         else:
             self.set_status("Install is not enabled for %s"
-                            % (pformat(archive)))
+                            % (repr(archive)))
 
         for btn in self.dl_buttons:
             btn.config(state=tk.NORMAL)
@@ -1211,7 +1208,7 @@ def prepare_and_run_launcher(self_install_options):
         # install_archive(archive_path, evt=meta)
     else:
         echo0("--upgrade was not specified. Using existing %s"
-              % pformat(good_installed_path))
+              % repr(good_installed_path))
         installed = copy.deepcopy(self_install_options)
         if "installed_path" not in installed:
             installed['installed_path'] = good_installed_path
@@ -1232,7 +1229,7 @@ def prepare_and_run_launcher(self_install_options):
     installed_path = installed.get('installed_path')
     if installed.get("already_installed"):
         echo0("Already installed: %s"
-              % pformat(installed_path))
+              % repr(installed_path))
     if not installed_path:
         echo0("d_click called by download_first must set"
               " 'installed_path' before *every* return unless"

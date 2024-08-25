@@ -80,9 +80,10 @@ class TestMoreSVG(unittest.TestCase):
         self.assertEqual(segment.buffer_2d(), [20, 30, 50, 60])
 
     def test_str_to_style(self):
-        # set_verbosity(2)  # try to uncover infinite loops
+        # logging.basicConfig(level=logging.DEBUG)
+        # ^ DEBUG to try to uncover infinite loops
         #   such as calling find_not_quoted with wrong start.
-        set_verbosity(1)
+        logging.basicConfig(level=logging.INFO)
         expected = OrderedDict(
             color="black",
             padding="0",
