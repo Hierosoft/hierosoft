@@ -93,16 +93,6 @@ from hierosoft.moreweb.hierosoftupdate import HierosoftUpdate  # noqa E402
 
 from hierosoft.moreweb.downloadmanager import DownloadManager  # noqa E402
 
-# from pprint import pformat
-from hierosoft.morelogging import (  # noqa E402
-    pformat,
-    view_traceback,
-)
-
-from hierosoft.ggrep import (  # noqa E402
-    contains_any,
-)
-
 from hierosoft.hierosoftpacked import (  # noqa E402
     hierosoft_16px_png,
     icon_library_png,

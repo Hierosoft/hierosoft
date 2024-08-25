@@ -56,34 +56,37 @@ def is_str_like(value):
     return type(value).__name__ in ("str", "bytes", "bytearray", "unicode")
 
 
-pformat_preferred_quote = None  # < See quote under set_pformat_preferred_quote
+emit_quote = None  # < See set_emit_quote's quote arg documentation
 
 
-def set_pformat_preferred_quote(quote):
-    """Set the global pformat_preferred_quote
+def set_emit_quote(quote):
+    """Set the global emit_quote
+    '"' is used if None (default).
 
     Args:
-        quote (str): Set pformat_preferred_quote to this. Defaults to
+        quote (str): Set emit_quote to this. Defaults to
             adaptive ("'" if "'" not in value else '"' when
-            pformat_preferred_quote is None).
+            emit_quote is None).
     """
-    global pformat_preferred_quote
-    pformat_preferred_quote = quote
+    # formerly set_hr_repr_preferred_quote
+    global emit_quote
+    emit_quote = quote
 
 
-def pformat(value, quote_if_like_str=None, escape_if_like_str=None):
-    """This is mostly like pformat from pprint except always on one line.
+def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None):
+    """Human-readable repr is mostly like pformat from pprint
+    except without newlines (existing ones get escaped).
 
     Numbers are left as numbers even if quote_if_like_str is True, to
-    avoid adding extra quotes. Use set pformat_preferred_quote to set
+    avoid adding extra quotes. Use set_emit_quote to set
     the preferred quote.
 
     Args:
         value: any value that can convert to str. Values in
             an iterable will be processed recursively first.
         quote_if_like_str (Optional[bool]): Do not use this option, or
-            your pformat calls will be incompatible with
-            pprint.pformat--This option is only for recursion. Add
+            your hr_repr calls will be incompatible with
+            pprint.hr_repr--This option is only for recursion. Add
             quotes (not done recursively, since if iterable but not
             is_str_like, the last step which is converting from iterable
             to string adds quotes to all string values). Defaults to
@@ -99,10 +102,8 @@ def pformat(value, quote_if_like_str=None, escape_if_like_str=None):
         str: string where only strings are quote_if_like_str (without
             leading b or u).
     """
-    warnings.warn(
-        "hierosoft.pformat is deprecated."
-        " For string continuation use pformat from prettyprint,"
-        " and for other cases use repr.")
+    # formerly named pformat (same name as with pprint's pformat but
+    #   different args so renamed)
     if escape_if_like_str is None:
         escape_if_like_str = True
     if quote_if_like_str is None:
@@ -123,11 +124,11 @@ def pformat(value, quote_if_like_str=None, escape_if_like_str=None):
                 else:
                     parts = {}
                 for key, item in value.items():
-                    parts[key] = pformat(item, quote_if_like_str=False)
+                    parts[key] = hr_repr(item, quote_if_like_str=False)
                 return parts
             for i, item in enumerate(value):
                 iterated = True
-                parts.append(pformat(item, quote_if_like_str=False))
+                parts.append(hr_repr(item, quote_if_like_str=False))
                 # Use append not '=' since tuple is not assignable
             if isinstance(value, tuple):
                 value = tuple(parts)
@@ -158,7 +159,7 @@ def pformat(value, quote_if_like_str=None, escape_if_like_str=None):
             value = value.replace("\b", "\\b")
             value = value.replace("\t", "\\t")
         if quote_if_like_str:
-            if pformat_preferred_quote is None:
+            if emit_quote is None:
                 if '"' in value:
                     return "'%s'" % value.replace("'", "\\'")
                 else:
@@ -166,7 +167,7 @@ def pformat(value, quote_if_like_str=None, escape_if_like_str=None):
             else:
                 # This is universal but isn't as nice since it will
                 #   force escaped quotes. The case above is adaptive.
-                quo = pformat_preferred_quote
+                quo = emit_quote
                 return '%s%s%s' % (quo, value.replace(quo, '\\'+quo), quo)
     # elif isinstance(value, OrderedDict)
     return value
