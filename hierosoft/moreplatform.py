@@ -108,7 +108,10 @@ def which_pixmap(name, context=DEFAULT_CONTEXT, size=48, refresh=True):
         str: Path to the icon or None
     """
     global ICON_THEME
-    # a.k.a. icon_exists, icon_path, or which_icon_image
+    # a.k.a. icon_exists, icon_path, or which_icon_image.
+    #   This is the image! For the desktop file, see which_icon
+    #   in whichicon.py in linuxpreinstall
+    #   (<https://github.com/Hierosoft/linux-preinstall>).
     if enable_gi:
         if not refresh:
             if not ICON_THEME:
