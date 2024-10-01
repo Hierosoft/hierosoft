@@ -1,2 +1,2 @@
 @echo off
-python %~dp0\ggrep %*
+python %~dp0\g-grep %*
