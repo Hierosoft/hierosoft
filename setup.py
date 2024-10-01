@@ -75,11 +75,17 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'hierosoft=hierosoft.gui_tk:main',
-            'ggrep=hierosoft.ggrep:main',
+            'g-grep=hierosoft.ggrep:main',
             'checkpath=hierosoft.checkpath:main',
             'checkversion=hierosoft.checkversion:main',
         ],
     },
+    # ^ The command must *not* be ggrep, since that is ambiguous with
+    #   usage in pyenv:
+    #   - plugins/python-build/test/test_helper.bash
+    #   - plugins/pyenv-doctor/configure
+    #   - plugins/python-build/bin/pyenv-install
+    #   (even prevents `pyenv install --list` from working properly)
     install_requires=install_requires,
     #     versionedModule['urllib'],
     # ^ "ERROR: Could not find a version that satisfies the requirement
