@@ -81,7 +81,7 @@ class ProcessWrapper:
     """
 
     # ardour_path = "/opt/Ardour-8.6.0/bin/ardour8"
-    ardour_path = "/opt/Ardour-*/bin/ardour*"
+    ardour_path = "/opt/Ardour-*/bin/ardour8"  # FIXME: ardour* doesn't work since ardour-8.9.0 is binary but ardour8 is necessary script that loads shared libraries
     my_pid_path = os.path.join(MY_PIDS_DIR, "bash.pid")
     yad_pid_path = os.path.join(MY_PIDS_DIR, "yad.pid")
     nextcloud_pid_path = os.path.join(MY_PIDS_DIR, "nextcloud.pid")
@@ -318,11 +318,20 @@ class ProcessWrapper:
             err = err.decode()
         return_code = target_proc.returncode
         if return_code != 0:
-            error = "%s failed with error" % shlex_join(cmd_parts)
+            print("", file=sys.stderr)
+            error = "%s failed with" % shlex_join(cmd_parts)
+            if out or err:
+                error += " error (code %s):\n" % return_code
+            else:
+                error += " unknown error (code %s)." % return_code
+            print(error, file=sys.stderr)
             if out:
+                print("%s" % out)
                 error += "\n" + out
             if err:
+                print("%s" % err, file=sys.stderr)
                 error += "\n" + err
+            print("", file=sys.stderr)
             messagebox.showerror("ProcessWrapper.", error)
         os.remove(target_pid_path)
 
