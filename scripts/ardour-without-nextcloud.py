@@ -27,6 +27,8 @@ otherwise it will hide the system's icon
 - However, you may prefer that in this case due to issue between
   Nextcloud and Ardour, so you could name the file
   Ardour-Ardour_8.6.0.desktop
+  or other version.
+  Target: /opt/Ardour-8.9.0/bin/ardour8
 """
 from __future__ import print_function
 import os
