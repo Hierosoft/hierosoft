@@ -1,6 +1,8 @@
 from __future__ import print_function
+import glob
 import os
 import psutil
+import shutil
 import subprocess
 import sys
 
@@ -21,12 +23,35 @@ except ImportError:
           file=sys.stderr)
     pass
 
+if sys.version_info.major >= 3:
+    from shlex import join as shlex_join
+else:
+    def shlex_join(parts):
+        result = ""
+        space = ""
+        for part in parts:
+            if " " in part:
+                result += space + "'" + part.replace("'", "\\'") + "'"
+            space = " "
+        return result
+
 ME = "ardour-without-nextcloud"
 MY_PIDS_DIR = os.path.join(
     str(Path.home()),
     ".var/run",
     ME
 )
+
+MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
+REPO_DIR = os.path.dirname(MODULE_DIR)
+if __name__ == "__main__":
+    sys.path.insert(0, REPO_DIR)
+
+from hierosoft.programinfo import (
+    ProgramInfo,
+)
+
+
 
 def clean_file_name(name):
     """Replace all non-alphanumeric characters with underscores."""
@@ -55,7 +80,8 @@ class ProcessWrapper:
             If None, it defaults to `clean_file_name(find_bin_pattern)`.
     """
 
-    ardour_path = "/opt/Ardour-8.6.0/bin/ardour8"
+    # ardour_path = "/opt/Ardour-8.6.0/bin/ardour8"
+    ardour_path = "/opt/Ardour-*/bin/ardour*"
     my_pid_path = os.path.join(MY_PIDS_DIR, "bash.pid")
     yad_pid_path = os.path.join(MY_PIDS_DIR, "yad.pid")
     nextcloud_pid_path = os.path.join(MY_PIDS_DIR, "nextcloud.pid")
@@ -69,10 +95,31 @@ class ProcessWrapper:
 
     def __init__(self, target, find_bin_pattern=None, pid_file_name=None):
         self.target = target if target else self.ardour_path
-        self.find_bin_pattern = (find_bin_pattern or
-                                 os.path.basename(self.target))
-        self.target_pid_path = (pid_file_name or
-                              clean_file_name(self.find_bin_pattern))
+        if "*" in self.target:
+            programs = []
+            highest_i = -1
+            highest_version = (0, 0, 0)
+            for path in list(sorted(glob.glob(self.target))):
+                prog = ProgramInfo()
+                prog.set_path(path)
+                if (prog.version_tuple()
+                        and (prog.version_tuple() > highest_version)):
+                    highest_i = len(programs)
+                    highest_version = prog.version_tuple()
+                    # Keep the "highest" version, such as if the file
+                    #   has 8 and the directory has 8.6.0, keep
+                    #   8.6.0 since it has the most info.
+                programs.append(prog)
+            if len(programs) == 1:
+                self.target = programs[0].path
+            elif highest_i > -1:
+                self.target = programs[highest_i].path
+            else:
+                self.target = programs[-1].path
+        self.find_bin_pattern = (
+            find_bin_pattern or os.path.basename(self.target))
+        self.target_pid_path = (
+            pid_file_name or clean_file_name(self.find_bin_pattern))
         self.bin_name = os.path.basename(self.target)
         self.my_pid = os.getpid()
         self.pause_icon = None
@@ -253,13 +300,30 @@ class ProcessWrapper:
                 f.write(str(yad_pid))
 
         # Run the target program
-        target_proc = subprocess.Popen([self.target] + sys.argv[1:])
+        cmd_parts = [self.target] + sys.argv[1:]
+        target_proc = subprocess.Popen(
+            cmd_parts,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         target_pid = target_proc.pid
         with open(target_pid_path, 'w') as f:
             f.write(str(target_pid))
 
         # Wait for the target program to exit
-        target_proc.wait()
+        # target_proc.wait()
+        out, err = target_proc.communicate()
+        if sys.version_info.major >= 3:
+            out = out.decode()
+            err = err.decode()
+        return_code = target_proc.returncode
+        if return_code != 0:
+            error = "%s failed with error" % shlex_join(cmd_parts)
+            if out:
+                error += "\n" + out
+            if err:
+                error += "\n" + err
+            messagebox.showerror("ProcessWrapper.", error)
         os.remove(target_pid_path)
 
         # Restart Nextcloud
