@@ -1,10 +1,6 @@
 import os
 
 
-def clean_file_name(name):
-    """Replace all non-alphanumeric characters with underscores."""
-    return ''.join(c if c.isalnum() else '_' for c in name)
-
 
 def is_dot_notation(name):
     if not name:
