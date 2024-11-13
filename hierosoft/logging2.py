@@ -1,8 +1,14 @@
 """
-This submodule mimics Python 3 logging.
-There is no logging class/object because
+This submodule mimics Python 3 logging but works in either Python 2 or Python 3.
+
+Project: hierosoft
+
+License: [MIT License](https://github.com/Hierosoft/hierosoft#MIT-1-ov-file)
+
+There is no logging class/object because the module is used directly
+for logging functions unless using getLogger (recommended).
 - The methods such as `warning` directly in the module just call
-  logging2.root's methods.
+  the methods of the root logger (logging2.root).
 
 See also:
 > [Original Python logging package](https://old.red-dove.com/python_logging.html)
