@@ -85,6 +85,28 @@ else:
 ICON_THEME = None
 
 
+def startfile(cell_content):
+    if os.name == "nt":  # Windows
+        os.startfile(cell_content)
+    elif sys.platform == "darwin":  # macOS
+        subprocess.call(["open", cell_content])
+    else:  # Linux and others
+        subprocess.call(["xdg-open", cell_content])
+
+
+def open_folder_select_file(path):
+    if platform.system() == "Windows":
+        cmd_parts = ["explorer", "/select,", path.replace("/", "\\")]
+        # ^ Yes, it is "/select," (with comma)...because Windows.
+        print("open_folder_select_file: " + " ".join(cmd_parts))
+        subprocess.Popen(cmd_parts)
+    # TODO: elif platform.system() == "Darwin":
+    else:
+        parent = os.path.dirname(path)
+        cmd_parts = ["xdg-open", parent]
+        subprocess.Popen(cmd_parts)
+
+
 def which_pixmap(name, context=DEFAULT_CONTEXT, size=48, refresh=True):
     """Find an icon file in XDG-like locations.
 
