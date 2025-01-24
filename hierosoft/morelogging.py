@@ -299,8 +299,10 @@ def echo0(*args, **kwargs):  # formerly prerr
             args = [prefix]
         else:
             if prefix not in args[0]:
-                args = list(args)  # since tuple doesn't support item assign
-                args[0] = prefix + args[0]
+                # Cast since tuple doesn't support item assignment:
+                args = [prefix] + list(args)  # just keep others intact,
+                #   since print takes almost anything (such as if a
+                #   single arg is an interable or other non-str)
                 args = tuple(args)
     # Python 2 (without print_function) print >> sys.stderr, args
     if 'file' not in kwargs:
@@ -389,6 +391,13 @@ def get_traceback(indent=""):
     msg += traceback.format_exc()
     del tb
     return msg
+
+
+def formatted_ex(ex):
+    """Similar to traceback.format_exc but works on any not just current
+    (traceback.format_exc only uses exception occurring, not argument!)
+    """
+    return "{}: {}".format(type(ex).__name__, ex)
 
 
 def view_traceback(indent="", min_indent=None):
