@@ -8,6 +8,7 @@ This module can't import hierosoft or it would be a circular dependency
 '''
 from __future__ import print_function
 from __future__ import division
+import inspect
 import sys
 import traceback
 import os
@@ -212,8 +213,99 @@ def write4(arg):
 
 
 def echo0(*args, **kwargs):  # formerly prerr
+    """Show the message and abbreviated callstack
+    Example output: "[__main__ loggingdemo.__init__ foo] Hi"
+    where __main__ is Python __main__ and foo is the function
+    that called echo0, and "Hi" is the message (args).
+
+    For other purposes, logging2 replaces echo methods.
+
+    For additional arguments, see print. kwargs['file'] defaults to
+        sys.stderr.
+
+    Args:
+        traceback_start (int, optional): Where in the traceback to
+            start. Reserved for use by other echo functions to skip
+            themselves (start=2). Defaults to 1 (only skip echo0 itself).
+    """
     # This level is like logging.CRITICAL
-    print(*args, file=sys.stderr, **kwargs)
+    # logging.CRITICAL = 50
+    start = 1  # only skip self (keep caller)
+    skip = kwargs.get('traceback_start')
+    if 'traceback_start' in kwargs:
+        # even if None, remove it (not compatible with print)
+        del kwargs['traceback_start']
+    if skip:
+        start = int(skip)
+    stack = inspect.stack()
+    # current_frame = inspect.currentframe()
+    # call_frame = inspect.getouterframes(current_frame, 2)
+    # stack_str = ""
+    prefix = ""
+    if len(stack) >= start + 1:
+        # Show the callstack during print
+        # for i in range(1, len(call_frame)):
+        # [3] is caller_name (but works with older Python)
+        # module = inspect.getmodule(call_frame[i]) # always "inspect"...
+        # name = call_frame[i][3]
+        # if not isinstance(name, str):
+        # if module and hasattr(module, '__name__'):
+        #     # name = name.__name__
+        #     name = module.__name__
+        # stack_str = name + " " + stack_str
+        names = []
+        # names = [frame.function for frame in stack[1:]]  # 1st is "<module>"
+        # so:
+        FRAME_IDX = 0
+        FUNCTION_IDX = 3
+        # frame is a namedtuple in Python 3, but tuple in Python 2:
+        # (frame, filename, lineno, function, context, index)
+        # print("frame={}".format(frame))
+        parent_i = 1
+        index = parent_i - 1  # -1 since +1 is done right away
+        for i, frame_info in enumerate(stack[parent_i:]):  # Skip self frame
+            index += 1
+            # Since stack[start:] misses grandparent name (probably
+            #   since no parent), don't use skip start until info is gathered.
+            # Get the module name for each frame
+            frame = frame_info[FRAME_IDX]
+            function_name = frame_info[FUNCTION_IDX]
+            module = inspect.getmodule(frame)
+            module_name = module.__name__ if module and hasattr(module, '__name__') else '<module>'
+            # if module_name == "__main__" and hasattr(module, '__file__') and module.__file__:
+            #     module_name = module.__file__
+            # ^ doesn't work (__main__ is set below)
+            # Prepend module name only if this frame is below the main script
+            class_name = None
+            if "self" in frame.f_locals:
+                class_name = frame.f_locals["self"].__class__.__name__
+            # Build the name with module, class (if any), and function
+            if class_name:
+                name = "{}.{}.{}".format(module_name, class_name, function_name)
+            else:
+                name = "{}.{}".format(module_name, function_name)
+            # Prepend module name only for the parent of the main script
+            if index < start:
+                continue
+            if i == len(stack) - 2:  # Main script frame
+                names.append("__main__")
+            elif i == len(stack) - 3:  # Parent of main script
+                names.append(name)
+            else:
+                names.append(function_name)
+
+        prefix = "[{}] ".format(" ".join(reversed(names)))
+        if not args:
+            args = [prefix]
+        else:
+            if prefix not in args[0]:
+                args = list(args)  # since tuple doesn't support item assign
+                args[0] = prefix + args[0]
+                args = tuple(args)
+    # Python 2 (without print_function) print >> sys.stderr, args
+    if 'file' not in kwargs:
+        kwargs['file'] = sys.stderr  # this way prevents dup named arg in print
+    print(*args, **kwargs)
     return True
 
 
@@ -221,7 +313,8 @@ def echo1(*args, **kwargs):  # formerly debug
     # This level is like logging.ERROR
     if verbosity < 1:
         return False
-    print(*args, file=sys.stderr, **kwargs)
+    kwargs['traceback_start'] = 2
+    echo0(*args, **kwargs)
     return True
 
 
@@ -229,7 +322,8 @@ def echo2(*args, **kwargs):  # formerly extra
     # This level is like logging.WARNING
     if verbosity < 2:
         return False
-    print(*args, file=sys.stderr, **kwargs)
+    kwargs['traceback_start'] = 2
+    echo0(*args, **kwargs)
     return True
 
 
@@ -237,7 +331,8 @@ def echo3(*args, **kwargs):
     # This level is like logging.INFO
     if verbosity < 3:
         return False
-    print(*args, file=sys.stderr, **kwargs)
+    kwargs['traceback_start'] = 2
+    echo0(*args, **kwargs)
     return True
 
 
@@ -245,7 +340,8 @@ def echo4(*args, **kwargs):
     # This level is like logging.DEBUG
     if verbosity < 4:
         return False
-    print(*args, file=sys.stderr, **kwargs)
+    kwargs['traceback_start'] = 2
+    echo0(*args, **kwargs)
     return True
 
 
