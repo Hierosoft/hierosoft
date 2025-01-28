@@ -213,8 +213,14 @@ def write4(arg):
     sys.stderr.flush()
     return True
 
+# frame is a namedtuple in Python 3, but tuple in Python 2:
+# (frame, filename, lineno, function, context, index)
+# so:
+STACK_ELEMENT_FRAME_IDX = 0
+STACK_ELEMENT_FUNCTION_IDX = 3
 
-def echo0(*args, **kwargs):  # formerly prerr
+
+def echo0_long(*args, **kwargs):  # formerly prerr
     """Show the message and abbreviated callstack
     Example output: "[__main__ loggingdemo.__init__ foo] Hi"
     where __main__ is Python __main__ and foo is the function
@@ -235,31 +241,22 @@ def echo0(*args, **kwargs):  # formerly prerr
             True.
         stack_trace (bool, optional): Whether a stack trace
             (reversed traceback, most recent call last) should be shown.
+            Defaults to global echo_stack_trace (True).
     """
     # This level is like logging.CRITICAL
     # logging.CRITICAL = 50
-    multiline = kwargs.get('multiline')
-    if 'multiline' in kwargs:
-        del kwargs['multiline']
-    if multiline is None:
-        multiline = True
-    stack_trace = kwargs.get('stack_trace')
-    if 'stack_trace' in kwargs:
-        del kwargs['stack_trace']
-    if stack_trace is None:
-        stack_trace = echo_stack_trace
+    stack_trace = kwargs.pop('stack_trace', echo_stack_trace)
+
     if not stack_trace:
         if 'file' not in kwargs:
             kwargs['file'] = sys.stderr
             # ^ this way prevents dup named arg in print
         print(*args, **kwargs)
-        if line2:
-            print(line2, file=sys.stderr)
+        return
+
+    multiline = kwargs.pop('multiline', True)
     start = 1  # only skip self (keep caller)
-    skip = kwargs.get('traceback_start')
-    if 'traceback_start' in kwargs:
-        # even if None, remove it (not compatible with print)
-        del kwargs['traceback_start']
+    skip = kwargs.pop('traceback_start', None)  # default prevents KeyError
     if skip:
         start = int(skip)
     stack = inspect.stack()
@@ -280,12 +277,6 @@ def echo0(*args, **kwargs):  # formerly prerr
         #     name = module.__name__
         # stack_str = name + " " + stack_str
         names = []
-        # names = [frame.function for frame in stack[1:]]  # 1st is "<module>"
-        # so:
-        FRAME_IDX = 0
-        FUNCTION_IDX = 3
-        # frame is a namedtuple in Python 3, but tuple in Python 2:
-        # (frame, filename, lineno, function, context, index)
         # print("frame={}".format(frame))
         parent_i = 1
         index = parent_i - 1  # -1 since +1 is done right away
@@ -294,8 +285,8 @@ def echo0(*args, **kwargs):  # formerly prerr
             # Since stack[start:] misses grandparent name (probably
             #   since no parent), don't use skip start until info is gathered.
             # Get the module name for each frame
-            frame = frame_info[FRAME_IDX]
-            function_name = frame_info[FUNCTION_IDX]
+            frame = frame_info[STACK_ELEMENT_FRAME_IDX]
+            function_name = frame_info[STACK_ELEMENT_FUNCTION_IDX]
             module = inspect.getmodule(frame)
             module_name = module.__name__ if module and hasattr(module, '__name__') else '<module>'
             # if module_name == "__main__" and hasattr(module, '__file__') and module.__file__:
@@ -341,6 +332,69 @@ def echo0(*args, **kwargs):  # formerly prerr
     if 'file' not in kwargs:
         kwargs['file'] = sys.stderr  # this way prevents dup named arg in print
     print(*args, **kwargs)
+    if line2 and args and args[0]:
+        print(line2, file=sys.stderr)
+    return True
+
+
+def echo0(*args, **kwargs):
+    """Show the message and the most recent call in the callstack.
+
+    Example output: "[__main__ foo] Hi"
+    where __main__ is the Python __main__ and foo is the function
+    that called echo0, and "Hi" is the message (args).
+
+    Args:
+        stack_trace (bool, optional): Whether a stack trace
+            (reversed traceback, most recent call last) should be shown.
+        traceback_start (int, optional): Where in the traceback to start
+            (skip frames). Defaults to 1 (only skip echo0 itself).
+        multiline (bool, optional): Write "  At: " then traceback on a
+            separate line. Defaults to True.
+    """
+
+    stack_trace = kwargs.pop("stack_trace", echo_stack_trace)
+    if not stack_trace:
+        if 'file' not in kwargs:
+            kwargs['file'] = sys.stderr
+            # ^ this way prevents dup named arg in print
+        print(*args, **kwargs)
+        return
+
+    multiline = kwargs.pop("multiline", True)
+    start = kwargs.pop("traceback_start", 1)
+
+    stack = inspect.stack()
+    names_str = None
+    line2 = None
+    if len(stack) > start:
+        frame_info = stack[start]
+        frame = frame_info[STACK_ELEMENT_FRAME_IDX]
+        function_name = frame_info[STACK_ELEMENT_FUNCTION_IDX]
+        module = inspect.getmodule(frame)
+        module_name = (
+            module.__name__ if module and hasattr(module, "__name__") else "__main__"
+        )
+        class_name = (
+            frame.f_locals["self"].__class__.__name__
+            if "self" in frame.f_locals
+            else None
+        )
+        if class_name:
+            names_str = "{}.{}.{}".format(module_name, class_name, function_name)
+        else:
+            names_str = "{}.{}".format(module_name, function_name)
+
+        if multiline:
+            line2 = "  At: {}".format(names_str)
+        else:
+            prefix = "[{}]".format(names_str)
+            args = ("{}".format(prefix),) + args
+            # print adds a *space* between sequential args.
+
+    kwargs['file'] = sys.stderr
+    print(*args, **kwargs)
+
     if line2 and args and args[0]:
         print(line2, file=sys.stderr)
     return True

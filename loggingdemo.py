@@ -9,7 +9,9 @@ from hierosoft.morelogging import (
 
 def foo():
     echo0("Hi")
-    echo1("Bye")
+    echo0()
+    echo0("...", stack_trace=False)
+    echo1("Bye", multiline=False)
 
 
 class Bar():

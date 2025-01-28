@@ -6,8 +6,8 @@ import sys
 from hierosoft.morelogging import (
     echo0,
     echo1,
-    # echo2,
-    # echo3,
+    echo2,
+    echo3,
 )
 
 if sys.version_info.major < 3:
@@ -113,7 +113,7 @@ class Constants(dict):
                 echo1('  != pwd.getpwuid(os.getuid())[0]="%s"'
                       % (pwd.getpwuid(os.getuid())[0]))
         except ModuleNotFoundError as ex:
-            echo1('Skipping optional dependency: %s' % (ex))
+            echo3('Skipping optional dependency: %s' % (ex))
 
     def init_platform(self, os_name):
 
@@ -313,7 +313,7 @@ class Constants(dict):
             if os.path.isdir(_try_cloud_path):
                 self['CLOUD_NAME'] = try_cloud_name
                 self['CLOUD'] = _try_cloud_path
-                echo1('* detected "%s"' % (self['CLOUD']))
+                echo1('* detected "%s"' % (self['CLOUD']), multiline=False)
                 break
             del _try_cloud_path
 
