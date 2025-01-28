@@ -19,6 +19,8 @@ from collections import OrderedDict
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
 
+echo_stack_trace = True
+
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
 
@@ -227,9 +229,32 @@ def echo0(*args, **kwargs):  # formerly prerr
         traceback_start (int, optional): Where in the traceback to
             start. Reserved for use by other echo functions to skip
             themselves (start=2). Defaults to 1 (only skip echo0 itself).
+        multiline (bool, optional): Write "  At: " then traceback on
+            a separate line (False formats the traceback as a prefix in
+            square brackets on the single line output). Defaults to
+            True.
+        stack_trace (bool, optional): Whether a stack trace
+            (reversed traceback, most recent call last) should be shown.
     """
     # This level is like logging.CRITICAL
     # logging.CRITICAL = 50
+    multiline = kwargs.get('multiline')
+    if 'multiline' in kwargs:
+        del kwargs['multiline']
+    if multiline is None:
+        multiline = True
+    stack_trace = kwargs.get('stack_trace')
+    if 'stack_trace' in kwargs:
+        del kwargs['stack_trace']
+    if stack_trace is None:
+        stack_trace = echo_stack_trace
+    if not stack_trace:
+        if 'file' not in kwargs:
+            kwargs['file'] = sys.stderr
+            # ^ this way prevents dup named arg in print
+        print(*args, **kwargs)
+        if line2:
+            print(line2, file=sys.stderr)
     start = 1  # only skip self (keep caller)
     skip = kwargs.get('traceback_start')
     if 'traceback_start' in kwargs:
@@ -242,6 +267,7 @@ def echo0(*args, **kwargs):  # formerly prerr
     # call_frame = inspect.getouterframes(current_frame, 2)
     # stack_str = ""
     prefix = ""
+    line2 = None
     if len(stack) >= start + 1:
         # Show the callstack during print
         # for i in range(1, len(call_frame)):
@@ -293,21 +319,30 @@ def echo0(*args, **kwargs):  # formerly prerr
                 names.append(name)
             else:
                 names.append(function_name)
-
-        prefix = "[{}] ".format(" ".join(reversed(names)))
-        if not args:
+        names_str = "{}".format(" ".join(reversed(names)))
+        # Remove unnamed module, replace multiple-whitespace with " ":
+        names_str = " ".join(
+            names_str.replace(".<module>", "").replace("<module>", "")
+            .split()
+        )
+        prefix = "[{}] ".format(names_str)
+        if multiline:
+            line2 = "  At: {}".format(names_str)
+        elif not args:
             args = [prefix]
         else:
             if prefix not in args[0]:
                 # Cast since tuple doesn't support item assignment:
                 args = [prefix] + list(args)  # just keep others intact,
                 #   since print takes almost anything (such as if a
-                #   single arg is an interable or other non-str)
+                #   single arg is an iterable or other non-str)
                 args = tuple(args)
     # Python 2 (without print_function) print >> sys.stderr, args
     if 'file' not in kwargs:
         kwargs['file'] = sys.stderr  # this way prevents dup named arg in print
     print(*args, **kwargs)
+    if line2 and args and args[0]:
+        print(line2, file=sys.stderr)
     return True
 
 
