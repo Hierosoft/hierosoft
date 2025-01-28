@@ -20,6 +20,14 @@ MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
 
 echo_stack_trace = True
+echo_multiline = True
+
+# frame is a namedtuple in Python 3, but tuple in Python 2:
+# (frame, filename, lineno, function, context, index)
+# so:
+STACK_ELEMENT_FRAME_IDX = 0
+STACK_ELEMENT_FUNCTION_IDX = 3
+
 
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
@@ -213,11 +221,21 @@ def write4(arg):
     sys.stderr.flush()
     return True
 
-# frame is a namedtuple in Python 3, but tuple in Python 2:
-# (frame, filename, lineno, function, context, index)
-# so:
-STACK_ELEMENT_FRAME_IDX = 0
-STACK_ELEMENT_FUNCTION_IDX = 3
+
+def set_echo_multiline(enable):
+    global echo_multiline
+    if enable not in (True, False):
+        raise ValueError(
+            "Expected True or False for enable, got {}".format(enable))
+    echo_multiline = enable
+
+
+def set_echo_stack_trace(enable):
+    global echo_stack_trace
+    if enable not in (True, False):
+        raise ValueError(
+            "Expected True or False for enable, got {}".format(enable))
+    echo_stack_trace = enable
 
 
 def echo0_long(*args, **kwargs):  # formerly prerr
@@ -238,7 +256,9 @@ def echo0_long(*args, **kwargs):  # formerly prerr
         multiline (bool, optional): Write "  At: " then traceback on
             a separate line (False formats the traceback as a prefix in
             square brackets on the single line output). Defaults to
-            True.
+            echo_multiline (True since easier to notice actual message
+            [as in args] if starts at beginning of line, and works
+            well if write* was used on same line).
         stack_trace (bool, optional): Whether a stack trace
             (reversed traceback, most recent call last) should be shown.
             Defaults to global echo_stack_trace (True).
@@ -254,7 +274,7 @@ def echo0_long(*args, **kwargs):  # formerly prerr
         print(*args, **kwargs)
         return
 
-    multiline = kwargs.pop('multiline', True)
+    multiline = kwargs.pop('multiline', echo_multiline)
     start = 1  # only skip self (keep caller)
     skip = kwargs.pop('traceback_start', None)  # default prevents KeyError
     if skip:
@@ -350,7 +370,9 @@ def echo0(*args, **kwargs):
         traceback_start (int, optional): Where in the traceback to start
             (skip frames). Defaults to 1 (only skip echo0 itself).
         multiline (bool, optional): Write "  At: " then traceback on a
-            separate line. Defaults to True.
+            separate line. Defaults to global echo_multiline, True since
+            message (args) is readable if at beginning of line, and
+            works well if write* was done on same line.
     """
 
     stack_trace = kwargs.pop("stack_trace", echo_stack_trace)
@@ -373,7 +395,7 @@ def echo0(*args, **kwargs):
         function_name = frame_info[STACK_ELEMENT_FUNCTION_IDX]
         module = inspect.getmodule(frame)
         module_name = (
-            module.__name__ if module and hasattr(module, "__name__") else "__main__"
+            module.__name__ if module and hasattr(module, "__name__") else "__main__"  # noqa:E501
         )
         class_name = (
             frame.f_locals["self"].__class__.__name__
