@@ -184,42 +184,47 @@ def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None):
     return value
 
 
-def write0(arg):
-    sys.stderr.write(arg)
-    sys.stderr.flush()
-    return True
+def write0(msg, traceback_start=2, stack_trace=True):
+    """Write to stderr & flush but do not add a newline.
+
+    Args:
+        msg (str): Message for stderr
+        traceback_start (int, optional): Where to start in the traceback
+            (set automatically). Defaults to 2.
+        stack_trace (bool, optional): Show the stack trace as a prefix
+            in square brackets. Defaults to True.
+
+    Returns:
+        bool: Whether message is shown (always True, but returned to
+            match behavior of other write functions).
+    """
+    return echo0(msg, traceback_start=traceback_start, add_newline=False,
+                 stack_trace=stack_trace)
 
 
-def write1(arg):
+
+def write1(msg):
     if verbosity < 1:
         return False
-    sys.stderr.write(arg)
-    sys.stderr.flush()
-    return True
+    return write0(msg, traceback_start=3)
 
 
-def write2(arg):
+def write2(msg):
     if verbosity < 2:
         return False
-    sys.stderr.write(arg)
-    sys.stderr.flush()
-    return True
+    return write0(msg, traceback_start=3)
 
 
-def write3(arg):
+def write3(msg):
     if verbosity < 3:
         return False
-    sys.stderr.write(arg)
-    sys.stderr.flush()
-    return True
+    return write0(msg, traceback_start=3)
 
 
-def write4(arg):
+def write4(msg):
     if verbosity < 4:
         return False
-    sys.stderr.write(arg)
-    sys.stderr.flush()
-    return True
+    return write0(msg, traceback_start=3)
 
 
 def set_echo_multiline(enable):
@@ -373,14 +378,22 @@ def echo0(*args, **kwargs):
             separate line. Defaults to global echo_multiline, True since
             message (args) is readable if at beginning of line, and
             works well if write* was done on same line.
+        add_newline (bool, optional): The line ends (Use print to
+            sys.stderr rather than sys.stderr.write+flush). Defaults to
+            True.
     """
-
-    stack_trace = kwargs.pop("stack_trace", echo_stack_trace)
+    add_newline = kwargs.pop('add_newline', True)
+    stack_trace = kwargs.pop('stack_trace', echo_stack_trace)
     if not stack_trace:
-        if 'file' not in kwargs:
-            kwargs['file'] = sys.stderr
-            # ^ this way prevents dup named arg in print
-        print(*args, **kwargs)
+        if add_newline:
+            if 'file' not in kwargs:
+                kwargs['file'] = sys.stderr
+                # ^ this way prevents dup named arg in print
+            print(*args, **kwargs)
+        else:
+            if args and args[0]:
+                sys.stderr.write(args[0])
+                sys.stderr.flush()
         return
 
     multiline = kwargs.pop("multiline", True)
@@ -403,7 +416,8 @@ def echo0(*args, **kwargs):
             else None
         )
         if class_name:
-            names_str = "{}.{}.{}".format(module_name, class_name, function_name)
+            names_str = "{}.{}.{}".format(module_name, class_name,
+                                          function_name)
         else:
             names_str = "{}.{}".format(module_name, function_name)
 
@@ -414,11 +428,20 @@ def echo0(*args, **kwargs):
             args = ("{}".format(prefix),) + args
             # print adds a *space* between sequential args.
 
-    kwargs['file'] = sys.stderr
-    print(*args, **kwargs)
+    if add_newline:
+        kwargs['file'] = sys.stderr
+        print(*args, **kwargs)
+    else:
+        if args and args[0]:
+            sys.stderr.write(args[0])
+            sys.stderr.flush()
 
     if line2 and args and args[0]:
-        print(line2, file=sys.stderr)
+        if add_newline:
+            print(line2, file=sys.stderr)
+        # else line isn't over yet, so do not show line2
+        #   (add_newline is expected later in client code
+        #   if add_newline is False this time.)
     return True
 
 
