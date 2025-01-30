@@ -12,6 +12,7 @@ import inspect
 import sys
 import traceback
 import os
+import re
 import warnings
 
 from collections import OrderedDict
@@ -27,6 +28,8 @@ echo_multiline = True
 # so:
 STACK_ELEMENT_FRAME_IDX = 0
 STACK_ELEMENT_FUNCTION_IDX = 3
+
+space_nospace_rc = re.compile(r'(\s*)(.*)')
 
 
 if __name__ == "__main__":
@@ -384,6 +387,8 @@ def echo0(*args, **kwargs):
     """
     add_newline = kwargs.pop('add_newline', True)
     stack_trace = kwargs.pop('stack_trace', echo_stack_trace)
+    multiline = kwargs.pop("multiline", True)
+    start = kwargs.pop("traceback_start", 1)
     if not stack_trace:
         if add_newline:
             if 'file' not in kwargs:
@@ -395,9 +400,6 @@ def echo0(*args, **kwargs):
                 sys.stderr.write(args[0])
                 sys.stderr.flush()
         return
-
-    multiline = kwargs.pop("multiline", True)
-    start = kwargs.pop("traceback_start", 1)
 
     stack = inspect.stack()
     names_str = None
@@ -425,7 +427,13 @@ def echo0(*args, **kwargs):
             line2 = "  At: {}".format(names_str)
         else:
             prefix = "[{}]".format(names_str)
-            args = ("{}".format(prefix),) + args
+            if args and args[0]:
+                # Get the tab & place it before the prefix
+                #   (safe: not-found group(s) still return '' string)
+                tab, no_tab = space_nospace_rc.match(args[0]).groups()
+                args = (tab+prefix,) + (no_tab,) + args[1:]
+            else:
+                args = (prefix,) + args
             # print adds a *space* between sequential args.
 
     if add_newline:
