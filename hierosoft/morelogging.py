@@ -20,7 +20,7 @@ from collections import OrderedDict
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
 
-echo_stack_trace = True
+echo_stack_trace = None
 echo_multiline = True
 
 # frame is a namedtuple in Python 3, but tuple in Python 2:
@@ -195,7 +195,7 @@ def write0(msg, traceback_start=2, stack_trace=True):
         traceback_start (int, optional): Where to start in the traceback
             (set automatically). Defaults to 2.
         stack_trace (bool, optional): Show the stack trace as a prefix
-            in square brackets. Defaults to True.
+            in square brackets. Defaults to echo_stack_trace.
 
     Returns:
         bool: Whether message is shown (always True, but returned to
@@ -269,10 +269,12 @@ def echo0_long(*args, **kwargs):  # formerly prerr
             well if write* was used on same line).
         stack_trace (bool, optional): Whether a stack trace
             (reversed traceback, most recent call last) should be shown.
-            Defaults to global echo_stack_trace (True).
+            Defaults to global echo_stack_trace.
     """
     # This level is like logging.CRITICAL
     # logging.CRITICAL = 50
+    if echo_stack_trace is None:
+        echo_stack_trace = get_verbosity() >= 3
     stack_trace = kwargs.pop('stack_trace', echo_stack_trace)
 
     if not stack_trace:
@@ -375,6 +377,8 @@ def echo0(*args, **kwargs):
     Args:
         stack_trace (bool, optional): Whether a stack trace
             (reversed traceback, most recent call last) should be shown.
+            Defaults to echo_stack_trace (True if log level is INFO or
+            DEBUG on first call of echo0, otherwise False).
         traceback_start (int, optional): Where in the traceback to start
             (skip frames). Defaults to 1 (only skip echo0 itself).
         multiline (bool, optional): Write "  At: " then traceback on a
@@ -385,6 +389,10 @@ def echo0(*args, **kwargs):
             sys.stderr rather than sys.stderr.write+flush). Defaults to
             True.
     """
+    global echo_stack_trace
+    if echo_stack_trace is None:
+        echo_stack_trace = get_verbosity() >= 3
+
     add_newline = kwargs.pop('add_newline', True)
     stack_trace = kwargs.pop('stack_trace', echo_stack_trace)
     multiline = kwargs.pop("multiline", True)

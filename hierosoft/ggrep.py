@@ -87,6 +87,8 @@ from hierosoft import (
     join_if_exists,
 )
 
+DEFAULT_IGNORE_DIRS = (".git", "node_modules", ".venv")
+
 default_includes = [
     "*.py",
     "*.lua",
@@ -754,7 +756,7 @@ def ggrep(pattern, path, more_args=None, include=None,
                 except UnicodeDecodeError as ex:
                     # 'utf-8' codec can't decode byte 0x89 in position
                     #  0: invalid start byte
-                    echo0('* ignored binary file "{}" due to: {}'
+                    echo3('* ignored binary file "{}" due to: {}'
                           ''.format(sub, str(ex)))
                     # return results
                     continue
@@ -886,7 +888,7 @@ def filter_tree(path, more_args=None, include=None, exclude=None, ex_by=None,
     sub = os.path.split(path)[1]
     # Do not ignore if "" even if .git, so let sub  ""--isdir("")==False
     if os.path.isdir(path):
-        if sub == ".git":
+        if sub in DEFAULT_IGNORE_DIRS:
             raise DontStopIteration('* ignored "{}"'.format(path))
 
     if (exclude is not None) and is_like_any(sub, exclude):
@@ -1149,7 +1151,7 @@ def filter_tree(path, more_args=None, include=None, exclude=None, ex_by=None,
             #     pass
             except DontStopIteration as ex:
                 if not contains_any(str(ex), TRIVIAL_EXCEPTION_FLAGS):
-                    echo0(str(ex))
+                    echo3(str(ex))
                     # ^ Show the message explaining why the file or
                     #   directory was ignored, without interfering with
                     #   stdout.
@@ -1398,6 +1400,8 @@ def main():
         echo0("* include_args count: {}".format(includeCount))
     else:
         echo0("* include_args: {}".format(include_args))
+
+    echo0("DEFAULT_IGNORE_DIRS: {}".format(DEFAULT_IGNORE_DIRS))
 
     if exclude_args is not None:
         excludeCount = len(exclude_args)
