@@ -1045,7 +1045,7 @@ def filter_tree(path, more_args=None, include=None, exclude=None, ex_by=None,
     tryIgnore = os.path.join(path, ".gitignore")
     tryIgnore = join_if_exists(path, [".gitignore", ".grepignore"])
     if gitignore and (tryIgnore is not None):
-        echo1('* reading "{}"'.format(tryIgnore))
+        echo1('* setting path filter to "{}"'.format(tryIgnore))
         ignore = []
         trace_ignore_files = {}
         ignore_root = path
