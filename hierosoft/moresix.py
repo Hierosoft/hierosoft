@@ -5,6 +5,8 @@ module for Python 2, with features listed at
 contributions to six, so this file should be completely modular (able to
 be copied anywhere and still work).
 
+See also seven, a project that helps Python 2.7 code work on Python 2.5.
+
 MIT License
 """
 # Copyright (c) 2010-2024 Benjamin Peterson
