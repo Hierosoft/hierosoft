@@ -1127,7 +1127,17 @@ def filter_tree(path, more_args=None, include=None, exclude=None, ex_by=None,
             try:
                 # Without `yield from`, the call never really happens
                 # (since this is a generator)!
-                yield from filter_tree(
+                # yield from is apparently Python 3-only syntax.
+                # `yield from get_all_subclasses(subclass)`
+                # is same as
+                # `for c in get_all_subclasses(subclass): yield c`
+                # and "The advantages of yield from come when you start
+                # to do more complicated things, like two-way
+                # communications between sender and receiver."
+                # according to
+                # <https://www.reddit.com/r/learnpython/comments/4rc15s/comment/d4zuk5l/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button>
+                # yield from filter_tree(
+                for this_sub in filter_tree(
                     subPath,
                     more_args=more_args,
                     include=include,
@@ -1142,7 +1152,8 @@ def filter_tree(path, more_args=None, include=None, exclude=None, ex_by=None,
                     follow_symlinks=follow_symlinks,
                     followed_targets=followed_targets,
                     root=root,
-                )
+                    ):
+                    yield this_sub
                 # ^ filter the files too
                 # ^ don't yield here, even if directory, since filtering
                 #   must occur (yield path before this loop instead)
