@@ -4,12 +4,11 @@ import sys
 import os
 
 
-my_dir = os.path.dirname(os.path.abspath(__file__))
-module_dir = os.path.dirname(my_dir)
-repo_dir = os.path.dirname(module_dir)
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_DIR = os.path.dirname(TESTS_DIR)
 
 if __name__ == "__main__":
-    sys.path.insert(0, repo_dir)
+    sys.path.insert(0, REPO_DIR)
 
 
 from hierosoft import (
@@ -58,8 +57,12 @@ class TestAlgorithms(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    testcase = TestAlgorithms()
-    for name in dir(testcase):
-        if name.startswith("test"):
-            fn = getattr(testcase, name)
-            fn()  # Look at def test_* for the code if tracebacks start here
+    # testcase = TestAlgorithms()
+    # for name in dir(testcase):
+    #     if name.startswith("test"):
+    #         fn = getattr(testcase, name)
+    #         fn()  # Look at def test_* for the code if tracebacks start here
+    # ^ constructor fails on Python 2:
+    #   ValueError: no such test method in <class '__main__.TestAlgorithms'>: runTest
+    #   so:
+    unittest.main()

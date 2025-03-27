@@ -5,13 +5,11 @@ import os
 
 from collections import OrderedDict
 
-
-my_dir = os.path.dirname(os.path.abspath(__file__))
-module_dir = os.path.dirname(my_dir)
-repo_dir = os.path.dirname(module_dir)
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_DIR = os.path.dirname(TESTS_DIR)
 
 if __name__ == "__main__":
-    sys.path.insert(0, repo_dir)
+    sys.path.insert(0, REPO_DIR)
 
 from hierosoft import moresvg  # noqa E402
 
