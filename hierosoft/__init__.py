@@ -2,81 +2,9 @@
 from __future__ import print_function
 import sys
 import os
-import subprocess
 import platform
 
 from datetime import datetime
-
-if sys.version_info.major < 3:
-    FileNotFoundError = IOError
-    ModuleNotFoundError = ImportError
-    NotADirectoryError = OSError
-    # ^ such as:
-    #   "NotADirectoryError: [Errno 20] Not a directory: '...'" where
-    #   "..." is a file and the call is os.listdir.
-
-# The polyfills below are used in other file(s) in the module.
-
-if sys.version_info.major >= 3:
-    # from subprocess import run as sp_run
-
-    # Globals used:
-    # import subprocess
-    from subprocess import CompletedProcess
-    from subprocess import run as sp_run
-else:
-    class CompletedProcess:
-        '''
-        This is a Python 2 substitute for the Python 3 class.
-        '''
-        _custom_impl = True
-
-        def __init__(self, args, returncode, stdout=None, stderr=None):
-            self.args = args
-            self.returncode = returncode
-            self.stdout = stdout
-            self.stderr = stderr
-
-        def check_returncode(self):
-            if self.returncode != 0:
-                err = subprocess.CalledProcessError(self.returncode,
-                                                    self.args,
-                                                    output=self.stdout)
-                raise err
-            return self.returncode
-
-    def sp_run(*popenargs, **kwargs):
-        '''subprocess.run substitute for Python 2
-        CC BY-SA 4.0
-        by Martijn Pieters
-        https://stackoverflow.com/a/40590445
-        and Poikilos
-        '''
-        this_input = kwargs.pop("input", None)
-        check = kwargs.pop("handle", False)
-
-        if this_input is not None:
-            if 'stdin' in kwargs:
-                raise ValueError('stdin and input arguments may not '
-                                 'both be used.')
-            kwargs['stdin'] = subprocess.PIPE
-
-        process = subprocess.Popen(*popenargs, **kwargs)
-        try:
-            outs, errs = process.communicate(this_input)
-        except Exception as ex:
-            process.kill()
-            process.wait()
-            raise ex
-        returncode = process.poll()
-        # print("check: {}".format(check))
-        # print("returncode: {}".format(returncode))
-        if check and returncode:
-            raise subprocess.CalledProcessError(returncode, popenargs,
-                                                output=outs)
-        return CompletedProcess(popenargs, returncode, stdout=outs,
-                                stderr=errs)
-    subprocess.run = sp_run
 
 from hierosoft.morelogging import (  # noqa F401
     echo0,
