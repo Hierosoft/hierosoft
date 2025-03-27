@@ -62,7 +62,7 @@ if __name__ == "__main__":
     #     if name.startswith("test"):
     #         fn = getattr(testcase, name)
     #         fn()  # Look at def test_* for the code if tracebacks start here
-    # ^ constructor fails on Python 2:
+    # ^ constructor fails on Python 2 after tests run:
     #   ValueError: no such test method in <class '__main__.TestAlgorithms'>: runTest
     #   so:
     unittest.main()

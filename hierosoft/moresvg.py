@@ -33,8 +33,11 @@ Attr (node.attributes[x])'s public members:
 'previousSibling', 'removeChild', 'replaceChild', 'schemaType',
 'setUserData', 'specified', 'toprettyxml', 'toxml', 'unlink', 'value'
 """
-from __future__ import print_function
+# from __future__ import annotations  # allows getter, setter, etc, but *postponed*:
+#     still not in Python 2.7.17!
 from __future__ import division  # workarounds are used, but import to be sure
+from __future__ import print_function
+
 import copy
 import sys
 
@@ -58,7 +61,8 @@ from hierosoft.morebytes import (
 
 
 def echo0(*args, **kwargs):
-    print(*args, **kwargs, file=sys.stderr)
+    kwargs['file'] = sys.stderr
+    print(*args, **kwargs)
     return True
 
 
@@ -90,7 +94,7 @@ class SVGSegment:
         'command',
         'quadratic',
         'smooth',
-        'vector_fmt',
+        '_vector_fmt',
     ]
 
     def __init__(self):
@@ -99,7 +103,7 @@ class SVGSegment:
         self.command = None
         self.quadratic = False
         self.smooth = 0
-        self.vector_fmt = ["x", "y"]
+        self.set_vector_fmt(["x", "y"])
         # All of these should be copied by copy()
 
     def to_dict(self, get_buffer=True):
@@ -112,8 +116,8 @@ class SVGSegment:
 
     def element(self, i, name):
         return self.buffer[
-            i * len(self.vector_fmt)
-            + self.vector_fmt.index(name)
+            i * len(self._vector_fmt)
+            + self._vector_fmt.index(name)
         ]
 
     def __len__(self):
@@ -122,12 +126,12 @@ class SVGSegment:
         Returns:
             int: number of segments
         """
-        if len(self.buffer) % len(self.vector_fmt) != 0:
+        if len(self.buffer) % len(self._vector_fmt) != 0:
             raise ValueError(
-                "Buffer len %s should be divisiable by vector_fmt %s: %s"
-                % (len(self.buffer), self.vector_fmt, self.buffer)
+                "Buffer len %s should be divisible by vector_fmt %s: %s"
+                % (len(self.buffer), self._vector_fmt, self.buffer)
             )
-        return int(len(self.buffer) / len(self.vector_fmt))
+        return int(len(self.buffer) / len(self._vector_fmt))
 
     def location(self, i):
         return (
@@ -150,14 +154,23 @@ class SVGSegment:
         Returns:
             int: index inside of the buffer (skips everything but 'x' & 'y')
         """
-        raise RuntimeError("Set vector_fmt first to generate this method.")
+        if sys.version_info.major >= 3:
+            raise RuntimeError(
+                "Set vector_fmt first to generate this method."
+            )
+        else:
+            raise RuntimeError(
+                "Call set_vector_fmt first to generate this method."
+            )
+
+    def get_vector_fmt(self):  # for Python 2
+        return self._vector_fmt
 
     @property
     def vector_fmt(self):
         return self._vector_fmt
 
-    @vector_fmt.setter
-    def vector_fmt(self, vector_fmt):
+    def set_vector_fmt(self, vector_fmt):  # for Python 2
         self._vector_fmt = vector_fmt
         len_vector_fmt = len(vector_fmt)
         if 'x' not in vector_fmt:
@@ -187,6 +200,14 @@ class SVGSegment:
             #       % (index, len(vector_fmt), _y_i))
             return index * len_vector_fmt + _y_i
         self._2D_to_index = fast_2D_to_index
+        assert len(vector_fmt) == len(self._vector_fmt)
+
+    @vector_fmt.setter
+    def vector_fmt(self, vector_fmt):
+        # Requires `from __future__ import annotations` in Python 2
+        #   (otherwise, "SVGSegment instance has no attribute '_vector_fmt'"
+        #   occurs) so use set_vector_fmt if using Python 2.
+        self.set_vector_fmt(vector_fmt)
 
     def buffer_2d(self):
         """Convert n-dimensional buffer to 2D buffer.
@@ -194,7 +215,7 @@ class SVGSegment:
         Returns:
             list[float]: Length is len(self) * 2 since
                 __len__ is overridden by
-                int(len(self.buffer) / len(self.vector_fmt)
+                int(len(self.buffer) / len(self._vector_fmt)
         """
         fn = self._2D_to_index
         # len(self) * 2 to simulate 2D output buffer
@@ -207,20 +228,20 @@ class SVGSegment:
         segment.bezier = self.bezier
         segment.quadratic = self.quadratic
         segment.smooth = self.smooth
-        segment.vector_fmt = copy.deepcopy(self.vector_fmt)
+        segment._vector_fmt = copy.deepcopy(self._vector_fmt)
         return segment
 
     def append_location(self, x, y):
         new_index = len(self)
-        self.buffer += [0 for _ in self.vector_fmt]
+        self.buffer += [0 for _ in self._vector_fmt]
         self.set_element(new_index, "x", x)
         self.set_element(new_index, "y", y)
-        if len(self.vector_fmt) > 2:
+        if len(self._vector_fmt) > 2:
             echo0("Warning: append_location only set x and y but has %s"
-                  % self.vector_fmt)
+                  % self._vector_fmt)
 
     def connect_to_start(self):
-        first = self.buffer[:len(self.vector_fmt)]
+        first = self.buffer[:len(self._vector_fmt)]
         self.buffer += first
 
 
@@ -509,7 +530,7 @@ class MoreSVG(object):  # Must be new-style class (object) for get/set in Py 2
                 # Can have multiple segments such as: M C Z m c z
                 #   in that order, where lowercase is relative
                 segments.append(segment)
-                new_segment.vector_fmt = arg_spec_to_vector_fmt(arg_spec)
+                new_segment._vector_fmt = arg_spec_to_vector_fmt(arg_spec)
                 new_segment.command = part
                 segment = new_segment.copy()
                 argi = -1
@@ -622,20 +643,24 @@ class MoreSVG(object):  # Must be new-style class (object) for get/set in Py 2
                     fill_opacity = 1.0
             if fill_opacity > .5:
                 # create_polygon is filled
-                self.shapes.append(canvas.create_polygon(
-                    *buffer2d,
-                    fill=fill,
-                    smooth=segment.smooth,
-                ))
+                self.shapes.append(
+                    canvas.create_polygon(
+                        *buffer2d,
+                        fill=fill,
+                        smooth=segment.smooth
+                    )  # ^ Python 2 does not like trailing comma above.
+                )
             else:
                 if stroke == "none":
                     raise ValueError('There is no fill and stroke is "none".')
                 # create_line is never filled
-                self.shapes.append(canvas.create_line(
-                    *buffer2d,
-                    fill=stroke,  # create_line never filled so fill is stroke
-                    smooth=segment.smooth,
-                ))
+                self.shapes.append(
+                    canvas.create_line(
+                        *buffer2d,
+                        fill=stroke,  # create_line never filled so fill is stroke
+                        smooth=segment.smooth
+                    )  # ^ Python 2 does not like trailing comma above.
+                )
 
     def _draw_svg_root(self, root, canvas, constrain=None, pos=None):
         """Draw a Node assuming it is the svg root node.

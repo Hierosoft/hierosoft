@@ -15,7 +15,13 @@ from hierosoft import (
 )
 
 
-def crc16_buypass(data: bytes):
+BYTE_STR_TYPES = (bytes, bytearray)
+if sys.version_info.major < 3:
+    # In Python 2, str is same as bytes (not unicode)
+    BYTE_STR_TYPES = (bytes, bytearray, str)
+
+
+def crc16_buypass(data):
     """Calculate the hash using the CRC16 BUYPASS algorithm.
 
     by [Sz'](https://stackoverflow.com/users/2278704/sz)
@@ -25,6 +31,7 @@ def crc16_buypass(data: bytes):
     Returns:
         int: An integer that can fit in a word (two bytes)
     """
+    assert isinstance(data, (bytes))
     xor_in = 0x0000  # initial value
     xor_out = 0x0000  # final XOR value
     poly = 0x8005  # generator polinom (normal form)
@@ -43,7 +50,7 @@ def crc16_buypass(data: bytes):
     return reg ^ xor_out
 
 
-def crc16_modbus(data: bytearray, offset=0, length=None):
+def crc16_modbus(data, offset=0, length=None):
     """Calculate the hash using the CRC16 MODBUS algorithm.
 
     answered May 1, 2019 at 8:16 by user11436151
@@ -58,6 +65,7 @@ def crc16_modbus(data: bytearray, offset=0, length=None):
     Returns:
         int: An integer that can fit in a word (two bytes)
     """
+    assert isinstance(data, (bytes, bytearray))
     if length is None:
         length = len(data)
     if ((data is None) or (offset < 0) or (offset > len(data) - 1)
@@ -79,7 +87,7 @@ def crc16_modbus(data: bytearray, offset=0, length=None):
     return crc & 0xFFFF
 
 
-def crc16_ccit_false(data: bytearray, offset=0, length=None):
+def crc16_ccit_false(data, offset=0, length=None):
     '''Python implementation of CRC-16/CCITT-FALSE
 
     (output matches CRC-16 button's CCITT-FALSE output on
@@ -88,6 +96,7 @@ def crc16_ccit_false(data: bytearray, offset=0, length=None):
     CC BY-SA 4.0 Amin Saidani
     <https://stackoverflow.com/a/55850496/4541104>
     '''
+    assert isinstance(data, (bytes, bytearray))
     if length is None:
         length = len(data)
     if ((data is None) or (offset < 0) or (offset > len(data) - 1)
@@ -103,7 +112,6 @@ def crc16_ccit_false(data: bytearray, offset=0, length=None):
                 crc = crc << 1
     return crc & 0xFFFF
 
-
 def to_hex(bytestring, delimiter=""):
     '''
     Represent the binary as an ASCII string of hexadecimal characters.
@@ -117,9 +125,14 @@ def to_hex(bytestring, delimiter=""):
     Keyword arguments:
     delimiter -- Place this between each byte (each hex pair).
     '''
+    assert isinstance(bytestring, BYTE_STR_TYPES)
+
     # import binascii
     if (delimiter is not None) and (len(delimiter) > 0):
-        return " ".join(["{:02x}".format(x) for x in bytestring])
+        if sys.version_info.major >= 3:
+            return " ".join(["{:02x}".format(x) for x in bytestring])
+        else:
+            return " ".join(["%02x" % ord(x) for x in bytestring])
 
     return binascii.hexlify(bytestring).decode('utf-8')  # no delimiter
 
@@ -906,7 +919,9 @@ class AssignmentInfo:
     COMMENT = 5
     LINE_END = 6
     EMPTY = [None, None, None, None, None, None, None]
-    PARTS = EMPTY.copy()
+    # PARTS = EMPTY.copy()
+    # ^ list has no attribute copy in Python 2, so:
+    PARTS = EMPTY[:]
     PARTS[INDENT] = "indent"
     PARTS[NAME] = "name"
     PARTS[SIGN_AND_SPACING] = "sign_and_spacing"
