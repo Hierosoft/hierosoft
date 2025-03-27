@@ -1,7 +1,18 @@
 # -*- coding: utf-8 -*-
 import unittest
-# import sys
+import sys
 import os
+
+TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
+# MODULE_DIR = os.path.dirname(MY_DIR)
+TEST_DATA_DIR = os.path.join(TESTS_DIR, "data")
+
+REPO_DIR = os.path.dirname(TESTS_DIR)
+
+if __name__ == "__main__":
+    sys.path.insert(0, REPO_DIR)
+
+assert os.path.isdir(TEST_DATA_DIR)
 
 from hierosoft import (
     echo0,
@@ -13,13 +24,6 @@ from hierosoft.ggrep import (
     is_like_any,
     filter_tree,
 )
-
-MY_DIR = os.path.dirname(os.path.realpath(__file__))
-# MODULE_DIR = os.path.dirname(MY_DIR)
-TEST_DATA_DIR = os.path.join(MY_DIR, "data")
-
-assert os.path.isdir(TEST_DATA_DIR)
-
 
 class TestGrepStringMethods(unittest.TestCase):
 
@@ -170,7 +174,9 @@ class TestGrepStringMethods(unittest.TestCase):
                 )
                 echo0('  - only_this_deeper_one_should_be_kept="{}"'
                       ''.format(only_this_deeper_one_should_be_kept))
-                assert only_this_deeper_one_should_be_kept in path
+
+                self.assertIn(only_this_deeper_one_should_be_kept, path)
+                # ^ *substring* in *string* (not a list)
             if "filter_rel_but_only_dir" in path:
                 if exclusion in path:
                     found_exclusion = True
@@ -179,3 +185,7 @@ class TestGrepStringMethods(unittest.TestCase):
                     found_not_filtered_file = True
         assert found_not_filtered_file
         assert found_exclusion
+
+
+if __name__ == "__main__":
+    unittest.main()

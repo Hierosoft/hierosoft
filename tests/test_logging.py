@@ -4,17 +4,17 @@ import unittest
 import sys
 import os
 
-my_dir = os.path.dirname(os.path.abspath(__file__))
-module_dir = os.path.dirname(my_dir)
-repo_dir = os.path.dirname(module_dir)
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_DIR = os.path.dirname(TESTS_DIR)
 
 if __name__ == "__main__":
-    sys.path.insert(0, repo_dir)
+    sys.path.insert(0, REPO_DIR)
 
 if sys.version_info.major < 3:
     print("[test_logging] using Python 2 shims for logging.",
           file=sys.stderr)
-    import hierosoft.morelogging as logging
+    # import hierosoft.morelogging as logging
+    import hierosoft.logging2 as logging
 else:
     print("[test_logging] using Python 3 logging.",
           file=sys.stderr)
@@ -125,9 +125,12 @@ class TestLogging(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
     # testcase = TestLogging()
     # for name in dir(testcase):
     #     if name.startswith("test"):
     #         fn = getattr(testcase, name)
     #         fn()  # Look at def test_* for the code if tracebacks start here
+    # ^ constructor fails on Python 2:
+    #   ValueError: no such test method in <class '__main__.TestAlgorithms'>: runTest
+    #   so:
+    unittest.main()
