@@ -107,6 +107,10 @@ else:
 
 # endregion Polyfills that can be copied to other files
 
+if sys.version_info.major >= 3:
+    from time import perf_counter
+else:
+    from timeit import default_timer as perf_counter
 
 if sys.version_info.major < 3:
     import time
