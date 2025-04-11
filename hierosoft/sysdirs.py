@@ -9,48 +9,20 @@ from hierosoft.morelogging import (
     echo2,
     echo3,
 )
+from hierosoft.readonlydict import ReadOnlyOrderedDict
 
 if sys.version_info.major < 3:
     FileNotFoundError = IOError
     ModuleNotFoundError = ImportError
     NotADirectoryError = OSError
 
-
-class Constants(dict):
-    """Read-only Dictionary.
-
-    based on https://stackoverflow.com/a/19023331/4541104
-    """
-
-    # "$" and "%" are *mixed intentionally* since the blnk file may have
-    #   come from another OS:
-
+class PlatformReadOnlyDict(ReadOnlyOrderedDict):
     def __init__(self):
-        dict.__init__(self)
-        self.__readonly = False
+        ReadOnlyOrderedDict.__init__(self)
         self._substitutions = {
             "$CLOUD": None,
             "%CLOUD%": None,
         }  # ^ CLOUD values are set in check_cloud.
-
-    def readonly(self, readonly=True):
-        """Allow or deny modifying dictionary"""
-        if readonly is None:
-            readonly = False
-        elif readonly not in (True, False):
-            raise TypeError("readonly should be True or False (got %s)"
-                            % (readonly))
-        self.__readonly = readonly
-
-    def __setitem__(self, key, value):
-        if self.__readonly:
-            raise TypeError("__setitem__ is not supported")
-        return dict.__setitem__(self, key, value)
-
-    def __delitem__(self, key):
-        if self.__readonly:
-            raise TypeError("__delitem__ is not supported")
-        return dict.__delitem__(self, key)
 
     def substitutions(self):
         self._substitutions.update({
@@ -365,7 +337,7 @@ class Constants(dict):
                       % (try_cloud_profile_dir))
 
 
-sysdirs = Constants()  # Call .readonly() after vars are set below.
+sysdirs = PlatformReadOnlyDict()  # Call .readonly() after vars are set below.
 sysdirs.init_platform(platform.system())
 sysdirs.sanity_check()
 sysdirs.init_cloud()

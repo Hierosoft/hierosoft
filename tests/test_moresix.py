@@ -37,6 +37,5 @@ class TestMoreSix(unittest.TestCase):
             # datetime.datetime instance has no timestamp method in Python 2
 
 
-
 if __name__ == "__main__":
     unittest.main()
