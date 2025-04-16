@@ -1081,9 +1081,6 @@ def rewrite_conf(sc_src_path, desktop_sc_path, metadata,
         return not_added_data
 
 
-# TODO: combine rewrite_conf_str with rewrite_conf (rewrite_conf_str was
-#   named rewrite_conf when install-lmk was a dependency-free script in
-#   EnlivenMinetest [It now depends on hierosoft and nopackage])
 def rewrite_conf_str(src, dst, changes={}):
     """Install a conf such as an XDG desktop shortcut with changes.
 
@@ -1177,6 +1174,18 @@ if sys.version_info.major < 3:
             write0("removing tmp file...")
             sys.stderr.flush()
             os.remove(path)
+
+
+def ord_at(string, idx):
+    if sys.version_info.major >= 3:
+        return string[idx]  # In Python 3 it is already int
+    return ord(string[idx])  # same as: struct.unpack(">B", string[idx])[0]
+
+
+def chr_at(string, idx):
+    if sys.version_info.major >= 3:
+        return chr(string[idx])
+    return string[idx]  # In Python 2 it is still str
 
 
 class ByteConf(Byter):
