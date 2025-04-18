@@ -112,6 +112,7 @@ def crc16_ccit_false(data, offset=0, length=None):
                 crc = crc << 1
     return crc & 0xFFFF
 
+
 def to_hex(bytestring, delimiter=""):
     '''
     Represent the binary as an ASCII string of hexadecimal characters.
