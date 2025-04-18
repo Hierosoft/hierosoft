@@ -5,6 +5,11 @@ from collections import OrderedDict
 class ReadOnlyOrderedDict(OrderedDict):
     """Read-only ordered dictionary.
 
+    This was created since:
+    - frozendict was rejected as PEP 416 (but is available as a package)
+    - MappingProxyType (read-only proxy, not immutable per se) is
+      similar to immutable frozendict, but is not available in Python 2.
+
     based on https://stackoverflow.com/a/19023331/4541104
     """
 
