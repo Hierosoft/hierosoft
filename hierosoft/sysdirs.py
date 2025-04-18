@@ -88,7 +88,6 @@ class PlatformReadOnlyDict(ReadOnlyOrderedDict):
             echo3('Skipping optional dependency: %s' % (ex))
 
     def init_platform(self, os_name):
-
         # For semi-standard folders on Windows and Darwin see
         # <johnkoerner.com/csharp/special-folder-values-on-windows-versus-mac/>
         self['PREFIX'] = os.environ.get('PREFIX')
@@ -134,9 +133,12 @@ class PlatformReadOnlyDict(ReadOnlyOrderedDict):
             self['CACHES'] = os.path.join(self['LOCALAPPDATA'], "Caches")
             self['USER_PROGRAMS'] = os.path.join(self['LOCALAPPDATA'],
                                                  "Programs")
-            self['TMP'] = os.environ.get("TMPDIR")
-            if not self['TMP']:
-                os.path.join(self['LOCALAPPDATA'], "Temp")
+            # self['TMP'] = os.environ.get("TMPDIR")
+            # if not self['TMP']:
+            #     self['TMP'] = os.environ.get("TEMP")
+            # TODO: ^ Ok on Windows 11. Test on Windows 7 before uncommenting
+            # if not self['TMP']:
+            os.path.join(self['LOCALAPPDATA'], "Temp")
             if self['PREFIX'] is None:
                 self['PREFIX'] = self['LOCALAPPDATA']
             self['PIXMAPS'] = self['PREFIX']
@@ -267,6 +269,8 @@ class PlatformReadOnlyDict(ReadOnlyOrderedDict):
 
         self['LOCAL_BIN'] = \
             os.path.join(self['PREFIX'], "bin")  # formerly localBinPath
+        for key, value in self:
+            assert value is not None
 
     def init_cloud(self):
         # self['HOME'] = None  # formerly profile
