@@ -13,12 +13,7 @@ from hierosoft import (
     echo2,
     write0,
 )
-
-
-BYTE_STR_TYPES = (bytes, bytearray)
-if sys.version_info.major < 3:
-    # In Python 2, str is same as bytes (not unicode)
-    BYTE_STR_TYPES = (bytes, bytearray, str)
+from hierosoft import moresix
 
 
 def crc16_buypass(data):
@@ -120,13 +115,12 @@ def to_hex(bytestring, delimiter=""):
     bytestring.hex(" "). Therefore, this function is only for
     backward compatibility.
 
-    Sequential arguments:
-    binary -- A "bytes" or "bytearray" object.
-
-    Keyword arguments:
-    delimiter -- Place this between each byte (each hex pair).
+    Args:
+        binary (six.binary_type): Any bytes list.
+        delimiter (str, optional): Place this between each byte
+            (to separate each resulting hex pair).
     '''
-    assert isinstance(bytestring, BYTE_STR_TYPES)
+    assert isinstance(bytestring, moresix.binary_types)
 
     # import binascii
     if (delimiter is not None) and (len(delimiter) > 0):

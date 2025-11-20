@@ -33,6 +33,7 @@ import sys
 # endregion Polyfills that can be copied to other files
 # (or use moresix.subprocess_run etc. explicitly to avoid that)
 import subprocess
+import six
 
 if sys.version_info.major < 3:
     FileNotFoundError = IOError
@@ -115,6 +116,43 @@ else:
 if sys.version_info.major < 3:
     import time
 
+# binary_types (list[type]): denotes all types that can be written to a
+#   binary buffer and be assumed to be encoded in Python 3 (Python 2
+#   requires you to track that state in your code if it is str, since
+#   bytes is just an alias of str).
+#   - six has six.binary_type but not binary_types
+binary_types = (bytes, bytearray)
+if sys.version_info.major < 3:
+    # In Python 2, str is alias of bytes (is not unicode)
+    binary_types = (bytes, bytearray, str)
+# formerly BYTESTRING_TYPES formerly BYTE_STR_TYPES
+LXML_STR_ENCODING = None if sys.version_info.major == 2 else "unicode"
+# ^ always produces str even if None in Python 2, but encoding="unicode"
+#   is required for lxml.etree.tostring to produce a str in Python 3
+
+
+def equals_binary(valuesA, valuesB):
+    # since six.ensure_binary doesn't work on mmap
+    if len(valuesA) != len(valuesB):
+        return False
+    for i, a in enumerate(valuesA):
+        b = valuesB[i]
+        ord_b = b
+        ord_a = a
+        if isinstance(a, str):  # Python 2
+            assert len(a) == 1
+            ord_a = ord(a)
+        else:
+            assert isinstance(ord_a, int)
+        if isinstance(b, str):  # Python 2
+            assert len(b) == 1
+            ord_b = ord(b)
+        else:
+            assert isinstance(ord_b, int)
+        if ord_a != ord_b:
+            return False
+    return True
+
 
 def datetime_timestamp(now, emulate_python2=False):
     """Convert a datetime object to a timestamp (seconds).
@@ -146,3 +184,10 @@ def datetime_timestamp(now, emulate_python2=False):
         # now.replace(tzinfo=timezone.utc).timestamp()
     return time.mktime(now.timetuple())  # round in Python 2
     #   (accurate to the second) but still float
+
+
+def ensure_str_or_none(s):
+    if s is None:
+        return None
+    return six.ensure_str(s)
+
