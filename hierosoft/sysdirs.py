@@ -269,7 +269,7 @@ class PlatformReadOnlyDict(ReadOnlyOrderedDict):
 
         self['LOCAL_BIN'] = \
             os.path.join(self['PREFIX'], "bin")  # formerly localBinPath
-        for key, value in self:
+        for key, value in self.items():
             assert value is not None
 
     def init_cloud(self):
