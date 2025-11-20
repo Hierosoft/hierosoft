@@ -9,10 +9,10 @@ This module can't import hierosoft or it would be a circular dependency
 from __future__ import print_function
 from __future__ import division
 import inspect
+import re
 import sys
 import traceback
 import os
-import re
 import warnings
 
 from collections import OrderedDict
@@ -29,13 +29,32 @@ echo_multiline = True
 STACK_ELEMENT_FRAME_IDX = 0
 STACK_ELEMENT_FUNCTION_IDX = 3
 
+verbosity = 2  # 2 to mimic Python 3 logging default WARNING (30)
+
 space_nospace_rc = re.compile(r'(\s*)(.*)')
 
+log_path = "stderr.txt"  # None for no file-based logging
 
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
 
 # import hierosoft.moreweb  # avoid this--circular import
+
+
+def set_echo_multiline(enable):
+    global echo_multiline
+    if enable not in (True, False):
+        raise ValueError(
+            "Expected True or False for enable, got {}".format(enable))
+    echo_multiline = enable
+
+
+def set_echo_stack_trace(enable):
+    global echo_stack_trace
+    if enable not in (True, False):
+        raise ValueError(
+            "Expected True or False for enable, got {}".format(enable))
+    echo_stack_trace = enable
 
 
 to_log_level = {
@@ -50,7 +69,6 @@ to_log_level = {
 
 verbosity_levels = [False, True, 0, 1, 2, 3, 4]
 
-verbosity = 2  # 2 to mimic Python 3 logging default WARNING (30)
 for _arg_i in range(1, len(sys.argv)):
     arg = sys.argv[_arg_i]
     if arg.startswith("--"):
@@ -58,6 +76,34 @@ for _arg_i in range(1, len(sys.argv)):
             verbosity = 1
         elif arg == "--debug":
             verbosity = 2
+
+
+def formatted_ex(ex):
+    """Similar to traceback.format_exc but works on any not just current
+    (traceback.format_exc only uses exception occurring, not argument!)
+    """
+    return "{}: {}".format(type(ex).__name__, ex)
+
+
+def view_traceback(indent="", min_indent=None):
+    """Write the traceback to stderr.
+
+    Deprecations:
+    min_indent keyword argument
+
+    Args:
+        min_indent (Optional[str]): indent each line of output this
+            much.
+    """
+    if min_indent is not None:
+        raise ValueError("min_indent is deprecated. Use indent.")
+    # # echo0(min_indent+str(ex_type))
+    # # echo0(min_indent+str(ex))
+    # echo0("{}{} {}: ".format(indent, ex_type, ex))
+    # traceback.print_tb(tb)
+    echo0(get_traceback(indent=indent))
+    # del tb
+    echo0("")
 
 
 def is_enclosed(value, start, end):
@@ -100,7 +146,8 @@ def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None):
             an iterable will be processed recursively first.
         quote_if_like_str (Optional[bool]): Do not use this option, or
             your hr_repr calls will be incompatible with
-            pprint.hr_repr--This option is only for recursion. Add
+            (will have call signature different from)
+            pprint.pformat--This option is only for recursion. Add
             quotes (not done recursively, since if iterable but not
             is_str_like, the last step which is converting from iterable
             to string adds quotes to all string values). Defaults to
@@ -139,6 +186,8 @@ def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None):
                     parts = {}
                 for key, item in value.items():
                     parts[key] = hr_repr(item, quote_if_like_str=False)
+                if isinstance(parts, OrderedDict):
+                    return str(parts).replace("OrderedDict", "")[1:-1]
                 return parts
             for i, item in enumerate(value):
                 iterated = True
@@ -195,7 +244,7 @@ def write0(msg, traceback_start=2, stack_trace=True):
         traceback_start (int, optional): Where to start in the traceback
             (set automatically). Defaults to 2.
         stack_trace (bool, optional): Show the stack trace as a prefix
-            in square brackets. Defaults to echo_stack_trace.
+            in square brackets. Defaults to True.
 
     Returns:
         bool: Whether message is shown (always True, but returned to
@@ -203,7 +252,6 @@ def write0(msg, traceback_start=2, stack_trace=True):
     """
     return echo0(msg, traceback_start=traceback_start, add_newline=False,
                  stack_trace=stack_trace)
-
 
 
 def write1(msg):
@@ -230,20 +278,30 @@ def write4(msg):
     return write0(msg, traceback_start=3)
 
 
-def set_echo_multiline(enable):
-    global echo_multiline
-    if enable not in (True, False):
-        raise ValueError(
-            "Expected True or False for enable, got {}".format(enable))
-    echo_multiline = enable
+def _print(*args, **kwargs):
+    print(*args, **kwargs)
+    if log_path is None:
+        return True
+    with open(log_path, 'a') as stream:
+        kwargs['file'] = stream
+        print(*args, **kwargs)
+    return True
 
 
-def set_echo_stack_trace(enable):
-    global echo_stack_trace
-    if enable not in (True, False):
-        raise ValueError(
-            "Expected True or False for enable, got {}".format(enable))
-    echo_stack_trace = enable
+def _write(msg):
+    sys.stderr.write(msg)
+    if log_path is None:
+        return True
+    with open(log_path, 'a') as stream:
+        stream.write(msg)
+    return True
+
+
+def _flush():
+    if log_path is None:
+        sys.stderr.flush()
+        return
+    # else nothing to do (written in realtime)
 
 
 def echo0_long(*args, **kwargs):  # formerly prerr
@@ -402,11 +460,11 @@ def echo0(*args, **kwargs):
             if 'file' not in kwargs:
                 kwargs['file'] = sys.stderr
                 # ^ this way prevents dup named arg in print
-            print(*args, **kwargs)
+            _print(*args, **kwargs)
         else:
             if args and args[0]:
-                sys.stderr.write(args[0])
-                sys.stderr.flush()
+                _write(args[0])
+                _flush()
         return
 
     stack = inspect.stack()
@@ -446,15 +504,15 @@ def echo0(*args, **kwargs):
 
     if add_newline:
         kwargs['file'] = sys.stderr
-        print(*args, **kwargs)
+        _print(*args, **kwargs)
     else:
         if args and args[0]:
-            sys.stderr.write(args[0])
-            sys.stderr.flush()
+            _write(args[0])
+            _flush()
 
     if line2 and args and args[0]:
         if add_newline:
-            print(line2, file=sys.stderr)
+            _print(line2, file=sys.stderr)
         # else line isn't over yet, so do not show line2
         #   (add_newline is expected later in client code
         #   if add_newline is False this time.)
@@ -542,33 +600,6 @@ def get_traceback(indent=""):
     del tb
     return msg
 
-
-def formatted_ex(ex):
-    """Similar to traceback.format_exc but works on any not just current
-    (traceback.format_exc only uses exception occurring, not argument!)
-    """
-    return "{}: {}".format(type(ex).__name__, ex)
-
-
-def view_traceback(indent="", min_indent=None):
-    """Write the traceback to stderr.
-
-    Deprecations:
-    min_indent keyword argument
-
-    Args:
-        min_indent (Optional[str]): indent each line of output this
-            much.
-    """
-    if min_indent is not None:
-        raise ValueError("min_indent is deprecated. Use indent.")
-    # # echo0(min_indent+str(ex_type))
-    # # echo0(min_indent+str(ex))
-    # echo0("{}{} {}: ".format(indent, ex_type, ex))
-    # traceback.print_tb(tb)
-    echo0(get_traceback(indent=indent))
-    # del tb
-    echo0("")
 
 
 # syntax_error_fmt = "{path}:{row}:{column}: {message}"
