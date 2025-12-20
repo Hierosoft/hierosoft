@@ -162,6 +162,12 @@ class HierosoftUpdate(object):
     }
 
     def __init__(self, parent, root, options, status_var=None):
+        # region deprecated _init_single_app
+        self.version_e = None
+        self.arch_e = None
+        self.pflag_e = None
+        # engregion deprecated _init_single_app
+
         # For docstring see class.
         self.root = None
         # region for d_done
@@ -984,6 +990,7 @@ def construct_gui(root, app):
     #   # icon_file.write(BLANK_PAGE_ICON)
     #   # icon_file.write(transparent_png)
     #   # root.iconbitmap(default=icon_file.name)
+    print("Loading splash screen {} byte(s)".format(len(white_png)))
     photo = tk.PhotoImage(
         # data=transparent_png,  # Doesn't work (black; tested on Windows 10)
         # data=hierosoft_16px_png,  # Only for main window not splash screen
