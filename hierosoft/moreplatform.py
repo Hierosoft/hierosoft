@@ -63,12 +63,14 @@ if sys.version_info.major < 3:
     FileNotFoundError = IOError
     FileExistsError = IOError
 
-# TODO: if shlex is used, do:
+# TODO: if shlex is used, do (or contribute code to six?):
 """
 if sys.version_info.major > 3 and sys.version_info.minor > 8:
     shlex_join = shlex.join
 else:
+    import pipes  # deprecated, slated for removal in 3.13
     def shlex_join(parts):
+        return ' '.join(pipes.quote(arg) for arg in split_command)
         result = ""
         sep = ""
         for part in parts:
