@@ -48,6 +48,11 @@ APP_ICONS_PATHS = [  # which_pixmap checks others beyond DEFAULT_CONTEXT
     os.path.join("/usr/local/share/icons/hicolor/scalable", DEFAULT_CONTEXT),
 ]
 
+if sys.version_info.major < 3:
+    FileNotFoundError = IOError
+    FileExistsError = IOError
+    ModuleNotFoundError = ImportError
+
 try:
     import gi
     gi.require_version('Gtk', '3.0')
@@ -58,10 +63,6 @@ except ModuleNotFoundError:
           .format(APP_ICONS_PATHS))
     pass
 
-
-if sys.version_info.major < 3:
-    FileNotFoundError = IOError
-    FileExistsError = IOError
 
 # TODO: if shlex is used, do (or contribute code to six?):
 """

@@ -26,6 +26,9 @@ import threading
 # import zipfile
 # import platform
 import copy
+
+from hierosoft.morelogging import formatted_ex
+from hierosoft.logging2 import getLogger
 # import time
 
 if sys.version_info.major >= 3:  # try:
@@ -59,6 +62,9 @@ REPO_DIR = os.path.dirname(MODULE_DIR)
 if __name__ == "__main__":
     if os.path.isfile(os.path.join(REPO_DIR, "hierosoft", "__init__.py")):
         sys.path.insert(0, REPO_DIR)  # find hierosoft if running gui_tk.py
+    logger = getLogger(__file__)
+else:
+    logger = getLogger(__name__)
 
 # Dependencies are ok since:
 # - On Windows, PowerShell script can install Python & run moreweb to get repo
@@ -137,17 +143,18 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
             *args,
             row=self.auto_row,
             column=self.auto_column,
-            **combined_kwargs,
+            **combined_kwargs
         )
         self.auto_row += 1
 
     def addField(self, widget, *args, **kwargs):
+        all_kwargs = copy.deepcopy(self.widget_kwargs)
+        all_kwargs.update(kwargs)
         widget.grid(
             *args,
             row=self.auto_row,
             column=self.auto_column,
-            **self.widget_kwargs,
-            **kwargs,
+            **all_kwargs
         )
         self.auto_column += 1
 
@@ -261,7 +268,11 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         self.gray_download_image = self.get_gray_photoimage(icon_download_png)
         self.library_image = self.get_gray_photoimage(icon_library_png)
         # download_icon =
-        ttk.Label(root, image=self.gray_download_image).grid(padx=10, pady=10)
+        try:
+            ttk.Label(root, image=self.gray_download_image).grid(padx=10, pady=10)
+        except tk.TclError as ex:
+            print("[HierosoftUpdateFrame __init__] {}".format(formatted_ex(ex)))
+            ttk.Label(root, text="Downloading...").grid(padx=10, pady=10)
         ttk.Button(
             root,
             text="This version is a work in progress.",
@@ -317,7 +328,6 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         base_h = 300
         # self.root.geometry('300x' + str(base_h))
         # self.option_entries['']
-        self.version_e = None
         self.del_arc_var = tk.IntVar()
 
         # ^ contains self.mgr.profile_path
@@ -459,12 +469,19 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         """Override superclass: load variables from GUI
         """
         # formerly load_user_settings
-        key_fields = {
-            "version": self.version_e,  # key used by only_v property
-            "arch": self.arch_e,  # key used by only_a property
-            "platform": self.pflag_e,  # key used by only_p property
-        }
-        for key, field in key_fields.items():
+        key_widgets = {}
+        if self.version_e is not None:
+            key_widgets['version'] = self.version_e
+            logger.warning("No version widget (Can't use _init_single_app mode.)")
+        if self.arch_e is not None:
+            key_widgets['arch'] = self.arch_e
+            logger.warning("No arch widget (Can't use _init_single_app mode.)")
+        if self.pflag_e is not None:
+            key_widgets['platform'] = self.pflag_e
+            logger.warning("No platform widget (Can't use _init_single_app mode.)")
+
+        key_fields = {}
+        for key, field in key_widgets.items():
             value = field.get().strip()
             if len(value) == 0:
                 value = None
@@ -624,11 +641,14 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
             echo0("")
             echo0(prefix+"Starting refresh thread...")
             self.thread1 = threading.Thread(target=self.refresh_ui, args=())
-            self.refresh_btn.config(state=tk.DISABLED)
+            if self.refresh_btn is not None:
+                self.refresh_btn.config(state=tk.DISABLED)
+            else:
+                logger.warning("refresh button not initialized.")
             self.root.update()
             self.thread1.start()
         else:
-            echo0("WARNING: Refresh is already running.")
+            logger.warning("Refresh is already running.")
 
     def refresh_click(self):
         self.start_refresh()
