@@ -165,6 +165,7 @@
 			"pyimage",
 			"pythonw",
 			"pyval",
+			"pyvenv",
 			"readonlydict",
 			"redir",
 			"regedit",
