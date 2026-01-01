@@ -26,6 +26,7 @@ import threading
 # import zipfile
 # import platform
 import copy
+import warnings
 
 from hierosoft.morelogging import formatted_ex
 from hierosoft.logging2 import getLogger
@@ -123,6 +124,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         root (tk.Tk): The actual tk root
         parent: root, or a frame of any kind.
     """
+    instances = 0
 
     @classmethod
     def get_help(cls, key):
@@ -159,6 +161,9 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         self.auto_column += 1
 
     def __init__(self, parent, root, options, *args, **kwargs):
+        HierosoftUpdateFrame.instances += 1
+        if HierosoftUpdateFrame.instances > 1:
+            raise RuntimeError("More than one instance is not supported.")
         # docstring is in class (in Sphinx it can only be here/there not both)
         # This region exists since the d_done code now contains the
         #   download code that was formerly synchronous and occurred
@@ -202,8 +207,24 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
 
         self.root.minsize(600, 400)
         # self.root.geometry("1000x600")  # See later call below instead
+        self.widget_kwargs = {
+            'padx': 5,
+            'pady': 10,
+            'sticky': "nsew",
+        }
+        self.container = root  # changed after innerFrame & bottom widgets
+        innerFrame = ttk.Frame(self.root)
+        self.addRow(innerFrame, sticky='we')
 
-        self.container = self.root
+        self.pbar = ttk.Progressbar(self.container)
+        # orient="horizontal", length=200, mode="determinate"
+        self.addRow(self.pbar, sticky='we')
+
+        self.count_label = ttk.Label(self.container, text="")  # at bottom
+        self.addRow(self.count_label, sticky='we')
+
+        self.container = innerFrame
+        self.auto_row = 0  # reset to 0 since new container is innerFrame
 
         title_s = options.get('title')
         if title_s is None:
@@ -216,11 +237,6 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         # Formerly global:
         self.thread1 = None
         self.shown_progress = 0
-        self.widget_kwargs = {
-            'padx': 5,
-            'pady': 10,
-            'sticky': "nsew",
-        }
         # self._init_single_app(options)  # old blendernightly style
         screen_w = root.winfo_screenwidth()
         screen_h = root.winfo_screenheight()
@@ -269,9 +285,20 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         self.library_image = self.get_gray_photoimage(icon_library_png)
         # download_icon =
         try:
-            ttk.Label(root, image=self.gray_download_image).grid(padx=10, pady=10)
+            self.dlImageLabel = ttk.Label(root, image=self.gray_download_image)
+            self.dlImageLabel.photoimage = self.gray_download_image
+            # self.dlImageLabel.image = self.gray_download_pil_image
+            self.dlImageLabel.grid(padx=10, pady=10)
         except tk.TclError as ex:
-            print("[HierosoftUpdateFrame __init__] {}".format(formatted_ex(ex)))
+            # NOTE:
+            # _tkinter.TclError: image "pyimage4" doesn't exist
+            # occurs if the PhotoImage is disposed:
+            # - no references remain
+            # - OR master argument not set in PhotoImage constructor
+            print("[HierosoftUpdateFrame __init__] {}".format(
+                formatted_ex(ex)))
+            if "doesn't exist" in str(ex):
+                warnings.warn("- The image was disposed!")
             ttk.Label(root, text="Downloading...").grid(padx=10, pady=10)
         ttk.Button(
             root,
@@ -283,6 +310,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         # TODO: Show app_meta.get('news')
 
     def get_photoimage(self, png_data):
+        # type: (bytes) -> ImageTk.PhotoImage
         """Get an image, generally a hierosoft packed image.
         For use with ImageEnhance see the get_gray_photoimage method instead.
 
@@ -293,7 +321,9 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         Returns:
             PhotoImage: You *must* use return to set a variable in
                 object or higher scope or garbage collection will
-                destruct the image!
+                destroy the image!
+                - That can also be caused by no master in PhotoImage
+                  constructor but that is done here.
                 - The return is not compatible with ImageEnhance
                   ("no attribute 'convert'")--see get_gray_photoimage
                   method.
@@ -304,6 +334,12 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         )
 
     def get_gray_photoimage(self, png_data):
+        # type: (bytes) -> ImageTk.PhotoImage
+        # # type: (bytes) -> tuple[ImageTk.PhotoImage, tk.Image]
+        """Convert binary data to *gray* PhotoImage.
+        See get_photoimage for details.
+        """
+        assert png_data is not None, "png_data is None"
         image_io = io.BytesIO(png_data)
         # self.download_image = Image.frombuffer(...)
         with Image.open(image_io) as white_image:
@@ -312,7 +348,9 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         # Contrast: See <https://stackoverflow.com/a/64993814/4541104>
         imgMod = contrast.enhance(.25)
         # Now convert to PIL Image to a Tk PhotoImage:
-        return ImageTk.PhotoImage(imgMod)
+        return ImageTk.PhotoImage(imgMod, master=self.root)  # , imgMod
+        # NOTE: ^ *MUST* specify master, or will get disposed
+        #   non-deterministically!
 
     def _init_single_app(self, options):
         """This method is deprecated,
@@ -346,13 +384,6 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                                       command=self.refresh_click)
         self.addRow(self.refresh_btn, sticky='we')
         # ^ sticky='we' is like pack with fill='w'
-
-        self.pbar = ttk.Progressbar(self.container)
-        # orient="horizontal", length=200, mode="determinate"
-        self.addRow(self.pbar, sticky='we')
-
-        self.count_label = ttk.Label(self.container, text="")  # at bottom
-        self.addRow(self.count_label, sticky='we')
 
         news = options.get('news')
         if news:
@@ -490,7 +521,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                     # space-separated values
                     value = value.split()
             key_fields[key] = value
-        self.set_all_options(key_fields, False)
+        self.set_all_options(key_fields, False, require_bin=False)
 
     def refresh_ui(self):
         # prefix = "[refresh_ui] "
@@ -640,6 +671,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         if self.thread1 is None:
             echo0("")
             echo0(prefix+"Starting refresh thread...")
+            # Requires self.count_label:
             self.thread1 = threading.Thread(target=self.refresh_ui, args=())
             if self.refresh_btn is not None:
                 self.refresh_btn.config(state=tk.DISABLED)
