@@ -396,7 +396,7 @@ sources_json = """{
           "html_url": "https://minetest.io/downloads/launcher.php",
           "must_contain": "/Hierosoft/hierosoft/archive/refs/heads/main.zip",
           "title": "Hierosoft Launcher",
-          "version": "current"
+          "version": null
         }
       ]
     },

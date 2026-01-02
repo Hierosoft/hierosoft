@@ -8,6 +8,8 @@ import re
 import shutil
 import sys
 
+from hierosoft import ALREADY_LAUNCHED
+
 
 dst_python_scripts = os.path.dirname(sys.executable)
 dst_python_env = os.path.dirname(dst_python_scripts)
@@ -45,9 +47,6 @@ if os.path.isfile(os.path.join(dst_python_env, "pyvenv.cfg")):
     else:
         print("[run] Using {}".format(dst_tcl))
 
-from hierosoft.gui_tk import main as gui_main  # noqa: E402
-from hierosoft.moreweb.hierosoftupdate import main as update_main  # noqa: E402
-
 
 def main():
     prefix = "[main] "
@@ -58,10 +57,15 @@ def main():
             continue  # skip the script (not an arg)
         if arg == "--offline":
             enable_web = False
+        elif arg == ALREADY_LAUNCHED:
+            enable_web = False
+    print("[run main] Ran as: {}".format(" ".join(sys.argv)))
     if enable_web:
+        from hierosoft.moreweb.hierosoftupdate import main as update_main  # noqa: E402,E501
         print(prefix+"Running with web...", file=sys.stderr)
         sys.exit(update_main())
     else:
+        from hierosoft.gui_tk import main as gui_main  # noqa: E402
         print(prefix+"Running without web...", file=sys.stderr)
         sys.exit(gui_main())
 
