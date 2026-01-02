@@ -3,6 +3,7 @@ from __future__ import print_function
 import binascii
 import os
 import shutil
+import six
 import sys
 import re
 import tempfile
@@ -128,7 +129,9 @@ def to_hex(bytestring, delimiter=""):
             return " ".join(["{:02x}".format(x) for x in bytestring])
         else:
             return " ".join(["%02x" % ord(x) for x in bytestring])
-
+    # TODO: ?
+    # if sys.version_info.major < 3:
+    #     return binascii.hexlify(bytestring)  # no delimiter
     return binascii.hexlify(bytestring).decode('utf-8')  # no delimiter
 
 
@@ -279,11 +282,11 @@ class Byter:
     # TODO: merge this code with newer rewrite_conf (may be more
     #   fault-tolerant)
     def __init__(self):
-        self.path = None
-        self.comment_marks = [b"#"]
-        self.assignment_operators = [b":"]
-        self.padded_assignment_operator = b":"
-        self.newline = os.linesep.encode('utf-8')
+        self.path = None  # type: str
+        self.comment_marks = [b"#"]  # type: list[bytes]
+        self.assignment_operators = [b":"]  # type: list[bytes]
+        self.padded_assignment_operator = b":"  # type: bytes
+        self.newline = os.linesep.encode('utf-8')  # type: bytes
         self.changes = 0
 
     def load(self, path):
@@ -292,7 +295,7 @@ class Byter:
         self.cursor = 0
         self.path = path
         i = -1
-        self.newline = None
+        self.newline = None  # type: bytes
         while True:
             i += 1
             if i >= len(self.data):
@@ -666,7 +669,7 @@ def without_comments(style_str, enclosures=None):
         SyntaxError: _description_
 
     Returns:
-        _type_: _description_
+        str: Style string only, wrapped in enclosures.
     """
     if enclosures is None:
         if isinstance(style_str, (bytes, bytearray)):
@@ -675,6 +678,13 @@ def without_comments(style_str, enclosures=None):
         else:
             enclosures = ("/*", "*/")
             squo = "'"
+    elif isinstance(enclosures[0], (bytes, bytearray)):
+        squo = b"'"
+    else:
+        squo = "'"
+    assert len(enclosures) == 2
+    assert isinstance(enclosures[0], type(style_str))
+    assert isinstance(enclosures[1], type(style_str))
     starter = enclosures[0]
     ender = enclosures[1]
     while True:
@@ -698,6 +708,7 @@ newlineStrRE = re.compile(r"[\r\n]")
 
 
 def split_before_newlines(spacing_and_newline):
+    # type: (str|bytes|bytearray) -> tuple[str,str]|tuple[bytes,bytes]
     """Split the line from the newline.
 
     Args:
@@ -716,7 +727,10 @@ def split_before_newlines(spacing_and_newline):
         newlineRE = newlineStrRE
     match = newlineRE.search(spacing_and_newline)
     if not match:
-        return (spacing_and_newline, "")
+        if isinstance(spacing_and_newline, (bytes, bytearray)):
+            return (spacing_and_newline, b"")
+        else:
+            return (spacing_and_newline, "")
     return (
         spacing_and_newline[:match.span()[0]],
         spacing_and_newline[match.span()[0]:]
@@ -724,6 +738,7 @@ def split_before_newlines(spacing_and_newline):
 
 
 def keep_strip(value_and_spacing):
+    # type:(str|bytes|bytearray) -> tuple[str,str,str]|tuple[bytes,bytes,bytes]
     """Split a string into spacing, non-spacing, spacing.
 
     Args:
@@ -794,9 +809,9 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
         echo0("Warning: performance may be slow"
               " due to no precompiled regex for %s"
               % repr(sign))
-        spaceOpSpace = re.compile(type(sign)(r"[^\S\r\n]*")
+        spaceOpSpace = re.compile(moresix.ensure_type(r"[^\S\r\n]*", type(sign))
                                   + re.escape(sign)
-                                  + type(sign)(r"[^\S\r\n]*"))
+                                  + moresix.ensure_type(r"[^\S\r\n]*"), type(sign))
     match = spaceOpSpace.search(line_strip)
     if not match:
         where = ""
@@ -830,9 +845,9 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
         )
 
     value = None
-    post_value_spacing = None
-    comment = None
-    line_end = None
+    post_value_spacing = None  # type: str|bytes|bytearray|None
+    comment = None  # type: str|bytes|bytearray|None
+    line_end = None  # type: str|bytes|bytearray|None
     if allow_comment_after_value:
         comment_i = find_not_quoted(rvalue, comment_mark)
         if comment_i > -1:
@@ -913,10 +928,10 @@ class AssignmentInfo:
     POST_VALUE_SPACING = 4
     COMMENT = 5
     LINE_END = 6
-    EMPTY = [None, None, None, None, None, None, None]
+    EMPTY = [None, None, None, None, None, None, None]  # type: list[str]  # noqa:E501  #type:ignore
     # PARTS = EMPTY.copy()
     # ^ list has no attribute copy in Python 2, so:
-    PARTS = EMPTY[:]
+    PARTS = EMPTY[:]  # type: list[str]
     PARTS[INDENT] = "indent"
     PARTS[NAME] = "name"
     PARTS[SIGN_AND_SPACING] = "sign_and_spacing"
@@ -1019,16 +1034,26 @@ def tokenize_conf_line_as_dict(raw_line, allow_comment_after_value, **kwargs):
 
 def rewrite_conf(sc_src_path, desktop_sc_path, metadata,
                  assignment_operator="=", none_string="",
-                 allow_adding=True):
-    """_summary_
+                 allow_adding=True,
+                 allow_comment_after_value=False):
+    """Rewrite a conf file.
+    Alternatives:
+    - https://github.com/pixelb/crudini
 
     Args:
-        sc_src_path (_type_): _description_
-        desktop_sc_path (_type_): _description_
-        metadata (_type_): _description_
-        assignment_operator (str, optional): _description_. Defaults to "=".
-        none_string (str, optional): _description_. Defaults to "".
-        allow_adding (bool, optional): _description_. Defaults to True.
+        sc_src_path (str): Any conf (formerly Shortcut source path).
+        desktop_sc_path (str): Any destination conf (formerly Desktop
+            shortcut path)
+        metadata (dict): Variables name & value pairs for the conf file.
+        assignment_operator (str, optional): Operator to write. Defaults
+            to "=".
+        none_string (str, optional): The null symbol in the given conf
+            file's format. Defaults to "".
+        allow_adding (bool, optional): Allow adding variables from
+            metadata that are not in sc_src_path. Defaults to True.
+        allow_comment_after_value (bool, optional): Allow inline
+            comments. Defaults to False (such as following XDG Desktop
+            Entry specification).
 
     Returns:
         dict: Either None or a dict of values not added.
@@ -1041,6 +1066,7 @@ def rewrite_conf(sc_src_path, desktop_sc_path, metadata,
                 indent, name, sign_and_spacing, value, right_spacing = \
                     tokenize_conf_line(
                         line_orig,
+                        allow_comment_after_value,
                         sign=assignment_operator,
                     )
                 if line_end is None or (len(right_spacing) < len(line_end)):
@@ -1058,13 +1084,14 @@ def rewrite_conf(sc_src_path, desktop_sc_path, metadata,
             line_end = os.linesep
             echo0("Warning: newline detected; using os newline (length=%s)"
                   % len(line_end))
-        not_added_data = None
+        not_added_data = None  # type:dict[str,bytes|bytearray]
         if not allow_adding:
             not_added_data = {}
         for key, value in metadata.items():
             if key not in done_keys:
                 if allow_adding:
-                    outs.write("%s=%s%s" % (key, value, line_end))
+                    outs.write(six.ensure_binary("%s=%s%s")
+                               % (key, value, line_end))
                 else:
                     not_added_data[key] = value
         if allow_adding or (len(not_added_data) < 1):

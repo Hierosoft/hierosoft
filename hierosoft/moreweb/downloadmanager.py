@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import os
 import threading
 
@@ -26,18 +27,22 @@ class DownloadManager:
     for documentation, see DownloadManager.get_help(key) where key is
     the option. If the option is in DownloadPageParser.get_option_keys()
     the HELP key is defined there, but get_help will still work here.
+
+    Attributes:
+        HELP (dict[str, str]): Key is option in self.options, value is
+            description. For further options see DownloadPageParser's
+            get_help.
     '''
     # formerly blendernightly LinkManager (moved to hierosoft by author).
     # TODO: If there are helpful changes in
     #   ~/git/linux-preinstall/everyone/deprecated/LBRY-AppImage.py
     #   then merge them.
     # - Another variant (of the old file_path version of download) is
-    #   in <https://github.com/poikilos/nopackage>.
+    #   in <https://github.com/Hierosoft/nopackage>.
 
-    HELP = {
-        'html_url': "Scrape this web page (only for get_urls method).",
-        'base_url': "Prepend this instead of html_url to found relative URL",
-    }  # For further options see DownloadPageParser's get_help
+    HELP = OrderedDict()
+    HELP['html_url'] = "Scrape this web page (only for get_urls method)."
+    HELP['base_url'] = "Prepend this instead of html_url to found relative URL"
 
     @classmethod
     def get_option_keys(cls):
@@ -50,14 +55,14 @@ class DownloadManager:
         return cls.HELP.get(key)
 
     def __init__(self):
-        self.options = {}
+        self.options = OrderedDict()  # type: OrderedDict[str, str]
         # self.set_options(options)
-        self.profile_path = sysdirs['HOME']
-        self.localappdata_path = sysdirs['LOCALAPPDATA']
-        self.appdata_path = sysdirs['APPDATA']
-        self.parser = None
-        self.download_thread = None
-        self.url = None
+        self.profile_path = sysdirs['HOME']  # type:str
+        self.localappdata_path = sysdirs['LOCALAPPDATA']  # type:str
+        self.appdata_path = sysdirs['APPDATA']  # type:str
+        self.parser = None  # type: DownloadPageParser|None
+        self.download_thread = None  # type: threading.Thread|None
+        self.url = None  # type: str|None
 
     def set_mgr_and_parser_options(self, options):
         """Set options that apply to DownloadManager and DownloadPageParser.
@@ -164,23 +169,25 @@ class DownloadManager:
         return os.path.join(self.profile_path, "Desktop")
 
     def absolute_url(self, rel_href):
-        route_i = rel_href.find("//")
-        html_url = self.options.get('html_url')
-        echo0("found rel_href: " + rel_href)
-        echo0("html_url: " + html_url)
+        route_i = rel_href.find("//")  # type: int
+        html_url = self.options.get('html_url')  # type: str|None
+        assert html_url is not None, \
+            "html_url is required to generate absolute_url"
+        echo0("found rel_href: {}".format(repr(rel_href)))
+        echo0("html_url: {}".format(repr(html_url)))
 
-        relL = rel_href.lower()
+        relL = rel_href.lower()  # type:str
         if relL.startswith("https://") or relL.startswith("http://"):
             return rel_href
         if route_i > -1:
             # assume before '//' is route (not real directory) & remove:
             rel_href = rel_href[route_i+2:]
 
-        base_url = self.options.get('base_url')
+        base_url = self.options.get('base_url')  # type: str|None
         if not base_url:
             base_url = html_url
         else:
-            echo0("base_url: " + html_url)
+            echo0("base_url: {}".format(repr(html_url)))
             full_url = base_url
             if not full_url.endswith("/") and not rel_href.startswith("/"):
                 full_url += "/"

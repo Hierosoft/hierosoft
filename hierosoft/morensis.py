@@ -93,14 +93,16 @@ class NSISInclude:
             file.
         path (str): The path of the file that was loaded (set it
             manually before save if no file was loaded).
+        type (OrderedDict[str,str]): types of vars as defined in an NSIS
+            file.
         vars (OrderedDict): All of the !define names and values.
     """
     def __init__(self):
-        self.path = None
-        self.vars = OrderedDict()
-        self._post_comments = []
-        self._pre_var_comments = OrderedDict()
-        self.types = {}
+        self.path = None  # type: str|None
+        self.vars = OrderedDict()  # type: OrderedDict[str,str|float|int]
+        self._post_comments = []  # type: list[str]
+        self._pre_var_comments = OrderedDict()  # type: OrderedDict[str,list[str]]  # noqa:E501
+        self.types = OrderedDict()  # type: OrderedDict[str,str]
 
     def load(self, path):
         """Load an NSIS include file.
@@ -114,7 +116,7 @@ class NSISInclude:
         self.path = path
         self._post_comments = []
         self._pre_var_comments = OrderedDict()
-        self.types = {}
+        self.types = OrderedDict()
         plain_openers = ["!define /date", "!define"]
         # ^ Starts with larger when overlaps to avoid misidentification
         openers = []

@@ -2,6 +2,7 @@
 from __future__ import print_function
 from __future__ import division
 
+from collections import OrderedDict
 import json
 import os
 import platform
@@ -580,7 +581,7 @@ class HInstaller:
         """
         keeps = self.meta.get('keeps') or []
         replaces = self.meta.get('replaces') or []
-        vars = {}
+        vars = OrderedDict()
 
         vars['src_rel'] = rel
         vars['dst_rel'] = rel

@@ -274,7 +274,7 @@ def install_extracted(extracted_path, dst, event_template=None):
     """
     prefix = "[install_extracted] "
     # move = False
-    names = get_subdir_names(extracted_path)  # Do *not* use os.listdir:
+    names = get_subdir_names(extracted_path) or []  # Do *not* use os.listdir:
     #   (listdir may return hidden files making `== 1` fail below!)
     all_names = list(os.listdir(extracted_path))
     if event_template is None:

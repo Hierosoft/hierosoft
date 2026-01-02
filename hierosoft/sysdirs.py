@@ -150,7 +150,7 @@ class PlatformReadOnlyDict(ReadOnlyOrderedDict):
             #   WhereToPutFiles.html>
             self['PROFILES'] = "/Users"
             self['SHORTCUT_EXT'] = "command"
-            # See also <https://github.com/Poikilos/world_clock>
+            # See also <https://github.com/Hierosoft/world_clock>
 
             self['SHORTCUTS'] = self['DESKTOP']
             # APPDATA = os.path.join(self['HOME'], "Library", "Preferences")
