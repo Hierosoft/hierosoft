@@ -389,11 +389,11 @@ sources_json = """{
     "hierosoft": {
       "sources": [
         {
-          "base_url": "https://github.com",
+          "base_url": "https://minetest.io",
           "bin_names": [
             "run.pyw"
           ],
-          "html_url": "https://github.com/Hierosoft/hierosoft",
+          "html_url": "https://minetest.io/downloads/launcher.php",
           "must_contain": "/Hierosoft/hierosoft/archive/refs/heads/main.zip",
           "title": "Hierosoft Launcher",
           "version": "current"
@@ -494,6 +494,35 @@ hierosoft_16px_png_str = (
 )
 hierosoft_16px_png = zlib.decompress(base64.b64decode(
     hierosoft_16px_png_str.encode('utf-8')
+))
+hierosoft_48px_png_str = (
+    "eJwB5wQY+4lQTkcNChoKAAAADUlIRFIAAAAwAAAAMAgGAAAAVwL5hwAAAAFzUkdCAdnJLH8AA"
+    "AAEZ0FNQQAAsY8L/GEFAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJ"
+    "y6UTwAAAAGYktHRAD/AP8A/6C9p5MAAAAJcEhZcwAAHYYAAB2GAV2iE4EAAAAHdElNRQfqAQI"
+    "DISxQY7QmAAAEK0lEQVRo3u2Z3W9URRjGf27dlSoSC1QuqlXAGmJBwKY2NiERjEgiJPiRcEMo"
+    "4cJw5603BC6I4Q6aYKomVWP8C/DCyAUiJSQ0iJiILS1CDEIlsEA/2C3sR7nos8nJyZmzPTPTL"
+    "iZ9k5PZnDkz7zwz78cz78K81FaecBibAj4B3nGYIw+cBL4DynMN/gegKMUuT1Fzzak8DVwBpj"
+    "w9fwP1tmZgI5PAqMcNuQs8mOtTWAGcAa4COYtdz2nsaaC5lkFgEfAhMJZg8WPAduBZx0DiVX5"
+    "OAODE4xaK3wAmEgCY0Jia7/4CYD8wbuED4xq7oFaLfxP4Eyg4hM8CcBHomMuF1wMHFUVGgeMK"
+    "g0kXPwH0a44ccEj5xYs0AK8ALwDpwPs2KZ0CzgKdQDuQtQTwvuY4q3e/6WSR3lZFq53A5pkAf"
+    "BLoAf4BbgEjwCDwrd5nxV8OBjLnPlECGxPqliPX6wTyOs1TMs+sElxJfb8rbBuly6CowluuAe"
+    "8Fvn8KuODgA8MhCrFVOuLG7IsDcCRmYL9MKiitHnhQW2jOZuB8zPcH4gCsMsTzQWBxxPe9HgB"
+    "EMdElwKUIKzhfzYQANgB/BPjNJLDa4C9jHgBMAJmI+ddI9xRwAziahLFmgL0afM7wzUY5lyuA"
+    "ErDDoOOccsXrSen0Q+CYfp80fLPbExVIAXsMfb/qpEds7gNNagcM/Ge9Ry7zcijfVGRY7Ys2A"
+    "BrUXonoS3vmMGkDgKtqX7IBUMl6Nw0m1u/pIl5W0spF9I2ENjMyksRxHmIW2QX8C3wMPAc8o8"
+    "RWzaxKcsw8cE/3iE8N3xbU1tkAyFQZXAI+U2JZrgS0TMArIKZCv8vAfVGE6zLPXMwa6qpsYiy"
+    "AO2obZ3DBHzA4u6ssVXvbxgeuBbJzraQl5MyJAFQcaF0NAbwWWksiE6rY6tqE9+M0sDAizBZE"
+    "PR7KH2YinaL1OdvYfEbRopqzfyAOP6qFxj3jqkrsVNSKc+C86kZp22pDt6JNRwzIHx140C8xI"
+    "NZK92GXjP+Rokx3DKFzJXO7DXMfle7tLk60TFR20HCMBzwA+N5wsn8pEja6FHdv6m7QBLwV0Z"
+    "/3EGnuR7xr1+1vQE7sJJ1M1/B7ImzRhwntivC9L6XzbV+lwyFVC56PYKyTDosvR9yzG6Vr2Gf"
+    "pcZsUfmMItbYALkREoS/Ut8VnRswAfbL5llDffgcAn4d2eaWSVp/hnuwk78rh+kIMtV0JzKa4"
+    "uyGUuPp0yd80G7wkBfykU+gKmdGgBYDLIbqxS3Mfm82y+2Lxo/9CDn04YXmxHIr/jZrzXoBCz"
+    "5psFqc5HTCllQnL7MUASawTjyqotDjrkgK+Ek/pFd1en9APJlWFblXhuAR8jf2/pollkXJDUT"
+    "H7tnZwpn9ulzQmqzmGmP7DzypJ2cqrKrO7OlxZFech5uV/KI8A/teefrn/TrsAAAAASUVORK5"
+    "CYIJDCyWo"
+)
+hierosoft_48px_png = zlib.decompress(base64.b64decode(
+    hierosoft_48px_png_str.encode('utf-8')
 ))
 icon_app_empty_png_str = (
     "eJwBEwPs/IlQTkcNChoKAAAADUlIRFIAAAAwAAAAMAgGAAAAVwL5hwAAAAZiS0dEAAAAAAAA+"

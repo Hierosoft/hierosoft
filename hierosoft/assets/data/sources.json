@@ -14,11 +14,11 @@
     "hierosoft": {
       "sources": [
         {
-          "base_url": "https://github.com",
+          "base_url": "https://minetest.io",
           "bin_names": [
             "run.pyw"
           ],
-          "html_url": "https://github.com/Hierosoft/hierosoft",
+          "html_url": "https://minetest.io/downloads/launcher.php",
           "must_contain": "/Hierosoft/hierosoft/archive/refs/heads/main.zip",
           "title": "Hierosoft Launcher",
           "version": "current"

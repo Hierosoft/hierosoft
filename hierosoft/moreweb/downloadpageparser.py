@@ -96,7 +96,7 @@ class DownloadPageParser(HTMLParser):
             self.urls = []
             echo0("CLEARED dl list since found <html...")
             # echo0('Links:  # with "{}"'.format(must_contain))
-        echo2(" " * len(self.tag_stack) + "push: " + str(tag))
+        echo3(" " * len(self.tag_stack) + "push: " + str(tag))
         self.tag_stack.append(tag)
         # attrs is an array of (name, value) tuples:
         attr_d = dict(attrs)
@@ -119,7 +119,7 @@ class DownloadPageParser(HTMLParser):
                         self.urls.append(href)
             else:
                 echo1('  - (does not match "%s") %s' % (must_contain, href))
-        echo2(" " * len(self.tag_stack) + "attr_d: " + str(attr_d))
+        echo3(" " * len(self.tag_stack) + "attr_d: " + str(attr_d))
 
         self.tag = tag
 
@@ -132,7 +132,7 @@ class DownloadPageParser(HTMLParser):
                     break
             if found is not None:
                 for i in range(found, len(self.tag_stack)+1):
-                    echo2(" " * len(self.tag_stack)
+                    echo3(" " * len(self.tag_stack)
                           + "unwind: (" + self.tag_stack[-1]
                           + " at ) " + str(tag))
                     self.tag_stack.pop()
@@ -140,10 +140,10 @@ class DownloadPageParser(HTMLParser):
                 echo2(" " * len(self.tag_stack) + "UNEXPECTED: " + str(tag))
         else:
             self.tag_stack.pop()
-            echo2(" " * len(self.tag_stack) + ":" + str(tag))
+            echo3(" " * len(self.tag_stack) + ":" + str(tag))
 
     def handle_data(self, data):
-        echo2(" " * len(self.tag_stack) + "data:" + str(data))
+        echo3(" " * len(self.tag_stack) + "data:" + str(data))
 
     def id_from_name(self, filename, remove_arch=True,
                      remove_win_arch=False, remove_ext=False,
