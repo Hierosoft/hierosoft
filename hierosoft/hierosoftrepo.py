@@ -128,6 +128,7 @@ def pack_text():
     white_path = os.path.join(CLOUD_PICTURES, "white.png")
     LOGO_DIR = os.path.join(CLOUD_PICTURES, "Identity", "Hierosoft")
     hierosoft_16_path = os.path.join(LOGO_DIR, "logo-1.2.1-16px.png")
+    hierosoft_48_path = os.path.join(LOGO_DIR, "logo-1.2.1-48px.png")
     SVG_DIR = os.path.join(LOGO_DIR,
                            "hierosoft-noscale-for_moresvg")
     svg_path = os.path.join(
@@ -186,6 +187,10 @@ def pack_text():
         {
             'name': "hierosoft_16px_png",
             'path': hierosoft_16_path,
+        },
+        {
+            "name": "hierosoft_48px_png",
+            "path": hierosoft_48_path,
         },
     ]
     icons_dir = os.path.join(PROJECTS_DIR, "icons")

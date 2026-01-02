@@ -356,7 +356,7 @@ class HierosoftUpdate(object):
         pass
 
     def _download_page(self):
-        prefix = "_download_page"
+        prefix = "[_download_page] "
         if self.mgr.parser is None:
             raise RuntimeError("The parser was not initialized"
                                " (run self.mgr.set_options first).")
@@ -369,6 +369,7 @@ class HierosoftUpdate(object):
             'platform': self.only_p,
             'arch': self.only_a,
         })
+        echo0(prefix+"DownloadManager({})...".format(self.mgr.options))
         self.v_urls = []
         self.p_urls = []
         self.a_urls = []
@@ -1006,13 +1007,13 @@ def construct_gui(root, app):
     #   # icon_file.write(transparent_png)
     #   # root.iconbitmap(default=icon_file.name)
     print("Loading splash screen {} byte(s)".format(len(white_png)))
-    photo = tk.PhotoImage(
+    root.logo_photo = tk.PhotoImage(
         # data=transparent_png,  # Doesn't work (black; tested on Windows 10)
         # data=hierosoft_16px_png,  # Only for main window not splash screen
         data=white_png,
         master=root,  # prevents intermittent use of disposed PhotoImage!
     )
-    root.iconphoto(False, photo)
+    root.iconphoto(False, root.logo_photo)
     left = int((screenW - winW) / 2)
     top = int((screenH - winH) / 2)
     root.geometry("%sx%s+%s+%s" % (winW, winH, left, top))
@@ -1020,6 +1021,7 @@ def construct_gui(root, app):
     canvasW = winW
     canvasH = winH - int(pointSize*20.0)  # reduce for status bar
     canvas = tk.Canvas(
+        root,
         width=canvasW,
         height=canvasH,
     )
@@ -1043,10 +1045,14 @@ def construct_gui(root, app):
         fill=tk.BOTH,
         expand=True,
     )
-    from hierosoft.hierosoftpacked import hierosoft_svg
+    from hierosoft.hierosoftpacked import (
+        hierosoft_svg,
+        hierosoft_48px_png,
+    )
     from hierosoft.moresvg import MoreSVG
     # from hierosoft.moretk import OffscreenCanvas
     # def after_size():
+    enable_svg = False
     root.update()
     # ^ finalizes size (otherwise constrain fails due to
     #   incorrect canvas.winfo_width() or winfo_height())
@@ -1054,22 +1060,51 @@ def construct_gui(root, app):
     # canvas.create_polygon(10, 10, canvas.winfo_width(),
     #                       60, 0,60, 10, 10,
     #                       fill="black", smooth=1)
-    svg = MoreSVG()
-    slack = winH - canvasH
-    pos = [
-        int((winW - canvasH - slack) // 2),  # assume square graphic to center
-        0,
-    ]
-    # ^ (winW-canvasH) works without `/ 2`
+    root.logo_photo = None
+    svg = None
+    if enable_svg:
+        svg = MoreSVG()
+        slack = winH - canvasH
+        pos = [
+            int((winW - canvasW - slack) // 2),  # assume square graphic to center
+            0,
+        ]
+        # ^ (winW-canvasH) works without `/ 2`
+    else:
+        # Set master *and* store instance (root.logo_photo) to prevent
+        #   being disposed early ('_tkinter.TclError: unknown option
+        #   "pyimage2"')
+        root.logo_photo = tk.PhotoImage(
+            data=hierosoft_48px_png,
+            master=root,
+        )
+        if not root.logo_photo:
+            echo0("Error: Tcl Failed to load packed hierosoft_48px_png.")
+        slackW = winW - canvasW
+        slackH = winH - canvasH
+        # margin = 0
+        # if not enable_svg:
+        marginW = canvasW - root.logo_photo.width()
+        marginH = canvasH - root.logo_photo.height()
+        pos = [
+            int((winH - canvasW - slackW + marginW) // 2),  # assume square graphic to center
+            int((winH - canvasH - slackH + marginH) // 2),
+        ]
+        # ^ (winW-canvasH) works without `/ 2`
     # aa = 4
     # aa_canvas = OffscreenCanvas(canvasW*aa, canvasH*aa)
     if not test_only:
-        svg.draw_svg(
-            hierosoft_svg,
-            canvas,  # TODO: aa_canvas,
-            constrain="height",
-            pos=pos,
-        )
+        if enable_svg:
+            # Not implemented
+            svg.draw_svg(
+                hierosoft_svg,
+                canvas,  # TODO: aa_canvas,
+                constrain="height",
+                pos=pos,
+            )
+        else:
+            canvas.create_image(pos[0], pos[1], image=root.logo_photo, anchor=tk.NW)
+
     # aa_canvas.render(canvas, divisor=aa, transparent="FFFFFF")
     return root
 
