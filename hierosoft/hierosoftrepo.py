@@ -142,7 +142,8 @@ def pack_text():
     json_path = os.path.join(DATA_DIR, "sources.json")
     with open(json_path, 'r') as ins:
         try:
-            _ = json.load(ins)  # Ensure json is valid.
+            # Ensure valid json
+            _ = json.load(ins, object_pairs_hook=OrderedDict)
         except json.decoder.JSONDecodeError as ex:
             exStr = str(ex)
             lineI = exStr.find(": line ")

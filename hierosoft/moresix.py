@@ -33,6 +33,7 @@ import sys
 # endregion Polyfills that can be copied to other files
 # (or use moresix.subprocess_run etc. explicitly to avoid that)
 import subprocess
+from typing import AnyStr
 import six
 
 if sys.version_info.major < 3:
@@ -191,3 +192,28 @@ def ensure_str_or_none(s):
         return None
     return six.ensure_str(s)
 
+
+def ensure_type(s, cast_to_type):
+    # type: (str|bytes|bytearray, type) -> AnyStr
+    assert isinstance(cast_to_type, type), \
+        "Expected a type, got a(n) {}".format(
+            type(cast_to_type).__name__)
+    if sys.version_info.major < 3:
+        if cast_to_type is unicode:  # type: ignore # noqa: F821
+            return six.ensure_text(s)
+    if (cast_to_type is str):
+        return six.ensure_str(s)
+    elif (cast_to_type is bytes) or (cast_to_type is bytearray):
+        return six.ensure_binary(s)
+
+    if sys.version_info.major < 3:
+        # in this case six.string_types is basestring (base class of
+        #   str and unicode) so list allowed types explicitly
+        raise TypeError(
+            "Expected {} for cast_to_type, got {}".format(
+                ['unicode', 'str', 'bytes', 'bytearray'],
+                cast_to_type.__name__))
+
+    raise TypeError(
+        "Expected {} for cast_to_type, got {}".format(
+            six.string_types, cast_to_type))

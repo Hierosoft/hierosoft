@@ -487,7 +487,8 @@ def run_and_get_lists(cmd_parts, collect_stderr=True):
 
 
 def get_subdir_names(folder_path, hidden=False):
-    ret = []
+    # type: (str, bool|None) -> list[str]|None
+    ret = None
     if os.path.exists(folder_path):
         ret = []
         for sub_name in os.listdir(folder_path):
@@ -498,6 +499,7 @@ def get_subdir_names(folder_path, hidden=False):
 
 
 def get_file_names(folder_path, hidden=False):
+    # type: (str, bool|None) -> list[str]|None
     ret = None
     if os.path.exists(folder_path):
         ret = []
@@ -590,7 +592,7 @@ def which(program_name, more_paths=[]):
         str: The full path to the executable or None.
     '''
     prefix = "[which] "
-    # from https://github.com/poikilos/DigitalMusicMC
+    # from https://github.com/Hierosoft/DigitalMusicMC
     preferred_path = None
     filenames = [program_name]
     if platform.system() == "Windows":
@@ -712,7 +714,7 @@ def generate_caption(project_meta, variant):
 
 
 # Date variables below are borrowed from enissue.py in
-# <https://github.com/Poikilos/EnlivenMinetest>, but the sanitized
+# <https://github.com/Hierosoft/EnlivenMinetest>, but the sanitized
 # version instead of the Gitea-specific version is used:
 giteaSanitizedDtFmt = "%Y-%m-%dT%H:%M:%S%z"
 sanitizedDtExampleS = "2021-11-25T12:00:13-0500"

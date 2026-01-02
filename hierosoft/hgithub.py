@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import argparse
 # import copy
+from collections import OrderedDict
 import json
 import os
 # import platform
@@ -271,7 +272,8 @@ class RepoState:
             logger.error(results['error'])
             return results
 
-        self._latest_release_meta = json.loads(results['text'])
+        self._latest_release_meta = json.loads(
+            results['text'], object_pairs_hook=OrderedDict)
         logger.warning("OK (decoded JSON from {})".format(url))
         self._latest_release_meta_src = url
 

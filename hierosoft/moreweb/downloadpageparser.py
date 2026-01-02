@@ -4,6 +4,7 @@ from hierosoft import (
     echo0,
     echo1,
     echo2,
+    echo3,
 )
 
 from hierosoft.moreweb import (

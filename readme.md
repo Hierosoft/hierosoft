@@ -32,8 +32,8 @@ Integrate Python programs with the system in various ways:
 
 ## Example projects
 (using this module)
-- <https://github.com/poikilos/blendernightly>
-- <https://github.com/poikilos/world_clock>
+- <https://github.com/Hierosoft/blendernightly>
+- <https://github.com/Hierosoft/world_clock>
 
 
 ## Core features
@@ -59,7 +59,7 @@ To learn more, see the comment (docstring) at the top of [checkpath.py](hierosof
 - [ ] Complete the launcher a separate project and run that instead of
   running a single program.
   - Potentially,
-    [nopackage](https://github.com/poikilos/nopackage) could become the
+    [nopackage](https://github.com/Hierosoft/nopackage) could become the
     launcher or a component in the same virtualenv). It has the
     advantage of having download locations of icons for certain
     programs.
@@ -93,4 +93,3 @@ icon and to do one of the following:
 The dilemma is that though solutions exist, there isn't a de facto
 standard other than solutions which already assume you have Python and
 require Command-Line Interface (CLI) commands.
-

@@ -1,5 +1,6 @@
 from __future__ import print_function
 from __future__ import division
+from collections import OrderedDict
 import copy
 import json
 import os
@@ -131,42 +132,49 @@ def i_am_static_build():
 
 class HierosoftUpdate(object):
     """Install the rest of hierosoft.
+    Attributes:
+        a_urls (Union[List[str],None]): urls matching specified
+            architecture
+        p_urls (Union[List[str],None]): urls matching specified platform
+            flag
+        v_urls (Union[List[str],None]): urls matching specified Blender
+            version (tag)
+
     Args:
-        parent: (ignored) reserved for sub-classes or alike-classes.
-        root: (ignored) reserved for sub-classes or alike-classes.
-        options (dict): a download spec
+        parent (Any): Reserved for sub-classes or alike-classes.
+        root (Any): Reserved for sub-classes or alike-classes.
+        options (dict): A download spec. See HELP.
     """
     NO_WEB_MSG = "Couldn't launch web update nor find downloaded copy."
-    HELP = {
-        'title': "Set the window title for the updater.",
-        'platforms': (
-            "A dictionary of platforms where the key can be any"
-            " platform.system() value such as Linux, Windows, or Darwin"
-            " and the value of each is the substring in the filename"
-            " for that platform. Example:"
-            " platforms={'Linux':\"linux\", 'Windows':\"windows\","
-            " 'Darwin':\"macos\"}. The only value of the"
-            " current platform will be set as the entry box value used"
-            " by the DownloadManager."
-        ),
-        'architectures': (
-            "A dictionary of architectures where the key can be any"
-            " platform.system() value such as Linux, Windows, or Darwin"
-            " and the value of each is the substring in the filename"
-            " for that platform. Example:"
-            " platforms={'Linux':\"x64\", 'Windows':\"x64\","
-            " 'Darwin':[\"x64\", \"arm64\"]}. The only value of the"
-            " current platform will be set as the entry box value used"
-            " by the DownloadManager."
-        ),
-    }
+    HELP = OrderedDict()
+    HELP['title'] = "Set the window title for the updater."
+    HELP['platforms'] = (
+        "A dictionary of platforms where the key can be any"
+        " platform.system() value such as Linux, Windows, or Darwin"
+        " and the value of each is the substring in the filename"
+        " for that platform. Example:"
+        " platforms={'Linux':\"linux\", 'Windows':\"windows\","
+        " 'Darwin':\"macos\"}. The only value of the"
+        " current platform will be set as the entry box value used"
+        " by the DownloadManager."
+    )
+    HELP['architectures'] = (
+        "A dictionary of architectures where the key can be any"
+        " platform.system() value such as Linux, Windows, or Darwin"
+        " and the value of each is the substring in the filename"
+        " for that platform. Example:"
+        " platforms={'Linux':\"x64\", 'Windows':\"x64\","
+        " 'Darwin':[\"x64\", \"arm64\"]}. The only value of the"
+        " current platform will be set as the entry box value used"
+        " by the DownloadManager."
+    )
 
     def __init__(self, parent, root, options, status_var=None):
         # region deprecated _init_single_app
         self.version_e = None
         self.arch_e = None
         self.pflag_e = None
-        # engregion deprecated _init_single_app
+        # endregion deprecated _init_single_app
 
         # For docstring see class.
         self.root = None
@@ -188,8 +196,13 @@ class HierosoftUpdate(object):
         self.update_present_verb = None
         self.action_present_verb = None
         # endregion for d_done
-
-        self.options = {}  # gathers *relevant* values from options
+        if options is None:
+            options = OrderedDict()
+        else:
+            assert isinstance(options, (dict, OrderedDict)), \
+                ("expected dict or OrderedDict for options, got a(n) {}"
+                 .format(type(options).__name__))
+        self.options = options  # gathers *relevant* values from options
         #  (See get_option_keys & set_options call below).
 
         self.best_python = which_python()
@@ -206,12 +219,15 @@ class HierosoftUpdate(object):
         self.startup_message = None
         self.news = None
 
-        self.v_urls = None  # urls matching specified Blender version (tag)
-        self.p_urls = None  # urls matching specified platform flag
-        self.a_urls = None  # urls matching specified architecture
+        self.v_urls = None  # type: list[str]|None
+        self.p_urls = None  # type: list[str]|None
+        self.a_urls = None  # type: list[str]|None
         self.option_entries = {}
         self.mgr = DownloadManager()
-        self.set_all_options(options, True, require_bin=False)
+        self.options = options
+
+    def showApplicationPage(self):
+        self.set_all_options(self.options, False, require_bin=False)
         # ^ sets *relevant* keys on self, mgr, parser
         title = self.options.get('title')
         if title is not None:
@@ -402,7 +418,7 @@ class HierosoftUpdate(object):
             if (self.only_a is None) or contains_any(url, arches):
                 self.a_urls.append(url)
                 print(url)
-                meta = {}
+                meta = OrderedDict()
                 meta['url'] = url
                 meta['filename'] = name_from_url(url)
                 meta['detected_luid'] = self.mgr.parser.id_from_url(
@@ -442,7 +458,7 @@ class HierosoftUpdate(object):
         self.dl_but_not_inst_count = 0
         print("  existing_downloads: ")  # /2.??-<commit>
         added_ids = []
-        for dl_name in get_file_names(self.archives_path):
+        for dl_name in get_file_names(self.archives_path) or []:
             # archive_path = os.path.join(self.archives_path, dl_name)
             dest_id = self.mgr.parser.id_from_url(dl_name, remove_ext=True)
             meta = {}
@@ -471,8 +487,7 @@ class HierosoftUpdate(object):
                 self.dl_but_not_inst_count += 1
         if self.versions_path is None:
             raise RuntimeError("versions_path is None.")
-
-        for installed_name in get_subdir_names(self.versions_path):
+        for installed_name in get_subdir_names(self.versions_path) or []:
             self.installed_path = os.path.join(self.versions_path,
                                                installed_name)
             dest_id = installed_name
@@ -911,7 +926,7 @@ class HierosoftUpdate(object):
         # Do not schedule--CLI may have to do successive downloads/steps
 
 
-default_sources = json.loads(sources_json)
+default_sources = json.loads(sources_json, object_pairs_hook=OrderedDict)
 # ^ Overwrites hierosoft/data/default_sources.json only if
 #   ~/metaprojects/hierosoft-developer.flag exists.
 
@@ -995,6 +1010,7 @@ def construct_gui(root, app):
         # data=transparent_png,  # Doesn't work (black; tested on Windows 10)
         # data=hierosoft_16px_png,  # Only for main window not splash screen
         data=white_png,
+        master=root,  # prevents intermittent use of disposed PhotoImage!
     )
     root.iconphoto(False, photo)
     left = int((screenW - winW) / 2)
@@ -1060,8 +1076,8 @@ def construct_gui(root, app):
 
 def run_binary_launcher(self_install_options):
     prefix = "[run_binary_launcher] "
-    app = self_install_options.get('next_app')
-    root = self_install_options.get('next_root')
+    app = self_install_options.get('next_app')  # type: HierosoftUpdate
+    root = self_install_options.get('next_root')  # type: tk.Tk
     # upgrade = self_install_options.get('next_enable_upgrade')
     # ^ Can't upgrade in binary_mode
     # Use self instead of Python version
@@ -1165,11 +1181,11 @@ def prepare_and_run_launcher(self_install_options):
         raise RuntimeError("Installing Python failed: %s" % error)
     local_options = self_install_options.copy()
     # ^ Keep keys deleted below in case fails (Deepcopy can't copy tkinter)
-    app = self_install_options['next_app']
+    app = self_install_options['next_app']  # type: HierosoftUpdate
     del self_install_options['next_app']
-    root = self_install_options['next_root']
+    root = self_install_options['next_root']  # type: tk.Tk
     del self_install_options['next_root']
-    upgrade = self_install_options['next_enable_upgrade']
+    upgrade = self_install_options['next_enable_upgrade']  # type: bool
     del self_install_options['next_enable_upgrade']
     self_install_options['exists_action'] = "delete" if upgrade else "skip"
     app.set_all_options(self_install_options, True)
@@ -1193,7 +1209,7 @@ def prepare_and_run_launcher(self_install_options):
     # version = self_install_options['version']
     # FIXME: should be "current" for main branch but isn't getting passed down
     version = "main"
-    good_installed_path = app.get_this_version_path(version)
+    good_installed_path = app.get_this_version_path(version)  # type: str
     try_launch_scripts = ["run.pyw", "run.py", "main.py"]
     start_script = join_if_exists(good_installed_path, try_launch_scripts)
     if not start_script or self_install_options['exists_action'] != "skip":

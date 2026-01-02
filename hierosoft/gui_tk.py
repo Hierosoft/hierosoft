@@ -17,6 +17,7 @@ Options (dict):
 
 '''
 from __future__ import print_function
+from collections import OrderedDict
 import io
 import sys
 import os
@@ -177,7 +178,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
             raise ValueError(
                 "parent must be non-None and can be root (tk.Tk()) or a frame"
             )
-        self.root = root
+        self.root = root  # type: tk.Tk
         self.parent = parent  # not root if inside something else
         self._super(parent, *args, **kwargs)
 
@@ -212,7 +213,8 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
             'pady': 10,
             'sticky': "nsew",
         }
-        self.container = root  # changed after innerFrame & bottom widgets
+        self.container = root  # type: tk.Tk|tk.Frame
+        # ^ changed after innerFrame & bottom widgets
         innerFrame = ttk.Frame(self.root)
         self.addRow(innerFrame, sticky='we')
 
@@ -421,8 +423,8 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         """
         ttk.Frame.__init__(self, parent, *args, **kwargs)
 
-    def push_label(self, s):
-        new_label = ttk.Label(self.container, text=s)
+    def push_label(self, text):
+        new_label = ttk.Label(self.container, text=text)
         self.addRow(new_label, pady=0)
         self.msg_labels.append(new_label)
         self.root.update()
@@ -738,7 +740,6 @@ def show_update_window(options):
     app = HierosoftUpdateFrame(parent, root, options)
     # app.pack(side="top", fill="both", expand=True)
     app.grid(sticky="nsew")
-
     root.after(500, app.start_refresh)  # requires app.mgr.parser
     root.mainloop()
     return 0
@@ -748,7 +749,7 @@ def main():
     # Avoid "RuntimeError: main thread is not in main loop"
     # such as on self.count_label.config
     # (not having a separate main function may help).
-    options = {}
+    options = OrderedDict()
     options['title'] = "Hierosoft Launcher"
     key = None
     # option_keys = HierosoftUpdateFrame.get_option_keys()
