@@ -55,7 +55,7 @@ def main():
     sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
     for i, arg in enumerate(sys.argv):
         if i < 1:
-            continue  # skip the command itself
+            continue  # skip the script (not an arg)
         if arg == "--offline":
             enable_web = False
     if enable_web:

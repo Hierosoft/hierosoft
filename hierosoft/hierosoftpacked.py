@@ -463,6 +463,12 @@ transparent_png_str = (
 transparent_png = zlib.decompress(base64.b64decode(
     transparent_png_str.encode('utf-8')
 ))
+transparent_ico_str = (
+    "eJxjYGBkYGQQEGAC0xsYGBjEGBgYNBgYGAQYGBgUGBjA4jjB//9wCi+uJ0INBfoBBU1CBQ=="
+)
+transparent_ico = zlib.decompress(base64.b64decode(
+    transparent_ico_str.encode('utf-8')
+))
 white_png_str = (
     "eJwBIgLd/YlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAYVpQ0NQSUNDIHByb"
     "2ZpbGUAACiRfZE9SMNAGIbfpoo/VBzaQcQhQnXRLiriWKpYBAulrdCqg8mlf9CkIUlxcRRcCw"
