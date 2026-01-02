@@ -1,6 +1,6 @@
 {
   "sources_urls": [
-    "https://github.com/Hierosoft/hierosoft/blob/main/hierosoft/assets/data/sources.json"
+    "https://raw.githubusercontent.com/Hierosoft/hierosoft/refs/heads/main/hierosoft/assets/data/sources.json"
   ],
   "sources_urls.comment": "If GitHub sources_urls is down, try https://minetest.io/launcherapi/sources.json",
   "news": [
@@ -21,7 +21,7 @@
           "html_url": "https://minetest.io/downloads/launcher.php",
           "must_contain": "/Hierosoft/hierosoft/archive/refs/heads/main.zip",
           "title": "Hierosoft Launcher",
-          "version": "current"
+          "version": null
         }
       ]
     },

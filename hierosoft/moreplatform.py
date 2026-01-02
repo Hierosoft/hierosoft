@@ -10,6 +10,7 @@ import sys
 import subprocess
 import tarfile
 import tempfile
+from typing import Callable
 import zipfile
 
 from zipfile import ZipFile
@@ -431,7 +432,9 @@ def install_zip(archive, dst, remove_archive=False,
 
 
 def install_archive(archive, dst, remove_dst=False,
-                    remove_archive=True, event_template=None):
+                    remove_archive=True, event_template=None,
+                    status_cb=None):
+    # type: (str, str, bool, bool, dict, Callable) -> dict[str,str]
     """Extract and install an archive file to dst directory.
 
     For returns and other documentation, see install_extracted.
@@ -446,6 +449,8 @@ def install_archive(archive, dst, remove_dst=False,
         evt = copy.deepcopy(event_template)
     if not archive:
         evt['error'] = "Archive path was not set before install_archive."
+        if status_cb:
+            status_cb(evt)
         return evt
     tar_args = get_tar_mode(archive, event_template=evt)
     if archive.lower().endswith(".zip"):

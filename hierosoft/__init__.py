@@ -24,6 +24,7 @@ from hierosoft.morelogging import (  # noqa F401
 
 from hierosoft.sysdirs import sysdirs
 
+ALREADY_LAUNCHED = "--already-launched"
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 ASSETS_DIR = os.path.join(MODULE_DIR, "assets")
 assets_dirs = [ASSETS_DIR]

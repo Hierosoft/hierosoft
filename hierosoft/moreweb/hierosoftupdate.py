@@ -8,6 +8,7 @@ import platform
 import shutil
 import sys
 import time
+
 # import tempfile
 # import base64
 # import zlib
@@ -34,12 +35,17 @@ from hierosoft import (
     # HOME,
     # USER_PROGRAMS,
     sysdirs,
+    ALREADY_LAUNCHED,
     ASSETS_DIR,
     which_python,
     join_if_exists,
 )
 from hierosoft.ggrep import (
     contains_any,
+)
+
+from hierosoft.morelogging import (
+    formatted_ex,
 )
 
 from hierosoft.moreplatform import (
@@ -151,6 +157,11 @@ class HierosoftUpdate(object):
         parent (Any): Reserved for sub-classes or alike-classes.
         root (Any): Reserved for sub-classes or alike-classes.
         options (dict): A download spec. See HELP.
+
+    Attributes:
+        options (dict[str,str]): gathers *relevant* values from options
+           (See get_option_keys & set_options call in __init__).
+
     """
     NO_WEB_MSG = "Couldn't launch web update nor find downloaded copy."
     HELP = OrderedDict()
@@ -187,21 +198,21 @@ class HierosoftUpdate(object):
         self.root = None
         # region for d_done
         # TODO: Move all/most of these to a new DownloadJob class?
-        self.auto_column = 0
-        self.auto_row = 0
-        self.download_done = False
-        self.archive_path = None
-        self.enable_install = None
-        self.remove_download = None
-        self.luid = None
+        self.auto_column = 0  # type: int
+        self.auto_row = 0  # type: int
+        self.download_done = False  # type: bool
+        self.archive_path = None  # type: str
+        self.enable_install = None  # type: bool
+        self.remove_download = None  # type: bool
+        self.luid = None  # type: str
         self.programs = sysdirs['PROGRAMS']
-        self.installed_path = None
+        self.installed_path = None  # type: str
         self.action = None
-        self.uninstall = None  # TODO: move this to the event
-        self.meta = None
-        self.update_past_verb = None
-        self.update_present_verb = None
-        self.action_present_verb = None
+        self.uninstall = None  # type: bool # TODO: move this to the event
+        self.meta = None  # type: dict[str,str]
+        self.update_past_verb = None  # type: str
+        self.update_present_verb = None  # type: str
+        self.action_present_verb = None  # type: str
         # endregion for d_done
         if options is None:
             options = OrderedDict()
@@ -209,8 +220,7 @@ class HierosoftUpdate(object):
             assert isinstance(options, (dict, OrderedDict)), \
                 ("expected dict or OrderedDict for options, got a(n) {}"
                  .format(type(options).__name__))
-        self.options = options  # gathers *relevant* values from options
-        #  (See get_option_keys & set_options call below).
+        self.options = options  # type: dict[str,str]
 
         self.best_python = which_python()
         # ^ Even if not i_am_static_build(), a Python is useful
@@ -281,6 +291,13 @@ class HierosoftUpdate(object):
                         echo0(text)
                     if url:
                         echo0(url)
+
+    def status_callback(self, event):
+        message = event.get('message')
+        if message:
+            self.set_status(message)
+        else:
+            self.set_status("Unknown event: {}".format(event))
 
     @property
     def only_a(self):
@@ -537,9 +554,14 @@ class HierosoftUpdate(object):
         event['command'] = "d_progress"
         ratio = event.get('ratio')
         if 'loaded' in evt:
-            sys.stderr.write(
-                "\r{} of {}".format(evt['loaded'], evt['total_size'])
-            )
+            if 'total_size' in evt:
+                sys.stderr.write(
+                    "\r{} of {}".format(evt['loaded'], evt['total_size'])
+                )
+            else:
+                sys.stderr.write(
+                    "\r{}".format(evt['loaded'])
+                )
         elif ratio is not None:
             sys.stderr.write("\r{}%".format(round(ratio*100, 1)))
         sys.stderr.flush()
@@ -747,7 +769,7 @@ class HierosoftUpdate(object):
         # formerly _d_done
         # prefix = "[_on_archive_ready]"
         echo0("")  # end the line that _d_progress started.
-        echo0("done: %s" % evt)
+        echo0("[_on_archive_ready] done: %s" % evt)
         # region move to event_template
         # meta = self.meta
         # meta = evt
@@ -774,18 +796,23 @@ class HierosoftUpdate(object):
         # versions_path = os.path.join(luid_dir, "versions")
         program_dir = os.path.join(versions_path, version)
         if err is None:
-            print("Download finished!")
+            self.set_status("Download finished!")
         else:
-            print("Download stopped due to: {}".format(err))
+            self.set_status("Download stopped due to: {}".format(err))
             return
         if self.enable_install and archive is not None:
             self.meta['Path'] = program_dir
-            installed = install_archive(
-                archive,
-                program_dir,
-                remove_archive=self.remove_download,
-                event_template=evt,
-            )
+            try:
+                installed = install_archive(
+                    archive,
+                    program_dir,
+                    remove_archive=self.remove_download,
+                    event_template=evt,
+                    status_cb=self.status_callback,
+                )
+            except Exception as ex:
+                self.set_status(formatted_ex(ex))
+                raise
             # ^ Automatically removes tier if root of zip is only one dir
             extracted_name = installed.get('extracted_name')
             if extracted_name:
@@ -1198,7 +1225,11 @@ def main():
     # ^ root many be None
     if platform.system() == "Windows":
         # In case this is an exe, install Python if not present
-        if not app.best_python:
+        if not app.best_python and offline:
+            echo2("Warning: offline mode was specified but there is no Python,"
+                  " so launcher will not update. Running internal launcher...")
+        elif not app.best_python:
+            echo0("Trying to download Python...")
             python_meta = get_python_download_spec()
             app.set_all_options(python_meta, True)
             app.start_refresh()  # synchronous since CLI superclass
@@ -1236,6 +1267,7 @@ def prepare_and_run_launcher(self_install_options):
     and run it.
     """
     prefix = "[prepare_and_run_launcher] "
+    echo0(prefix+"...")
     error = self_install_options.get('error')
     if error:
         raise RuntimeError("Installing Python failed: %s" % error)
@@ -1318,7 +1350,8 @@ def prepare_and_run_launcher(self_install_options):
               " 'installed_path' before *every* return unless"
               " 'error' is set. Ultimately, install_folder"
               " (or potentially _on_archive_ready)"
-              " has to set it if install_archive is called.")
+              " has to set it if install_archive is called."
+              " Reverting to '{}'".format(good_installed_path))
         # fault-tolerant way:
         installed_path = good_installed_path
     start_script = join_if_exists(installed_path, try_launch_scripts)
@@ -1328,8 +1361,14 @@ def prepare_and_run_launcher(self_install_options):
                 "Any of %s in %s" % (try_launch_scripts, installed_path)
             )
     import subprocess
-    launcher_cmd = [app.best_python, start_script]
+    print("[prepare_and_run_launcher] launch from: {}".format(sys.argv))
+    if ALREADY_LAUNCHED in sys.argv:
+        raise NotImplementedError("Error: can't launch self.")
+    launcher_cmd = [app.best_python, start_script, ALREADY_LAUNCHED,
+                    "--offline"]
     if error is None:
+        print("[prepare_and_run_launcher] Running: {}"
+              .format(" ".join(launcher_cmd)))
         _ = subprocess.Popen(
             launcher_cmd,
             start_new_session=True,
