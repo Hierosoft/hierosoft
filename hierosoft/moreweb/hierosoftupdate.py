@@ -15,7 +15,13 @@ import time
 
 # if __name__ == "__main__":
 #     sys.path.insert(0, REPO_DIR)
-
+enable_pil = False
+try:
+    from PIL import ImageTk
+    enable_pil = True
+except ImportError as ex:
+    print("{}: {}".format(type(ex).__name__, ex), file=sys.stderr)
+    pass
 
 from hierosoft import (
     echo0,
@@ -54,7 +60,8 @@ from hierosoft.moreweb.downloadmanager import DownloadManager
 
 from hierosoft.hierosoftpacked import (
     sources_json,
-    # transparent_png,
+    transparent_ico,
+    transparent_png,
     # hierosoft_16px_png,
     white_png,
 )
@@ -1006,14 +1013,34 @@ def construct_gui(root, app):
     #   # icon_file.write(BLANK_PAGE_ICON)
     #   # icon_file.write(transparent_png)
     #   # root.iconbitmap(default=icon_file.name)
-    print("Loading splash screen {} byte(s)".format(len(white_png)))
-    root.logo_photo = tk.PhotoImage(
-        # data=transparent_png,  # Doesn't work (black; tested on Windows 10)
-        # data=hierosoft_16px_png,  # Only for main window not splash screen
-        data=white_png,
-        master=root,  # prevents intermittent use of disposed PhotoImage!
-    )
-    root.iconphoto(False, root.logo_photo)
+    # transparent_data = transparent_ico \
+    #     if platform.system() == "Windows" else transparent_png
+    # print("Loading splash screen {} byte(s)"
+    #       .format(len(transparent_data)))
+    if platform.system() == "Windows":
+        # Also works: root.iconbitmap(sys.executable)  # python/compiled exe
+        if enable_pil:
+            root.logo_photo = ImageTk.PhotoImage(  # blank out the tk icon
+                # data=transparent_png,  # Doesn't work (black on Win 10/11)
+                # data=hierosoft_16px_png,  # Only for main window not splash
+                # data=white_png,
+                # file="transparent.tmp.ico",
+                data=transparent_ico,
+                # NOTE: GIMP cannot save entirely transparent (ends up
+                #   opaque black)! Convert from PNG or use other editor.
+                master=root,  # prevent use of disposed PhotoImage!
+            )
+            # ^ tk.PhotoImage cannot read it.
+            root.iconphoto(False, root.logo_photo)
+    else:
+        root.logo_photo = tk.PhotoImage(  # blank out the tk icon
+            # data=transparent_png,  # Doesn't work (black on Win 10/11)
+            # data=hierosoft_16px_png,  # Only for main window not splash
+            # data=white_png,
+            data=transparent_png,
+            master=root,  # prevents intermittent use of disposed PhotoImage!
+        )
+        root.iconphoto(False, root.logo_photo)
     left = int((screenW - winW) / 2)
     top = int((screenH - winH) / 2)
     root.geometry("%sx%s+%s+%s" % (winW, winH, left, top))
@@ -1080,15 +1107,9 @@ def construct_gui(root, app):
         )
         if not root.logo_photo:
             echo0("Error: Tcl Failed to load packed hierosoft_48px_png.")
-        slackW = winW - canvasW
-        slackH = winH - canvasH
-        # margin = 0
-        # if not enable_svg:
-        marginW = canvasW - root.logo_photo.width()
-        marginH = canvasH - root.logo_photo.height()
         pos = [
-            int((winH - canvasW - slackW + marginW) // 2),  # assume square graphic to center
-            int((winH - canvasH - slackH + marginH) // 2),
+            int((winW - root.logo_photo.width()) // 2),
+            int((winH - root.logo_photo.height()) // 2),
         ]
         # ^ (winW-canvasH) works without `/ 2`
     # aa = 4
@@ -1139,6 +1160,10 @@ def run_binary_launcher(self_install_options):
         from hierosoft.gui_tk import main as gui_main
         sys.exit(gui_main())
     root.mainloop()
+
+
+def set_status(message):
+    appStatusV.set(message)
 
 
 def main():

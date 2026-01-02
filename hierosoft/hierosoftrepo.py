@@ -4,6 +4,7 @@ import platform
 # import sys
 
 from collections import OrderedDict
+import shutil
 from hierosoft.morelogging import (
     # is_enclosed,
     hr_repr,
@@ -125,6 +126,7 @@ def pack_text():
     CLOUD_DIR = os.path.join(HOME, "Nextcloud")
     CLOUD_PICTURES = os.path.join(CLOUD_DIR, "Pictures")
     transparent_path = os.path.join(CLOUD_PICTURES, "transparent.png")
+    transparent_ico_path = os.path.join(CLOUD_PICTURES, "transparent.ico")
     white_path = os.path.join(CLOUD_PICTURES, "white.png")
     LOGO_DIR = os.path.join(CLOUD_PICTURES, "Identity", "Hierosoft")
     hierosoft_16_path = os.path.join(LOGO_DIR, "logo-1.2.1-16px.png")
@@ -181,6 +183,12 @@ def pack_text():
             'path': transparent_path,
         },
         {
+            # NOTE: GIMP cannot save entirely transparent (ends up
+            #   opaque black)! Convert from PNG or use other editor.
+            'name': "transparent_ico",
+            'path': transparent_ico_path,
+        },
+        {
             'name': "white_png",
             'path': white_path,
         },
@@ -214,7 +222,8 @@ def pack_text():
             'path': sub_path,
         })
     me = os.path.basename(__file__)
-    with open(pack_path, 'w') as stream:
+    tmp_path = pack_path + ".tmp"
+    with open(tmp_path, 'w') as stream:
         print("# -*- coding: utf-8 -*-", file=stream)
         print('"""', file=stream)
         print(
@@ -239,3 +248,13 @@ def pack_text():
             ))
         for binary_meta in binary_metas:
             _pack_binary(stream, binary_meta['name'], binary_meta['path'])
+    pyc_path = os.path.splitext(pack_path)[0] + ".pyc"
+    if os.path.isfile(pyc_path):
+        # Show abspath not realpath (Only abspath is actually deleted)
+        print("rm {}".format(hr_repr(os.path.abspath(pyc_path))))
+        os.remove(pyc_path)
+    if os.path.isfile(pack_path):
+        print("rm {}".format(hr_repr(os.path.abspath(pack_path))))
+        os.remove(pack_path)
+    shutil.move(tmp_path, pack_path)
+    print("# wrote new {}".format(hr_repr(os.path.abspath(pack_path))))
