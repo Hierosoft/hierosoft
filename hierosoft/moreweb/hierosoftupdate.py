@@ -988,6 +988,7 @@ def construct_gui(root, app):
     else:
         echo0(prefix+"creating tk")
         root = tk.Tk()
+    root.withdraw()
     if appStatusV is not None:
         raise NotImplementedError(prefix+"GUI already constructed.")
     else:
@@ -1110,6 +1111,7 @@ def construct_gui(root, app):
     root.update()
     # ^ finalizes size (otherwise constrain fails due to
     #   incorrect canvas.winfo_width() or winfo_height())
+    root.deiconify()
     test_only = False
     # canvas.create_polygon(10, 10, canvas.winfo_width(),
     #                       60, 0,60, 10, 10,
