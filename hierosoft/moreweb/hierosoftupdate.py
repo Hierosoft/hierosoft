@@ -1363,7 +1363,9 @@ def prepare_and_run_launcher(self_install_options):
     import subprocess
     print("[prepare_and_run_launcher] launch from: {}".format(sys.argv))
     if ALREADY_LAUNCHED in sys.argv:
-        raise NotImplementedError("Error: can't launch self.")
+        raise NotImplementedError(
+            "Error: can't launch self (State wasn't detected properly)."
+            " Halted to prevent loop.")
     launcher_cmd = [app.best_python, start_script, ALREADY_LAUNCHED,
                     "--offline"]
     if error is None:

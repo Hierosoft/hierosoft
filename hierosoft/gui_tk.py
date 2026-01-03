@@ -27,6 +27,7 @@ import threading
 # import zipfile
 # import platform
 import copy
+import time
 import warnings
 
 from hierosoft.morelogging import formatted_ex
@@ -732,6 +733,7 @@ def get_tk():
 
 def show_update_window(options):
     root = get_tk()
+    root.withdraw()  # Hide until ready (avoid blank gray window)
     option_keys = HierosoftUpdateFrame.get_option_keys()
     for key in option_keys:
         if key not in option_keys:
@@ -740,7 +742,9 @@ def show_update_window(options):
     app = HierosoftUpdateFrame(parent, root, options)
     # app.pack(side="top", fill="both", expand=True)
     app.grid(sticky="nsew")
-    root.after(500, app.start_refresh)  # requires app.mgr.parser
+    # root.after(500,  # re-download the applications list
+    #   app.start_refresh)  # requires app.mgr.parser
+    root.deiconify()
     root.mainloop()
     return 0
 
