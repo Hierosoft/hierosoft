@@ -171,7 +171,8 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         #   download code that was formerly synchronous and occurred
         #   after the synchronous download function ended.
         # TODO: Move this whole region to the event?
-        HierosoftUpdate.__init__(self, parent, root, options)
+        HierosoftUpdate.__init__(self, parent, root, options,
+                                 splashStatusV=kwargs.get('splashStatusV'))
         # ^ calls self.mgr.set_options which calls mgr.parser.set_options
         if root is None:
             raise ValueError("root must be non-None and must be `tk.Tk()`")
@@ -182,6 +183,8 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         self.root = root  # type: tk.Tk
         self.parent = parent  # not root if inside something else
         self._super(parent, *args, **kwargs)
+        prefix = "[HierosoftUpdateFrame __init__]"
+        cmd_prefix = "[{}] {}".format(sys.argv, prefix)
 
         self.columnconfigure(index=0, weight=1)
         self.columnconfigure(index=1, weight=1)
@@ -223,7 +226,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         # orient="horizontal", length=200, mode="determinate"
         self.addRow(self.pbar, sticky='we')
 
-        self.count_label = ttk.Label(self.container, text="")  # at bottom
+        self.count_label = ttk.Label(self.container, text="....")  # at bottom
         self.addRow(self.count_label, sticky='we')
 
         self.container = innerFrame
@@ -302,7 +305,7 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
                 formatted_ex(ex)))
             if "doesn't exist" in str(ex):
                 warnings.warn("- The image was disposed!")
-            ttk.Label(root, text="Downloading...").grid(padx=10, pady=10)
+            ttk.Label(root, text="(Missing Image)").grid(padx=10, pady=10)
         ttk.Button(
             root,
             text="This version is a work in progress.",
@@ -695,9 +698,11 @@ root = None
 def get_tk():
     global root
     if root is not None:
+        echo2("[get_tk] Using existing root window.")
         return root
 
     try:
+        echo2("[get_tk] Creating a root window.")
         root = tk.Tk()
     except tk.TclError:
         echo0("FATAL ERROR: Cannot use tkinter from terminal")
@@ -731,7 +736,8 @@ def get_tk():
     return root
 
 
-def show_update_window(options):
+def show_update_window(options, splashStatusV=None):
+    echo2("[show_update_window] splashStatusV={}".format(repr(splashStatusV)))
     root = get_tk()
     root.withdraw()  # Hide until ready (avoid blank gray window)
     option_keys = HierosoftUpdateFrame.get_option_keys()
@@ -739,7 +745,7 @@ def show_update_window(options):
         if key not in option_keys:
             raise ValueError("{} is not a valid option.".format(key))
     parent = root  # allowed to be a container instead of root
-    app = HierosoftUpdateFrame(parent, root, options)
+    app = HierosoftUpdateFrame(parent, root, options, splashStatusV=splashStatusV)
     # app.pack(side="top", fill="both", expand=True)
     app.grid(sticky="nsew")
     # root.after(500,  # re-download the applications list
@@ -749,7 +755,7 @@ def show_update_window(options):
     return 0
 
 
-def main():
+def main(splashStatusV=None):
     # Avoid "RuntimeError: main thread is not in main loop"
     # such as on self.count_label.config
     # (not having a separate main function may help).
@@ -770,7 +776,7 @@ def main():
                 else:
                     key = arg[2:]
 
-    return show_update_window(options)
+    return show_update_window(options, splashStatusV=splashStatusV)
 
 
 if __name__ == "__main__":

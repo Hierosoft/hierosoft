@@ -49,7 +49,7 @@ if os.path.isfile(os.path.join(dst_python_env, "pyvenv.cfg")):
 
 
 def main():
-    prefix = "[main] "
+    prefix = "[run.py main] "
     enable_web = True
     sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
     for i, arg in enumerate(sys.argv):
