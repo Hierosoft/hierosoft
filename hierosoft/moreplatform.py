@@ -15,7 +15,7 @@ import zipfile
 
 from zipfile import ZipFile
 
-from hierosoft.morelogging import hr_repr
+from hierosoft.morelogging import echo2, hr_repr
 
 from hierosoft import (
     echo0,
@@ -222,6 +222,8 @@ def install_folder(src, dst, event_template=None):
             #   calls on_error keyword argument if
             #   set, otherwise raises exception.
         else:
+            # echo0("Destination {} already exists. Not installing from {}."
+            #       .format(dst, src))
             if skip_dst:
                 echo0(prefix+"Warning: skipping extract since exists"
                       " and event_template['exists_action'] is skip")
@@ -371,7 +373,15 @@ def install_tar(archive, dst, remove_archive=False,
             )
             if not installed.get('error'):
                 if remove_archive:
+                    print("rm {}".format(hr_repr(archive)))
                     os.remove(archive)
+                else:
+                    echo2("[install_zip] Keeping archive.")
+            else:
+                if remove_archive:
+                    echo2("[install_tar] Warning:"
+                          " not removing archive due to: {}"
+                          .format(installed.get('error')))
             evt.update(installed)
     except EOFError:
         fmt = mode.split(":")[-1]
@@ -412,7 +422,15 @@ def install_zip(archive, dst, remove_archive=False,
             )
             if not installed.get('error'):
                 if remove_archive:
+                    print("rm {}".format(hr_repr(archive)))
                     os.remove(archive)
+                else:
+                    echo2("[install_zip] Keeping archive.")
+            else:
+                if remove_archive:
+                    echo2("[install_zip] Warning:"
+                          " not removing archive due to: {}"
+                          .format(installed.get('error')))
             evt.update(installed)
     except zipfile.BadZipFile as ex:
         evt['error'] = "%s: %s" % (type(ex).__name__, ex)

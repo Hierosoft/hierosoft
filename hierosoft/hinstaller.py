@@ -68,9 +68,9 @@ def console_callback(evt):
     error = evt.get('error')
     message = evt.get('message')
     if error:
-        sys.stderr.write(error)
+        sys.stderr.write("[console_callback] "+error)
     elif message:
-        sys.stderr.write(message)
+        sys.stderr.write("[console_callback] "+message)
     sys.stderr.flush()
     if evt.get('status') == "done":
         sys.stderr.write("\n")

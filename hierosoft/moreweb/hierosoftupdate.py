@@ -46,6 +46,7 @@ from hierosoft.ggrep import (
 
 from hierosoft.morelogging import (
     formatted_ex,
+    hr_repr,
 )
 
 from hierosoft.moreplatform import (
@@ -161,7 +162,10 @@ class HierosoftUpdate(object):
     Attributes:
         options (dict[str,str]): gathers *relevant* values from options
            (See get_option_keys & set_options call in __init__).
-
+        splashStatusV (Any): object with a set function accepting a str.
+            This is used by set_status in this base class to display
+            messages in splash screen such as for errors preventing
+            HierosoftUpdateFrame from loading
     """
     NO_WEB_MSG = "Couldn't launch web update nor find downloaded copy."
     HELP = OrderedDict()
@@ -187,15 +191,25 @@ class HierosoftUpdate(object):
         " by the DownloadManager."
     )
 
-    def __init__(self, parent, root, options, status_var=None):
+    def __init__(self, parent, root, options, splashStatusV=None):
+        prefix = "[HierosoftUpdate __init__]"
+        cmd_prefix = "[{}] {}".format(sys.argv, prefix)
         # region deprecated _init_single_app
         self.version_e = None
         self.arch_e = None
         self.pflag_e = None
         # endregion deprecated _init_single_app
 
+        if splashStatusV is not None:
+            self.splashStatusV = splashStatusV
+            echo2(cmd_prefix+"Set splashStatusV...OK")
+        else:
+            echo2(cmd_prefix+"Set splashStatusV...None"
+                  " (Launch errors will not be shown).")
+
         # For docstring see class.
-        self.root = None
+        self.root = root  # type: tk.Tk  # See subclass
+        self.splashStatusV = splashStatusV  # splash's equivalent to appStatusV
         # region for d_done
         # TODO: Move all/most of these to a new DownloadJob class?
         self.auto_column = 0  # type: int
@@ -205,9 +219,9 @@ class HierosoftUpdate(object):
         self.enable_install = None  # type: bool
         self.remove_download = None  # type: bool
         self.luid = None  # type: str
-        self.programs = sysdirs['PROGRAMS']
+        self.programs = sysdirs['PROGRAMS']  # type: str
         self.installed_path = None  # type: str
-        self.action = None
+        self.action = None  # type: str
         self.uninstall = None  # type: bool # TODO: move this to the event
         self.meta = None  # type: dict[str,str]
         self.update_past_verb = None  # type: str
@@ -273,12 +287,16 @@ class HierosoftUpdate(object):
         return os.path.join(self.versions_path, version)
 
     def set_status(self, msg):
+        if self.splashStatusV is not None:
+            self.splashStatusV.set(msg)
+        else:
+            echo2("[HierosoftUpdate set_status] There is no splashStatusV")
         if self.statusVar is not None:
             echo0("set status: %s" % msg)
             self.statusVar.set(msg)
         else:
             self.startup_message = msg
-            echo0("%s" % msg)
+            echo0("[HierosoftUpdate set_status] %s" % msg)
             if self.news:
                 for article in self.news:
                     echo0("")
@@ -292,12 +310,15 @@ class HierosoftUpdate(object):
                     if url:
                         echo0(url)
 
+    def set_status_after(self, message):
+        self.root.after(0, self.set_status, message)
+
     def status_callback(self, event):
         message = event.get('message')
         if message:
-            self.set_status(message)
+            self.set_status_after(message)
         else:
-            self.set_status("Unknown event: {}".format(event))
+            self.set_status_after("Unknown event: {}".format(event))
 
     @property
     def only_a(self):
@@ -713,7 +734,7 @@ class HierosoftUpdate(object):
             return evt
 
         # abs_url should never be None if file already exists
-        print("  - downloading: " + abs_url)
+        print("  - downloading: {}".format(hr_repr(abs_url)))
         with open(self.archive_path, 'wb') as f:
             self.download_done = False
             self.mgr.download(
@@ -828,7 +849,9 @@ class HierosoftUpdate(object):
                 #     echo0("Making shortcut since %s (not hierosoft)")
                 #     make_shortcut(result)
                 # TODO: add "add shortcut" button (and/or checkbox in install)
-                self.set_status("Done: %s" % installed)
+                self.set_status(
+                    "Installed %s %s."
+                    % (installed.get('title'), installed.get('version')))
         elif self.enable_install is not None:
             self.set_status("Error: Install is enabled but archive not set.")
         else:
@@ -893,7 +916,11 @@ class HierosoftUpdate(object):
         while len(self.events) > 0:
             event = self.events[0]
             del self.events[0]
-            self._process_event(event)
+            try:
+                self._process_event(event)
+            except Exception as ex:
+                self.set_status_after(
+                    "Processing event...{}".format(formatted_ex(ex)))
         # return done_events
 
     def push_label(self, text):
@@ -977,11 +1004,16 @@ sources_path = os.path.join(data_dir, "default_sources.json")
 #         json.dump(default_sources, stream, indent=2, sort_keys=True)
 # Instead, use prebuild.py to pack files.
 
-appStatusV = None
+splash_status_var = None
+
+
+def get_status_v():
+    return splash_status_var
 
 
 def construct_gui(root, app):
-    global appStatusV
+    """Construct the Splash Screen"""
+    global splash_status_var
     prefix = "[construct_gui] "
     if root is not None:
         echo0("Warning: tk already constructed")
@@ -989,19 +1021,27 @@ def construct_gui(root, app):
         echo0(prefix+"creating tk")
         root = tk.Tk()
     root.withdraw()
-    if appStatusV is not None:
+    if splash_status_var is not None:
         raise NotImplementedError(prefix+"GUI already constructed.")
     else:
         # root must be constructed first (above)
-        appStatusV = tk.StringVar()
+        splash_status_var = tk.StringVar(root)
     if app is not None:
         # Make set_status calls work on the local label (if enable_tk).
         if app.statusVar is not None:
-            appStatusV = app.statusVar
+            splash_status_var = app.statusVar
+            print("[construct_gui] Using app's statusVar")
         else:
-            app.statusVar = appStatusV
+            app.statusVar = splash_status_var
+            print("[construct_gui] Set app's statusVar")
             # OK to set if None (not assigned to label yet)
-
+    else:
+        echo2("Running without a previous app (Only windows starting with this"
+              " one will show errors)")
+        # NOTE: This path is expected in the case of running
+        #   the updater that updates the launcher (splash_status_var should be
+        #   given to HierosoftUpdate instance by the caller).
+        root.splashStatusV = splash_status_var
     screenW = root.winfo_screenwidth()
     screenH = root.winfo_screenheight()
     winW1 = int(float(screenW)/3.0)
@@ -1045,6 +1085,110 @@ def construct_gui(root, app):
     #     if platform.system() == "Windows" else transparent_png
     # print("Loading splash screen {} byte(s)"
     #       .format(len(transparent_data)))
+    left = int((screenW - winW) / 2)
+    top = int((screenH - winH) / 2)
+    root.geometry("%sx%s+%s+%s" % (winW, winH, left, top))
+    pointSize = float(screenW) / 14.0 / 72.0  # assume 14" approx screen
+    canvasW = winW
+    canvasH = winH - int(pointSize*20.0)  # reduce for status bar
+    canvas = tk.Canvas(
+        root,
+        width=canvasW,
+        height=canvasH,
+    )
+    label = ttk.Entry(
+        root,
+        textvariable=splash_status_var,
+        state='readonly',
+    )
+    splash_status_var.set("Preparing...")
+    if app and app.startup_message:
+        splash_status_var.set(app.startup_message)
+        # such as HierosoftUpdate.NO_WEB_MSG
+        app.startup_message = None
+
+    canvas.pack(
+        side=tk.TOP,
+        fill=tk.BOTH,
+        expand=True,
+    )
+    label.pack(
+        side=tk.BOTTOM,
+        fill=tk.BOTH,
+        expand=True,
+    )
+    root.update()
+    # ^ finalizes size (otherwise constrain fails due to
+    #   incorrect canvas.winfo_width() or winfo_height())
+    root.deiconify()
+    try:
+        show_images(root, app, canvas, winW=winW, winH=winH,
+                    canvasW=canvasW, canvasH=canvasH)
+    except Exception as ex:
+        set_status(prefix+"Logo error: "+formatted_ex(ex))
+    return root
+
+
+def run_binary_launcher(self_install_options):
+    prefix = "[run_binary_launcher] "
+    app = self_install_options.get('next_app')  # type: HierosoftUpdate
+    root = self_install_options.get('next_root')  # type: tk.Tk
+    # upgrade = self_install_options.get('next_enable_upgrade')
+    # ^ Can't upgrade in binary_mode
+    # Use self instead of Python version
+    if app:
+        app.set_status(HierosoftUpdate.NO_WEB_MSG)
+    if root is None:
+        # Try to force tk mode.
+        echo0(prefix+"Constructing GUI")
+        root = construct_gui(root, app)
+        # ^ sets global splash_status_var (same as root.splashStatusV)
+    else:
+        echo0(prefix+"Using existing root")
+    # This is updater mode but there is no web & no Python copy
+    #   so try to run self without web:
+    args = [
+        __file__,  # Try the binary
+        "--offline",  # Force offline mode (run main GUI not updater)
+    ]
+    error = self_install_options.get('error')
+    if error:
+        args.append("--error")
+        args.append(error)
+    try:
+        _ = subprocess.Popen(args)
+    except OSError:
+        # Apparently Python version of splash screen is running (such as
+        #   for development), so use gui_main
+        #   (behave like run.py)
+        from hierosoft.gui_tk import main as gui_main
+        sys.exit(gui_main(splashStatusV=splash_status_var))
+    root.mainloop()
+
+
+def set_status(message):
+    splash_status_var.set(message)
+
+
+def show_images(root, app, canvas, enable_svg=False, test_only=False,
+                winW=None, winH=None, canvasW=None, canvasH=None):
+    # type: (tk.Tk, HierosoftUpdate, tk.Canvas, bool, bool, int, int, int, int) -> None
+    from hierosoft.hierosoftpacked import (
+        hierosoft_svg,
+        hierosoft_48px_png,
+    )
+    from hierosoft.moresvg import MoreSVG
+    # from hierosoft.moretk import OffscreenCanvas
+
+    if winW is None:
+        winW = root.winfo_width()
+    if winH is None:
+        winH = root.winfo_height()
+    if canvasW is None:
+        canvasW = canvas.winfo_width()
+    if canvasH is None:
+        canvasH = canvas.winfo_height()
+
     if platform.system() == "Windows":
         # Also works: root.iconbitmap(sys.executable)  # python/compiled exe
         if enable_pil:
@@ -1069,60 +1213,19 @@ def construct_gui(root, app):
             master=root,  # prevents intermittent use of disposed PhotoImage!
         )
         root.iconphoto(False, root.logo_photo)
-    left = int((screenW - winW) / 2)
-    top = int((screenH - winH) / 2)
-    root.geometry("%sx%s+%s+%s" % (winW, winH, left, top))
-    pointSize = float(screenW) / 14.0 / 72.0  # assume 14" approx screen
-    canvasW = winW
-    canvasH = winH - int(pointSize*20.0)  # reduce for status bar
-    canvas = tk.Canvas(
-        root,
-        width=canvasW,
-        height=canvasH,
-    )
-    label = tk.Label(
-        root,
-        textvariable=appStatusV,
-    )
-    appStatusV.set("Preparing...")
-    if app and app.startup_message:
-        appStatusV.set(app.startup_message)
-        # such as HierosoftUpdate.NO_WEB_MSG
-        app.startup_message = None
 
-    canvas.pack(
-        side=tk.TOP,
-        fill=tk.BOTH,
-        expand=True,
-    )
-    label.pack(
-        side=tk.BOTTOM,
-        fill=tk.BOTH,
-        expand=True,
-    )
-    from hierosoft.hierosoftpacked import (
-        hierosoft_svg,
-        hierosoft_48px_png,
-    )
-    from hierosoft.moresvg import MoreSVG
-    # from hierosoft.moretk import OffscreenCanvas
     # def after_size():
-    enable_svg = False
-    root.update()
-    # ^ finalizes size (otherwise constrain fails due to
-    #   incorrect canvas.winfo_width() or winfo_height())
-    root.deiconify()
-    test_only = False
     # canvas.create_polygon(10, 10, canvas.winfo_width(),
     #                       60, 0,60, 10, 10,
     #                       fill="black", smooth=1)
-    root.logo_photo = None
-    svg = None
+    root.logo_photo = None  # type: tk.PhotoImage
+    svg = None  # type: MoreSVG|None
     if enable_svg:
         svg = MoreSVG()
-        slack = winH - canvasH
+        # slackH = winH - canvasH
+        slackW = winW - canvasW
         pos = [
-            int((winW - canvasW - slack) // 2),  # assume square graphic to center
+            int((winW - canvasW - slackW) // 2),
             0,
         ]
         # ^ (winW-canvasH) works without `/ 2`
@@ -1156,43 +1259,6 @@ def construct_gui(root, app):
             canvas.create_image(pos[0], pos[1], image=root.logo_photo, anchor=tk.NW)
 
     # aa_canvas.render(canvas, divisor=aa, transparent="FFFFFF")
-    return root
-
-
-def run_binary_launcher(self_install_options):
-    prefix = "[run_binary_launcher] "
-    app = self_install_options.get('next_app')  # type: HierosoftUpdate
-    root = self_install_options.get('next_root')  # type: tk.Tk
-    # upgrade = self_install_options.get('next_enable_upgrade')
-    # ^ Can't upgrade in binary_mode
-    # Use self instead of Python version
-    if app:
-        app.set_status(HierosoftUpdate.NO_WEB_MSG)
-    if root is None:
-        # Try to force tk mode.
-        echo0(prefix+"Constructing GUI")
-        root = construct_gui(root, app)
-    # This is updater mode but there is no web & no Python copy
-    #   so try to run self without web:
-    args = [
-        __file__,  # Try the binary
-        "--offline",  # Force offline mode (run main GUI not updater)
-    ]
-    error = self_install_options.get('error')
-    if error:
-        args.append("--error")
-        args.append(error)
-    try:
-        _ = subprocess.Popen(args)
-    except OSError:
-        # Apparently Python version is being tested, so use gui_main
-        from hierosoft.gui_tk import main as gui_main
-        sys.exit(gui_main())
-    root.mainloop()
-
-
-def set_status(message):
-    appStatusV.set(message)
 
 
 def main():
@@ -1202,6 +1268,7 @@ def main():
     the rest of hierosoft!
     """
     prefix = "[hierosoftupdate main] "
+    print(prefix+"...")
     global enable_tk
     root = None
     offline = False
@@ -1223,7 +1290,8 @@ def main():
     )
     # TODO: ^ Try another source if it fails, or random for load balancing.
     self_install_options['news'] = default_sources.get('news')
-    app = HierosoftUpdate(None, root, self_install_options)
+    app = HierosoftUpdate(None, root, self_install_options,
+                          splashStatusV=splash_status_var)
     # ^ root many be None
     if platform.system() == "Windows":
         # In case this is an exe, install Python if not present
@@ -1292,7 +1360,7 @@ def prepare_and_run_launcher(self_install_options):
     app.set_luid("hierosoft")  # other programs should say their own dir name
     if root is not None:
         root.update()
-    app.set_status("Loading...")  # Only displayed if app.statusVar=appStatusV
+    app.set_status("Loading...")  # visible if app.statusVar=splash_status_var
     if root is not None:
         root.update()
     app.enable_install = True
