@@ -919,8 +919,20 @@ class HierosoftUpdate(object):
             try:
                 self._process_event(event)
             except Exception as ex:
-                self.set_status_after(
-                    "Processing event...{}".format(formatted_ex(ex)))
+                if (isinstance(ex, PermissionError)
+                        and ("used by another" in str(ex))):
+                    # This is caused by _on_archive_ready due to
+                    #   install_zip trying to overwrite files in use
+                    # TODO: Check this through IPC/Pipes/http
+                    # FIXME: The crash wipes the folder
+                    #   (%LOCALAPPDATA%\Programs\hierosoft\versions\main is
+                    #   empty)!
+                    self.set_status_after(
+                        "The launcher is already running ({})"
+                        .format(formatted_ex(ex)))
+                else:
+                    self.set_status_after(
+                        "Processing event...{}".format(formatted_ex(ex)))
         # return done_events
 
     def push_label(self, text):
