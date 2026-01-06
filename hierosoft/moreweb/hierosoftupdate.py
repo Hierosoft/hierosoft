@@ -1,18 +1,20 @@
-from __future__ import print_function
 from __future__ import division
-from collections import OrderedDict
+from __future__ import print_function
+
 import copy
 import json
 import os
 import platform
 import shutil
+import subprocess
 import sys
 import time
-
 # import tempfile
 # import base64
 # import zlib
 # import zipfile
+
+from collections import OrderedDict
 
 # if __name__ == "__main__":
 #     sys.path.insert(0, REPO_DIR)
@@ -64,6 +66,7 @@ from hierosoft.moreweb import (
 )
 
 from hierosoft.moreweb.downloadmanager import DownloadManager
+from hierosoft.processwatcher import ProcessInfo, ProcessWatcher
 
 from hierosoft.hierosoftpacked import (
     sources_json,
@@ -1425,8 +1428,7 @@ def prepare_and_run_launcher(self_install_options):
 
     installed_path = installed.get('installed_path')
     if installed.get("already_installed"):
-        echo0("Already installed: %s"
-              % repr(installed_path))
+        echo0("Already installed: %s" % repr(installed_path))
     if not installed_path:
         echo0("d_click called by download_first must set"
               " 'installed_path' before *every* return unless"
@@ -1440,34 +1442,48 @@ def prepare_and_run_launcher(self_install_options):
     if start_script is None:
         if error is None:
             error = (
-                "Any of %s in %s" % (try_launch_scripts, installed_path)
+                "Missing any %s in %s" % (try_launch_scripts, installed_path)
             )
     import subprocess
     print("[prepare_and_run_launcher] launch from: {}".format(sys.argv))
     if ALREADY_LAUNCHED in sys.argv:
+        print("[prepare_and_run_launcher] Error: ALREADY LAUNCHED")
         raise NotImplementedError(
             "Error: can't launch self (State wasn't detected properly)."
             " Halted to prevent loop.")
     launcher_cmd = [app.best_python, start_script, ALREADY_LAUNCHED,
                     "--offline"]
+    # ^ start_new_session allows the binary launcher to close
+    #   and be replaced by the Python copy
     if error is None:
-        print("[prepare_and_run_launcher] Running: {}"
-              .format(" ".join(launcher_cmd)))
-        _ = subprocess.Popen(
+        launch_t = ProcessWatcher(
             launcher_cmd,
             start_new_session=True,
             cwd=installed_path,
         )
-        # ^ start_new_session allows the binary launcher to close
-        #   and be replaced by the Python copy
-    # else allow compiled copy to show error
+        print("[prepare_and_run_launcher] Running: {}"
+              .format(" ".join(launcher_cmd)))
+        launch_t.start()
+    else:
+        launch_t = ProcessInfo(  # Allows storing faulty data for reporting
+            launcher_cmd,
+            start_new_session=True,
+            cwd=installed_path,
+        )
+        message = "Not running `{}` due to: {}".format(launcher_cmd, error)
+        print(message)
+        set_status(error)
 
-    def close():
-        if error is None:
+    def close_if_ok():
+        if launch_t.error:
+            # An error prevented the launcher from starting, so show the
+            #     error on the splash screen.
+            set_status(launch_t.error)
+        elif error is None:
             root.destroy()
 
     # Keep splash a moment, not scare user with flashing screen.
-    root.after(2000, close)
+    root.after(2000, close_if_ok)
     root.mainloop()
     # time.sleep(2)
 
