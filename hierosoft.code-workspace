@@ -161,6 +161,7 @@
 			"polinom",
 			"popenargs",
 			"prebuild",
+			"processwatcher",
 			"progresswriter",
 			"psutil",
 			"pycodetool",
