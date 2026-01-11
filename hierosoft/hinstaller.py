@@ -635,10 +635,10 @@ class HInstaller:
             self.file_count += 1
         if os.path.exists(vars['dst_path']):
             if vars['src_rel'] in keeps:
-                vars['mode'] = 'skip'
+                vars['mode'] = "skip"
                 vars['warning'] = 'will not be overwritten'
             elif (not symlinks) and os.path.islink(vars['src_path']):
-                vars['mode'] = 'skip'
+                vars['mode'] = "skip"
                 vars['warning'] = 'is a symlink (skipped)'
             elif (os.path.islink(vars['dst_path'])
                     and not os.path.islink(vars['src_path'])):
@@ -659,7 +659,7 @@ class HInstaller:
                     vars['mode'] = 'delete'
                     vars['warning'] = 'is dir on src and file on dest!'
 
-            if vars.get('mode') != 'skip':
+            if vars.get('mode') != "skip":
                 if (os.path.isfile(vars['src_path'])
                         and os.path.isfile(vars['dst_path'])
                         and not os.path.islink(vars['src_path'])):
@@ -684,7 +684,7 @@ class HInstaller:
                         # and (src_ts == dst_ts):
                         if self.simulate:
                             self.matches.add(vars['dst_rel'])
-                        vars['mode'] = 'skip'
+                        vars['mode'] = "skip"
                         vars['hide'] = True
                         self.match_count += 1
                         if 'warning' in vars:
@@ -847,6 +847,7 @@ class HInstaller:
 
         # self.estimates[rel] = folder_size
         return evt
+        # self
 
     def after_install(self):
         '''Finalize logs.

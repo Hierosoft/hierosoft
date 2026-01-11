@@ -34,6 +34,7 @@ verbosity = 2  # 2 to mimic Python 3 logging default WARNING (30)
 space_nospace_rc = re.compile(r'(\s*)(.*)')
 
 log_path = "stderr.txt"  # None for no file-based logging
+log_mode = "w"  # changed to "a" after first use.
 
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
@@ -279,20 +280,24 @@ def write4(msg):
 
 
 def _print(*args, **kwargs):
+    global log_mode
     print(*args, **kwargs)
     if log_path is None:
         return True
-    with open(log_path, 'a') as stream:
+    with open(log_path, log_mode) as stream:
+        log_mode = "a"
         kwargs['file'] = stream
         print(*args, **kwargs)
     return True
 
 
 def _write(msg):
+    global log_mode
     sys.stderr.write(msg)
     if log_path is None:
         return True
-    with open(log_path, 'a') as stream:
+    with open(log_path, log_mode) as stream:
+        log_mode = "a"
         stream.write(msg)
     return True
 

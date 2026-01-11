@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+
 import copy
 import hashlib
 import os
@@ -10,9 +11,10 @@ import sys
 import subprocess
 import tarfile
 import tempfile
-from typing import Callable
 import zipfile
 
+from collections import OrderedDict
+from typing import Callable
 from zipfile import ZipFile
 
 from hierosoft.morelogging import echo2, hr_repr
@@ -30,10 +32,11 @@ from hierosoft.morebytes import (
 )
 
 
-enable_gi = False
-
 DEFAULT_SIZE_SUB = "48x48"
 DEFAULT_CONTEXT = "apps"
+
+ICON_THEME = None
+enable_gi = False
 
 APP_ICONS_PATHS = [  # which_pixmap checks others beyond DEFAULT_CONTEXT
     os.path.join("/usr/share/icons/hicolor", DEFAULT_SIZE_SUB,
@@ -86,7 +89,20 @@ else:
     shlex.join = shlex_join
 """
 
-ICON_THEME = None
+
+def default_status_cb(evt, prefix=""):
+    error = evt.get('error')
+    message = evt.get('message')
+    assert not evt.get("status"), "deprecated 'status' key"
+    ratio = evt.get('ratio')
+    if error:
+        print(prefix+"[default_status_cb] [ERROR] "+error, file=sys.stderr)
+    elif message:
+        print(prefix+"[default_status_cb] [INFO] "+error, file=sys.stderr)
+    elif ratio:
+        print("\r"+prefix+"[default_status_cb] [PROGRESS] {}%"
+              .format(round(ratio*100, 1)), file=sys.stderr)
+    return evt
 
 
 def startfile(cell_content):
@@ -181,8 +197,44 @@ def which_pixmap(name, context=DEFAULT_CONTEXT, size=48, refresh=True):
     return None
 
 
+def copytree(src, dst, **kwargs):
+    move = kwargs.get('move')
+    overwrite = kwargs.get('overwrite')
+    dirs = []
+    for sub in os.listdir(src):
+        src_sub_path = os.path.join(src, sub)
+        dst_sub_path = os.path.join(dst, sub)
+        if (os.path.islink(src_sub_path)
+                or os.path.isfile(src_sub_path)):
+            if overwrite:
+                if os.path.exists(dst_sub_path):
+                    os.remove(dst_sub_path)
+                else:
+                    print("# skipped existing {}"
+                          .format(hr_repr(dst_sub_path)))
+                    continue
+            dst_parent = os.path.dirname(dst_sub_path)
+            if not os.path.isdir(dst_parent):
+                os.makedirs(dst_parent)
+            if move:
+                shutil.move(src_sub_path, dst_sub_path)
+            else:
+                shutil.copy2(src_sub_path, dst_sub_path)
+        else:
+            dirs.append(sub)
+
+    for sub in dirs:
+        src_sub_path = os.path.join(src, sub)
+        dst_sub_path = os.path.join(dst, sub)
+        copytree(src_sub_path, dst_sub_path, **kwargs)
+
+
 def install_folder(src, dst, event_template=None):
-    '''
+    '''Install hierosoft itself using HInstaller.
+
+    NOTE: replaces all from source that are in dst
+    (Use a different function if not Hierosoft)!
+
     Args:
         event_template (Optional[dict]): Set options for this method and
             default metadata for event returned. Keys:
@@ -190,10 +242,19 @@ def install_folder(src, dst, event_template=None):
               "skip" to do nothing except set evt['installed_path'] and
               evt['already_installed'] if exists.
     '''
+    # TODO: Merge into HInstaller?
     prefix = "[install_folder] "
     remove_dst = False
     skip_dst = False
-    exists_action = event_template.get('exists_action')
+    if event_template is None:
+        evt = {}
+    else:
+        if 'error' in event_template:
+            raise ValueError("Calls continued after error but should not."
+                             " Previous error: %s" % event_template['error'])
+        evt = copy.deepcopy(event_template)
+    del event_template
+    exists_action = evt.get('exists_action')
     programs_dir = os.path.dirname(dst)
     if not os.path.isdir(programs_dir):
         echo0("Warning: creating programs directory %s"
@@ -202,18 +263,15 @@ def install_folder(src, dst, event_template=None):
     if exists_action:
         if exists_action == "delete":
             remove_dst = True
+        elif exists_action == "sync":
+            remove_dst = False
+            skip_dst = False
         elif exists_action == "skip":
             skip_dst = True
         else:
             raise NotImplementedError(prefix+"%s is not implemented"
                                       % exists_action)
-    if event_template is None:
-        evt = {}
-    else:
-        if 'error' in event_template:
-            raise ValueError("Calls continued after error but should not."
-                             " Previous error: %s" % event_template['error'])
-        evt = copy.deepcopy(event_template)
+
     if os.path.isdir(dst):
         # Don't remove until zip is sure to be ok!
         if remove_dst:
@@ -230,7 +288,7 @@ def install_folder(src, dst, event_template=None):
                 evt['already_installed'] = True
                 evt['installed_path'] = dst
                 return evt
-            else:
+            elif exists_action != "sync":
                 evt['error'] = ("The destination already exists: %s"
                                 % hr_repr(dst))
                 evt['installed_path'] = dst
@@ -243,7 +301,24 @@ def install_folder(src, dst, event_template=None):
     # copy_function (object):
     # ignore_dangling_symlinks
     evt['installed_path'] = dst
-    shutil.move(src, dst)
+    project_meta = {}
+    project_meta['dst_path'] = dst  # for 1-file progs use this not dst_dirpath
+    project_meta['dst_dirpath'] = dst
+    project_meta['keeps'] = []  # selective (such as run-in-place Minetest)
+    project_meta['replaces'] = []  # selective (such as run-in-place Minetest)
+    for sub in os.listdir(src):
+        # Replace all in the case of Hierosoft
+        project_meta['replaces'].append(sub)
+    if exists_action == "sync":
+        # TODO: remove install_folder & use HInstaller & avoid circular import:
+        # installer = HInstaller(src, dst, project_meta)
+        # installer.copytree(src, dst)
+        copytree(
+            src,
+            dst,
+        )
+    else:
+        shutil.move(src, dst)
     return evt
 
 
@@ -252,6 +327,10 @@ def install_extracted(extracted_path, dst, event_template=None):
 
     For further documentation see install_folder (where src is either
     extracted_path or single subdirectory if only has 1)
+
+    NOTE: Replaces everything (since uses install_folder)! See other
+    uses of Hierosoft for selective replacement such as for run-in-place
+    Minetest.
 
     Args:
         extracted_path (str): The path where one or more items were extracted
@@ -351,7 +430,7 @@ def install_tar(archive, dst, remove_archive=False,
         return mode_args
     mode = mode_args['tar.mode']
     if event_template is None:
-        evt = {}
+        evt = OrderedDict()
     else:
         if 'error' in event_template:
             raise ValueError("Calls continued after error but should not."
@@ -402,7 +481,7 @@ def install_zip(archive, dst, remove_archive=False,
     For returns and other documentation, see install_extracted.
     """
     if event_template is None:
-        evt = {}
+        evt = OrderedDict()
     else:
         if 'error' in event_template:
             raise ValueError("Calls continued after error but should not."
@@ -457,9 +536,14 @@ def install_archive(archive, dst, remove_dst=False,
 
     For returns and other documentation, see install_extracted.
     """
+    def local_status_cb(e):
+        return default_status_cb(e, prefix="install_archive")
+    if status_cb is None:
+        status_cb = local_status_cb
+
     # self.root.update()
     if event_template is None:
-        evt = {}
+        evt = OrderedDict()
     else:
         if 'error' in event_template:
             raise ValueError("Calls continued after error but should not."
@@ -467,8 +551,7 @@ def install_archive(archive, dst, remove_dst=False,
         evt = copy.deepcopy(event_template)
     if not archive:
         evt['error'] = "Archive path was not set before install_archive."
-        if status_cb:
-            status_cb(evt)
+        status_cb(evt)
         return evt
     tar_args = get_tar_mode(archive, event_template=evt)
     if archive.lower().endswith(".zip"):
@@ -490,6 +573,8 @@ def install_archive(archive, dst, remove_dst=False,
         installed = evt
     if 'error' not in installed:
         installed['Path'] = dst
+    evt['done'] = True
+    status_cb(evt)
     return installed
     # uninstall button & mode removed (too many nested conditions) 20230823
     # TODO: implement uninstall mode & button elsewhere
@@ -904,3 +989,123 @@ def same_hash(path1, path2):
             digests.append(a)
 
     return digests[0] == digests[1]
+
+
+def os_version_info():
+    # type: () -> OrderedDict[str, int]
+    """Get OS version info in a fault-tolerant way.
+
+    Work around Python issues getting Windows version incorrectly:
+    ```
+    Python 2.7.18 (v2.7.18:8d21aa21f2, Apr 20 2020, 13:25:05) [MSC
+    v.1500 64 bit (AMD64)] on win32
+    >>> sys.getwindowsversion()
+    sys.getwindowsversion(major=6, minor=2, build=9200, platform=2,
+    service_pack='')
+    >>> platform.win32_ver()
+    ('10', '10.0.26100', '', u'Multiprocessor Free')
+
+    Python 3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC
+    v.1944 64 bit (AMD64)] on win32
+    >>> sys.getwindowsversion()
+    sys.getwindowsversion(major=10, minor=0, build=26100, platform=2,
+    service_pack='')
+    >>> platform.win32_ver()
+    ('11', '10.0.26100', 'SP0', 'Multiprocessor Free')
+    ```
+    using the table at
+    https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version?redirectedfrom=MSDN
+
+    Returns:
+        OrderedDict: With 0 or more keys such as:
+            - 'major' (int): On Windows, this is translated from
+              technical major.minor to a marketed version--such as
+              6 if using Server 2008 or Vista.
+            - 'minor' (int): On Windows, this is translated. It is only
+              set for Vista (to 0) or 8 (set to 0 or 1). On other
+              versions of Windows it is not applicable.
+            - 'micro' (int): 3rd segment of version, such as 26100 in
+              "10.0.26100" (starting with 2 indicates Windows 11).
+            - 'build' (int): Windows-only, same as 'micro'
+            - 'raw' (list[int]): Windows-only
+            - 'name' (str): Windows-only: "2000", "XP", "Vista", "7",
+              "8.0", "8.1", "10", "11" or higher if Python detects a
+              higher version (Server detection is not implemented).
+            - and any keys in /etc/os-release if the file exists
+              (non-Windows only).
+    """
+    info = OrderedDict()
+    if platform.system() == "Windows":
+        if hasattr(platform, 'win32_ver'):
+            segments = platform.win32_ver()[1].split(".")
+            # ^ platform.win32_ver()[0] is sometimes wrong. See docstring.
+            info['raw'] = segments
+            if len(segments) > 1:
+                major_minor = segments[:2]
+                if major_minor == ["10", "0"]:
+                    # May be 10 or 11 :(
+                    majorI = int(segments[0])
+                    if majorI >= 11:
+                        # This doesn't work on Python 2 for some reason
+                        #   (but this is fault tolerant since
+                        #   false "10" is ignored. See next case)
+                        info['major'] = majorI
+                        info['name'] = segments[0]
+                    elif len(segments) > 2 and segments[2].startswith("2"):
+                        # ^ This is definitely Windows 11 (according to
+                        #   <https://www.elevenforum.com/t/why-does-the-
+                        #   command-prompt-say-that-im-running-version-
+                        #   10.30558/post-526488>)
+                        info['major'] = 11
+                        info['name'] = "11"
+                    else:
+                        info['major'] = 10
+                        info['name'] = "10"
+                elif major_minor == ["6", "3"]:
+                    info['major'] = 8
+                    info['minor'] = 1
+                    info['name'] = "8.1"
+                elif major_minor == ["6", "2"]:
+                    info['major'] = 8
+                    info['minor'] = 0
+                    info['name'] = "8"
+                elif major_minor == ["6", "1"]:
+                    info['major'] = 7
+                    info['name'] = "7"
+                elif major_minor == ["6", "0"]:
+                    info['major'] = 6
+                    info['minor'] = 0
+                    info['name'] = "Vista"
+                elif major_minor == ["5", "1"]:
+                    info['major'] = 5
+                    info['minor'] = 1
+                    info['name'] = "XP"
+                elif major_minor == ["5", "0"]:
+                    info['major'] = 5
+                    info['minor'] = 0
+                    info['name'] = "2000"
+            if len(segments) > 2:
+                info['micro'] = segments[2]
+                info['build'] = info['micro']
+            if len(segments) > 3:
+                print("Warning: only major.minor.micro is implemented,"
+                      " but got {} for {} version"
+                      .format(platform.win32_ver()[1], platform.system()))
+    # elif platform.system() == "Darwin":
+    #     print("Error: Darwin version is not implemented", file=sys.stderr)
+    else:  # platform.system() == "Linux":
+        if os.path.isfile("/etc/os-release"):
+            with open("/etc/os-release", "r") as stream:
+                for line in stream:
+                    line = line.strip()
+                    operands = line.split("=", 1)
+                    if operands[0] == "VERSION":
+                        parts = operands[1].split(" ", 1)
+                        info['major'] = int(parts[0])
+                        if len(parts) > 1:
+                            # such as "(Beefy Miracle)"
+                            info['codename'] = parts[1].strip("() ")
+                    info[operands[0]] = operands[1]
+        else:
+            print("There is no {} /etc/os-release".format(platform.system()))
+    return info
