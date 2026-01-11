@@ -2,6 +2,8 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
+from functools import partial
+import inspect
 import json
 import os
 import platform
@@ -245,6 +247,8 @@ class HierosoftUpdate(object):
         self.urls = None
         self.count_label = None
         self.refresh_btn = None
+        self.try_launch_scripts = ["run.pyw", "run.py", "main.py"]
+        self.required_folders = ["hierosoft"]
         self.dl_buttons = []
         self.msg_labels = []
         self.events = []
@@ -259,6 +263,7 @@ class HierosoftUpdate(object):
         self.option_entries = {}
         self.mgr = DownloadManager()
         self.options = options
+        self.version = "main"  # type:str
 
     def showApplicationPage(self):
         self.set_all_options(self.options, False, require_bin=False)
@@ -286,20 +291,31 @@ class HierosoftUpdate(object):
     def versions_path(self):
         return os.path.join(self.luid_dir, "versions")
 
+    def find_start_script(self):
+        good_installed_path = self.get_version_path()  # type: str
+        return join_if_exists(good_installed_path, self.try_launch_scripts)
+
     def get_this_version_path(self, version):
         return os.path.join(self.versions_path, version)
 
-    def set_status(self, msg):
+    def get_version_path(self):
+        return self.get_this_version_path(self.version)
+
+    def set_status(self, msg, caller_name=None):
+        if caller_name is None:
+            call_frame = inspect.stack()
+            caller_name = call_frame[1][3]
+        prefix = "[HierosoftUpdate set_status via {}] ".format(caller_name)
         if self.splashStatusV is not None:
             self.splashStatusV.set(msg)
         else:
-            echo2("[HierosoftUpdate set_status] There is no splashStatusV")
+            echo2(prefix+"There is no splashStatusV")
         if self.statusVar is not None:
             echo0("set status: %s" % msg)
             self.statusVar.set(msg)
         else:
             self.startup_message = msg
-            echo0("[HierosoftUpdate set_status] %s" % msg)
+            echo0(prefix+"%s" % msg)
             if self.news:
                 for article in self.news:
                     echo0("")
@@ -313,8 +329,15 @@ class HierosoftUpdate(object):
                     if url:
                         echo0(url)
 
-    def set_status_after(self, message):
-        self.root.after(0, self.set_status, message)
+    def set_status_after(self, message, caller_name=None):
+        if caller_name is None:
+            call_frame = inspect.stack()
+            caller_name = call_frame[1][3]
+        # self.root.after(0, self.set_status, message)
+        partial_fn = partial(self.set_status, msg=message,
+                                   caller_name=caller_name)
+        partial_fn.__name__ = "set_status"  # required by `after`
+        self.root.after(0, partial_fn)
 
     def status_callback(self, event):
         message = event.get('message')
@@ -934,8 +957,13 @@ class HierosoftUpdate(object):
                         "The launcher is already running ({})"
                         .format(formatted_ex(ex)))
                 else:
+                    details = event.get('command')
+                    if details is None:
+                        details = ""
                     self.set_status_after(
-                        "Processing event...{}".format(formatted_ex(ex)))
+                        "Processing event {}...{}"
+                        .format(details, formatted_ex(ex)))
+                    # raise
         # return done_events
 
     def push_label(self, text):
@@ -1142,6 +1170,31 @@ def construct_gui(root, app):
     except Exception as ex:
         set_status(prefix+"Logo error: "+formatted_ex(ex))
     return root
+
+
+def repo_integrity_error(installed_path, app):
+    # type: (str, HierosoftUpdate) -> str|None
+    error = None
+    start_script = join_if_exists(installed_path, app.try_launch_scripts)
+    missing_files = None
+    if start_script is None:
+        # if error is None:
+        error = (
+            "Missing any %s in %s" % (app.try_launch_scripts,
+                                      installed_path)
+        )
+        missing_files = copy.copy(app.try_launch_scripts)
+    missing_dirs = []
+    for sub in app.required_folders:
+        try_dir = os.path.join(installed_path, sub)
+        if not os.path.isdir(try_dir):
+            missing_dirs.append(sub)
+    if missing_files:
+        missing_dirs.extend(missing_files)
+    if missing_dirs:
+        error = "Missing {} in {}".format(hr_repr(missing_dirs),
+                                          hr_repr(installed_path))
+    return error
 
 
 def run_binary_launcher(self_install_options):
@@ -1385,13 +1438,27 @@ def prepare_and_run_launcher(self_install_options):
     # but to get return as well:
     # version = self_install_options['version']
     # FIXME: should be "current" for main branch but isn't getting passed down
-    version = "main"
-    good_installed_path = app.get_this_version_path(version)  # type: str
-    try_launch_scripts = ["run.pyw", "run.py", "main.py"]
-    start_script = join_if_exists(good_installed_path, try_launch_scripts)
+
+    start_script = app.find_start_script()
+    if os.path.isdir(app.get_version_path()):
+        error = repo_integrity_error(app.get_version_path(), app)
+        if error:
+            echo1(prefix+error)
+            echo1(prefix+"Trying to repair (switching to 'sync' upgrade mode)...")
+            if self_install_options['exists_action'] != "sync":
+                self_install_options['exists_action'] = "sync"
     if not start_script or self_install_options['exists_action'] != "skip":
         try:
             app._download_page()
+            if self_install_options['exists_action'] == "skip":
+                # Missing start_script, so do *not* skip (It is incomplete)
+                self_install_options['exists_action'] = "sync"
+                print("Missing {}. Changing exists_action to {}."
+                      .format(app.try_launch_scripts,
+                              repr(self_install_options.get('exists_action'))))
+            else:
+                print("Trying to download (should be skipped since launch script exists)")
+
             installed = app.download_first(event_template=self_install_options)
         except URLError:
             error = ("Web is required to update"
@@ -1408,10 +1475,10 @@ def prepare_and_run_launcher(self_install_options):
         # install_archive(archive_path, evt=meta)
     else:
         echo0("--upgrade was not specified. Using existing %s"
-              % repr(good_installed_path))
+              % repr(app.get_version_path()))
         installed = copy.deepcopy(self_install_options)
         if "installed_path" not in installed:
-            installed['installed_path'] = good_installed_path
+            installed['installed_path'] = app.get_version_path()
         else:
             echo0("Warning: using specified installed_path: %s"
                   % installed['installed_path'])
@@ -1435,16 +1502,11 @@ def prepare_and_run_launcher(self_install_options):
               " 'error' is set. Ultimately, install_folder"
               " (or potentially _on_archive_ready)"
               " has to set it if install_archive is called."
-              " Reverting to '{}'".format(good_installed_path))
+              " Reverting to '{}'".format(app.get_version_path()))
         # fault-tolerant way:
-        installed_path = good_installed_path
-    start_script = join_if_exists(installed_path, try_launch_scripts)
-    if start_script is None:
-        if error is None:
-            error = (
-                "Missing any %s in %s" % (try_launch_scripts, installed_path)
-            )
-    import subprocess
+        installed_path = app.get_version_path()
+    if not error:
+        error = repo_integrity_error(installed_path, app)
     print("[prepare_and_run_launcher] launch from: {}".format(sys.argv))
     if ALREADY_LAUNCHED in sys.argv:
         print("[prepare_and_run_launcher] Error: ALREADY LAUNCHED")
@@ -1456,16 +1518,20 @@ def prepare_and_run_launcher(self_install_options):
     # ^ start_new_session allows the binary launcher to close
     #   and be replaced by the Python copy
     if error is None:
-        launch_t = ProcessWatcher(
+        pw = ProcessWatcher(
             launcher_cmd,
             start_new_session=True,
             cwd=installed_path,
         )
         print("[prepare_and_run_launcher] Running: {}"
               .format(" ".join(launcher_cmd)))
-        launch_t.start()
+        try:
+            pw.start()
+        except Exception as ex:
+            # NOTE: typically unused handler. see _start_sync in ProcessWatcher
+            pw._err_bytes = formatted_ex(ex)
     else:
-        launch_t = ProcessInfo(  # Allows storing faulty data for reporting
+        pw = ProcessInfo(  # Allows storing faulty data for reporting
             launcher_cmd,
             start_new_session=True,
             cwd=installed_path,
@@ -1475,10 +1541,10 @@ def prepare_and_run_launcher(self_install_options):
         set_status(error)
 
     def close_if_ok():
-        if launch_t.error:
+        if pw._err_bytes:
             # An error prevented the launcher from starting, so show the
             #     error on the splash screen.
-            set_status(launch_t.error)
+            set_status(pw._err_bytes)
         elif error is None:
             root.destroy()
 
