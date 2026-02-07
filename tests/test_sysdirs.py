@@ -10,7 +10,7 @@ REPO_DIR = os.path.dirname(TESTS_DIR)
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
 
-from hierosoft.sysdirs import sysdirs
+from hierosoft.sysdirs import sysdirs  # noqa:E402
 
 
 class TestMorePlatform(unittest.TestCase):

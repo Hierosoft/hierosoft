@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 This submodule mimics Python 3 logging but works in either Python 2 or Python 3.
 

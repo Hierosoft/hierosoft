@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 The moresix module is an addendum to six (the Python 3 compatibility
 module for Python 2, with features listed at

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import unittest
@@ -10,7 +11,7 @@ REPO_DIR = os.path.dirname(TESTS_DIR)
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
 
-from hierosoft.readonlydict import ReadOnlyOrderedDict
+from hierosoft.readonlydict import ReadOnlyOrderedDict  # noqa: E402
 
 
 class TestReadOnlyDict(unittest.TestCase):
