@@ -3,6 +3,7 @@ from __future__ import print_function
 import os
 import sys
 
+
 import wx
 
 if __name__ == "__main__":
@@ -29,6 +30,7 @@ def main():
     app = wx.App(False)  # Create the application (False to not redirect stdout/stderr)
     frame = HierosoftUpdateFrameWx(None)  # Instantiate the frame with no parent
     frame.Show(True)  # Show the frame
+    wx.CallAfter(frame.start)
     app.MainLoop()  # Start the main event loop
     return 0
 

@@ -266,6 +266,9 @@ class HierosoftUpdate(object):
         self.options = options
         self.version = "main"  # type:str
 
+    def start(self):
+        pass
+
     def showApplicationPage(self):
         self.set_all_options(self.options, False, require_bin=False)
         # ^ sets *relevant* keys on self, mgr, parser
