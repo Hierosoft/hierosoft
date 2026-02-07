@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Usage:
 hgithub.py <github_user> <project_name> <asset_name> [-O <destination>]

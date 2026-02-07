@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# #!/usr/bin/python3
 # based on EnlivenMinetest/utilities/install-lmk
 #
 # The copy in hierosoft is relicensed by Poikilos (original author)

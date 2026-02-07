@@ -17,7 +17,7 @@ from hierosoft.moresvg import (  # noqa E402
     SVGSegment,
 )
 
-import hierosoft.logging2 as logging
+import hierosoft.logging2 as logging  # noqa E402
 
 from hierosoft.morebytes import (  # noqa E402
     find_not_quoted,

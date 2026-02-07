@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Support Tk versions below 8.7 (alpha June 18, 2021)
 that don't have SVG (such as in Python 2 or

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 
 from hierosoft import (
@@ -9,7 +10,7 @@ from hierosoft import (
 
 from hierosoft.moreweb import (
     name_from_url,
-    HTMLParser,
+    HTMLParser,  # imported from hierosoft instead of html.parser to handle 2to3 issues
 )
 
 

@@ -1,5 +1,5 @@
+# -*- coding: utf-8 -*-
 import os
-
 
 
 def is_dot_notation(name):

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 def property_to_kv_value(property):
     '''
     Change a real Python type value to a KV-encoded value,
