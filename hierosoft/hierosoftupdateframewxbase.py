@@ -21,34 +21,66 @@ _ = gettext.gettext
 class HierosoftUpdateFrameWxBase ( wx.Frame ):
 
     def __init__( self, parent ):
-        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 649,398 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+        wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 723,398 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 
         self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
         outerVSizer = wx.BoxSizer( wx.VERTICAL )
 
         self.m_outerHeaderPanel = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        outerVSizer.Add( self.m_outerHeaderPanel, 1, wx.EXPAND |wx.ALL, 5 )
+        outerVSizer.Add( self.m_outerHeaderPanel, 0, wx.EXPAND |wx.ALL, 0 )
 
         self.m_notebook = wx.aui.AuiNotebook( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.aui.AUI_NB_DEFAULT_STYLE )
-        self.m_packagesPanel = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.m_packagesTabPanel = wx.Panel( self.m_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
         packagesVSizer = wx.BoxSizer( wx.VERTICAL )
 
-        self.m_packagesSplitter = wx.SplitterWindow( self.m_packagesPanel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
+        self.m_packagesSplitter = wx.SplitterWindow( self.m_packagesTabPanel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SP_3D )
         self.m_packagesSplitter.Bind( wx.EVT_IDLE, self.m_packagesSplitterOnIdle )
 
-        self.m_packagesListPanel = wx.Panel( self.m_packagesSplitter, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        self.m_packagesPanel = wx.Panel( self.m_packagesSplitter, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+        packagesPanelOuterVSizer = wx.BoxSizer( wx.VERTICAL )
+
+        self.m_scrolledWindow1 = wx.ScrolledWindow( self.m_packagesPanel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.VSCROLL )
+        self.m_scrolledWindow1.SetScrollRate( 5, 5 )
+        packagesPanelInnerGSizer = wx.GridSizer( 0, 2, 0, 0 )
+
+
+        self.m_scrolledWindow1.SetSizer( packagesPanelInnerGSizer )
+        self.m_scrolledWindow1.Layout()
+        packagesPanelInnerGSizer.Fit( self.m_scrolledWindow1 )
+        packagesPanelOuterVSizer.Add( self.m_scrolledWindow1, 1, wx.EXPAND |wx.ALL, 5 )
+
+
+        self.m_packagesPanel.SetSizer( packagesPanelOuterVSizer )
+        self.m_packagesPanel.Layout()
+        packagesPanelOuterVSizer.Fit( self.m_packagesPanel )
         self.m_packagePanel = wx.Panel( self.m_packagesSplitter, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-        self.m_packagesSplitter.SplitVertically( self.m_packagesListPanel, self.m_packagePanel, 0 )
+        packagePanelOuterVSizer = wx.BoxSizer( wx.VERTICAL )
+
+        self.m_scrolledWindow2 = wx.ScrolledWindow( self.m_packagePanel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.HSCROLL|wx.VSCROLL )
+        self.m_scrolledWindow2.SetScrollRate( 5, 5 )
+        packagePanelInnerVSizer = wx.BoxSizer( wx.VERTICAL )
+
+
+        self.m_scrolledWindow2.SetSizer( packagePanelInnerVSizer )
+        self.m_scrolledWindow2.Layout()
+        packagePanelInnerVSizer.Fit( self.m_scrolledWindow2 )
+        packagePanelOuterVSizer.Add( self.m_scrolledWindow2, 1, wx.EXPAND |wx.ALL, 5 )
+
+
+        self.m_packagePanel.SetSizer( packagePanelOuterVSizer )
+        self.m_packagePanel.Layout()
+        packagePanelOuterVSizer.Fit( self.m_packagePanel )
+        self.m_packagesSplitter.SplitVertically( self.m_packagesPanel, self.m_packagePanel, 229 )
         packagesVSizer.Add( self.m_packagesSplitter, 1, wx.EXPAND, 5 )
 
 
-        self.m_packagesPanel.SetSizer( packagesVSizer )
-        self.m_packagesPanel.Layout()
-        packagesVSizer.Fit( self.m_packagesPanel )
-        self.m_notebook.AddPage( self.m_packagesPanel, _(u"a page"), False, wx.NullBitmap )
+        self.m_packagesTabPanel.SetSizer( packagesVSizer )
+        self.m_packagesTabPanel.Layout()
+        packagesVSizer.Fit( self.m_packagesTabPanel )
+        self.m_notebook.AddPage( self.m_packagesTabPanel, _(u"Packages"), False, wx.NullBitmap )
 
-        outerVSizer.Add( self.m_notebook, 9, wx.EXPAND |wx.ALL, 5 )
+        outerVSizer.Add( self.m_notebook, 9, wx.EXPAND |wx.ALL, 0 )
 
 
         self.SetSizer( outerVSizer )
@@ -61,7 +93,7 @@ class HierosoftUpdateFrameWxBase ( wx.Frame ):
         pass
 
     def m_packagesSplitterOnIdle( self, event ):
-        self.m_packagesSplitter.SetSashPosition( 0 )
+        self.m_packagesSplitter.SetSashPosition( 229 )
         self.m_packagesSplitter.Unbind( wx.EVT_IDLE )
 
 
