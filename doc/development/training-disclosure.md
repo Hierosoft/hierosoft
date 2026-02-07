@@ -168,3 +168,11 @@ Get the function that called this function in a backward-compatible way:
 ```
 
 How can I use partial or something to send the keyword arg along to set_status?
+
+## hierosoft/hierosoftupdateframetkbase.py
+- Grok
+Convert this to tkinter with PEP8 formatting. Import tkinter as tk. Don't use * imports, only explicit ones. Don't change variable names, but make the locals into attributes. Save parent to self.parent assuming typical constructor params (Tk() instantiated in caller, not in this file, passed to constructor, so the class, renamed to HierosoftUpdateFrameTkBase, should be a subclass of ttk.Frame).
+- paste hierosoftupdateframewxbase.py
+
+Now translate the subclass:
+- paste hierosoftupdateframewx.py
