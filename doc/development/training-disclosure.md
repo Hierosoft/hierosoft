@@ -176,3 +176,8 @@ Convert this to tkinter with PEP8 formatting. Import tkinter as tk. Don't use * 
 
 Now translate the subclass:
 - paste hierosoftupdateframewx.py
+
+## hierosoft/processwatcher.py
+Don't use asyncio. Integrate my last_nonempty variable. Complete the reader method instead of using comments to tell me to finish it. Use the missing code from the original version I pasted, but also add the new features from the following updated version (but ensure _err_bytes and _out_bytes are bytes, and error is str and maintain its usage from the original) unless they are wierd redundant ones or renames you did:
+- [sic]. Paste latest version.
+- Perform manual edits for PEP8.
