@@ -9,7 +9,7 @@ import json
 import os
 import platform
 import shutil
-import subprocess
+# import subprocess  # import from hierosoft instead for 2to3 polyfills
 import sys
 import time
 # import tempfile
@@ -29,7 +29,7 @@ except ImportError as ex:
     print("{}: {}".format(type(ex).__name__, ex), file=sys.stderr)
     pass
 
-from hierosoft import (
+from hierosoft import (  # noqa: E402
     echo0,
     echo1,
     echo2,
@@ -45,33 +45,33 @@ from hierosoft import (
     which_python,
     join_if_exists,
 )
-from hierosoft.ggrep import (
+from hierosoft.ggrep import (  # noqa: E402
     contains_any,
 )
 
-from hierosoft.morelogging import (
+from hierosoft.morelogging import (  # noqa: E402
     formatted_ex,
     hr_repr,
 )
 
-from hierosoft.moreplatform import (
+from hierosoft.moreplatform import (  # noqa: E402
     # install_zip,
     # make_shortcut,
     install_archive,
     subprocess,
 )
 
-from hierosoft.moreweb import (
+from hierosoft.moreweb import (  # noqa: E402
     name_from_url,
     STATUS_DONE,
     get_python_download_spec,
     URLError,
 )
 
-from hierosoft.moreweb.downloadmanager import DownloadManager
-from hierosoft.processwatcher import ProcessInfo, ProcessWatcher
+from hierosoft.moreweb.downloadmanager import DownloadManager  # noqa: E402
+from hierosoft.processwatcher import ProcessInfo, ProcessWatcher  # noqa: E402
 
-from hierosoft.hierosoftpacked import (
+from hierosoft.hierosoftpacked import (  # noqa: E402
     sources_json,
     transparent_ico,
     transparent_png,
@@ -221,7 +221,7 @@ class HierosoftUpdate(object):
         self.auto_column = 0  # type: int
         self.auto_row = 0  # type: int
         self.download_done = False  # type: bool
-        self.archive_path = None  # type: str
+        self.archive_path = None  # type: str|None
         self.enable_install = None  # type: bool
         self.remove_download = None  # type: bool
         self.luid = None  # type: str
@@ -267,6 +267,9 @@ class HierosoftUpdate(object):
         self.version = "main"  # type:str
 
     def start(self):
+        """Load metadata (launcher scope). See subclass for GUI version.
+        See also start_refresh (program-scope refresh).
+        """
         pass
 
     def showApplicationPage(self):
@@ -339,8 +342,8 @@ class HierosoftUpdate(object):
             caller_name = call_frame[1][3]
         # self.root.after(0, self.set_status, message)
         partial_fn = partial(self.set_status, msg=message,
-                                   caller_name=caller_name)
-        partial_fn.__name__ = "set_status"  # required by `after`
+                             caller_name=caller_name)
+        partial_fn.__name__ = "set_status"  # required by `after` #type:ignore
         self.root.after(0, partial_fn)
 
     def status_callback(self, event):
@@ -697,6 +700,7 @@ class HierosoftUpdate(object):
 
         dest_id = meta.get('luid')
         if dest_id is None:
+            assert self.mgr.parser is not None
             dest_id = self.mgr.parser.id_from_name(meta['filename'],
                                                    remove_ext=True)
         # print("new_filename: " + self.mgr.parser.id_from_url(url))
@@ -749,6 +753,7 @@ class HierosoftUpdate(object):
         evt['archive'] = self.archive_path
         # ^ triggers extract
         evt['luid'] = self.luid
+        assert self.archive_path is not None
         if os.path.isfile(self.archive_path):
             self.push_label("Warning: Resuming install with existing archive")
             self.push_label(self.archive_path)
@@ -1051,7 +1056,7 @@ sources_path = os.path.join(data_dir, "default_sources.json")
 #         json.dump(default_sources, stream, indent=2, sort_keys=True)
 # Instead, use prebuild.py to pack files.
 
-splash_status_var = None
+splash_status_var = None  # type: tk.StringVar
 
 
 def get_status_v():
@@ -1244,7 +1249,7 @@ def set_status(message):
 
 def show_images(root, app, canvas, enable_svg=False, test_only=False,
                 winW=None, winH=None, canvasW=None, canvasH=None):
-    # type: (tk.Tk, HierosoftUpdate, tk.Canvas, bool, bool, int, int, int, int) -> None
+    # type: (tk.Tk, HierosoftUpdate, tk.Canvas, bool, bool, int|None, int|None, int|None, int|None) -> None  # noqa: E501
     from hierosoft.hierosoftpacked import (
         hierosoft_svg,
         hierosoft_48px_png,
@@ -1448,7 +1453,8 @@ def prepare_and_run_launcher(self_install_options):
         error = repo_integrity_error(app.get_version_path(), app)
         if error:
             echo1(prefix+error)
-            echo1(prefix+"Trying to repair (switching to 'sync' upgrade mode)...")
+            echo1(prefix
+                  + "Trying to repair (switching to 'sync' upgrade mode)...")
             if self_install_options['exists_action'] != "sync":
                 self_install_options['exists_action'] = "sync"
     if not start_script or self_install_options['exists_action'] != "skip":
@@ -1461,7 +1467,8 @@ def prepare_and_run_launcher(self_install_options):
                       .format(app.try_launch_scripts,
                               repr(self_install_options.get('exists_action'))))
             else:
-                print("Trying to download (should be skipped since launch script exists)")
+                print("Trying to download"
+                      " (should be skipped since launch script exists)")
 
             installed = app.download_first(event_template=self_install_options)
         except URLError:
@@ -1533,7 +1540,7 @@ def prepare_and_run_launcher(self_install_options):
             pw.start()
         except Exception as ex:
             # NOTE: typically unused handler. see _start_sync in ProcessWatcher
-            pw._err_bytes = formatted_ex(ex)
+            pw._err_bytes = formatted_ex(ex).encode('utf-8')
     else:
         pw = ProcessInfo(  # Allows storing faulty data for reporting
             launcher_cmd,
