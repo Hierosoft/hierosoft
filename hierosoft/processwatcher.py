@@ -56,10 +56,11 @@ class ProcessWatcher(ProcessInfo):
         self._out_bytes = bytearray()
         self._err_bytes = bytearray()
 
+        self.kwargs['stdout'] = subprocess.PIPE
+        self.kwargs['stderr'] = subprocess.PIPE  # keep separate
+
         self.proc = subprocess.Popen(
             self.launcher_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,  # keep separate
             **self.kwargs,
         )
 
