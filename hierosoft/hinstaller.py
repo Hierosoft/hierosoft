@@ -32,9 +32,10 @@ from hierosoft.moreplatform import (
     zip_dir,
 )
 
-from hierosoft.morelogging import (
+from hierosoft.logging2 import (
     utcnow,
 )
+
 
 def best_timer_ms():
     return time.time_ns() / 1000000
@@ -324,7 +325,7 @@ class HInstaller:
                 raise ValueError('bytes_done was already {}'
                                  ''.format(evt.get('bytes_done')))
         else:
-            if not self.hasattr(self, 'matches'):
+            if not hasattr(self, 'matches'):
                 self.matches = set()
             self.started = True
             self.ended = False
@@ -866,6 +867,7 @@ class HInstaller:
         else:
             echo0("Install is complete.")
         undo = self.undo
+        assert self.rmdir_lines
         rmdir_lines = list(sorted(self.rmdir_lines, key=len))
         for i in range(len(rmdir_lines)):
             if not rmdir_lines[i].endswith("\n"):
@@ -882,6 +884,7 @@ class HInstaller:
             if os.path.isfile(self.bak_id_file):
                 # os.remove(self.bak_id_file)
                 _, name = os.path.split(self.bak_id_file)
+                assert self.undo_root
                 shutil.move(self.bak_id_file,
                             os.path.join(self.undo_root, name))
         else:
@@ -1032,7 +1035,7 @@ class HInstaller:
             if not os.path.isdir(src_path):
                 # is dir & not on src.
                 # if ((undo_dir not in self.undo_mkdir_lines)
-                #         and not os.isdir(undo_dir)):
+                #         and not os.path.isdir(undo_dir)):
                 #     # Make *parent*
                 #     if not self.simulate:
                 #         os.makedirs(undo_dir)
@@ -1098,10 +1101,10 @@ class HInstaller:
                 and not os.path.exists(src)):
             # Remove empty directory *if* not in src & not top level.
             deleted = 1
-            if not os.islink(dst):
+            if not os.path.islink(dst):
                 self.append_install(shlex.join([
                     "rmdir",
-                    dst_path
+                    dst_parent
                 ]))
                 if not self.simulate:
                     os.rmdir(dst)
@@ -1112,7 +1115,7 @@ class HInstaller:
                     self.append_install(shlex.join([
                         "rm",
                         "-f",
-                        dst_path,
+                        dst_parent,
                     ])+"  # directory symlink (*not* recursive delete!)")
                 if not self.simulate:
                     os.unlink(dst)
