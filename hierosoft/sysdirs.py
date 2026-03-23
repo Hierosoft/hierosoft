@@ -17,6 +17,7 @@ if sys.version_info.major < 3:
     ModuleNotFoundError = ImportError
     NotADirectoryError = OSError
 
+
 class PlatformReadOnlyDict(ReadOnlyOrderedDict):
     def __init__(self):
         ReadOnlyOrderedDict.__init__(self)

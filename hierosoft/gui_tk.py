@@ -18,16 +18,11 @@ Options (dict):
 '''
 from __future__ import print_function
 from collections import OrderedDict
+import copy
 import io
 import sys
 import os
-# import shutil
 import threading
-# import tarfile
-# import zipfile
-# import platform
-import copy
-import time
 import warnings
 
 from hierosoft.morelogging import formatted_ex
@@ -45,12 +40,12 @@ if sys.version_info.major >= 3:  # try:
     # from tkinter import tix
 else:  # except ImportError:
     # Python 2
-    import tkMessageBox as messagebox  # noqa F401,N813
-    import tkFileDialog as filedialog  # noqa F401,N813
-    import tkSimpleDialog as simpledialog  # noqa F401,N813
-    import Tkinter as tk  # noqa F401,N813
-    import tkFont as font  # noqa F401,N813
-    import ttk
+    import tkMessageBox as messagebox  # noqa F401,N813 # type:ignore
+    import tkFileDialog as filedialog  # noqa F401,N813 # type:ignore
+    import tkSimpleDialog as simpledialog  # noqa F401,N813 # type:ignore
+    import Tkinter as tk  # noqa F401,N813 # type:ignore
+    import tkFont as font  # noqa F401,N813 # type:ignore
+    import ttk  # type:ignore
     # import Tix as tix
 
 from PIL import Image, ImageEnhance, ImageTk
@@ -509,13 +504,15 @@ class HierosoftUpdateFrame(HierosoftUpdate, ttk.Frame):
         key_widgets = {}
         if self.version_e is not None:
             key_widgets['version'] = self.version_e
-            logger.warning("No version widget (Can't use _init_single_app mode.)")
+            logger.warning(
+                "No version widget (Can't use _init_single_app mode.)")
         if self.arch_e is not None:
             key_widgets['arch'] = self.arch_e
             logger.warning("No arch widget (Can't use _init_single_app mode.)")
         if self.pflag_e is not None:
             key_widgets['platform'] = self.pflag_e
-            logger.warning("No platform widget (Can't use _init_single_app mode.)")
+            logger.warning(
+                "No platform widget (Can't use _init_single_app mode.)")
 
         key_fields = {}
         for key, field in key_widgets.items():
@@ -745,7 +742,8 @@ def show_update_window(options, splashStatusV=None):
         if key not in option_keys:
             raise ValueError("{} is not a valid option.".format(key))
     parent = root  # allowed to be a container instead of root
-    app = HierosoftUpdateFrame(parent, root, options, splashStatusV=splashStatusV)
+    app = HierosoftUpdateFrame(parent, root, options,
+                               splashStatusV=splashStatusV)
     # app.pack(side="top", fill="both", expand=True)
     app.grid(sticky="nsew")
     # root.after(500,  # re-download the applications list

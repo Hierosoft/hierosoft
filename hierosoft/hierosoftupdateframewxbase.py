@@ -95,5 +95,3 @@ class HierosoftUpdateFrameWxBase ( wx.Frame ):
     def m_packagesSplitterOnIdle( self, event ):
         self.m_packagesSplitter.SetSashPosition( 229 )
         self.m_packagesSplitter.Unbind( wx.EVT_IDLE )
-
-

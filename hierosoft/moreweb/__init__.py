@@ -113,15 +113,15 @@ def valid_ip_address(value, allow_broadcast=False, allow_netmask=False):
     This function checks to ensure that a value is a properly formatted
     IPv4 address (not a hostname nor IPv6 address, nor malformed).
 
-    Sequential arguments:
-    value -- A number which may nor may not be an IP address, but should
-        be checked whether it is.
-    allow_broadcast -- Set to True to allow the address to end with
-        255.
+    Args:
+        value (str): A number which may nor may not be an IP address,
+            but should be checked whether it is.
+        allow_broadcast (bool, optional): Set to True to allow the
+            address to end with 255.
 
     Returns:
-    None if good, otherwise an error string describing what is wrong
-        with the value.
+        str|None: None if good, otherwise an error string describing
+            what is wrong with the value.
     '''
     parts = value.split(".")
     if len(parts) != 4:
@@ -184,10 +184,11 @@ def get_ips(ip_addr_proto="ipv4", ignore_local=True, ignore_unassigned=True):
     Get the IP address(es) of the local machine (the computer running
     the program).
 
-    Keyword arguments:
-    ignore_local -- Ignore 127.* addresses (localhost).
-    ignore_unassigned -- Ignore 169.* addresses (missing DHCP server or
-        disconnected from the network).
+    Args:
+        ignore_local (bool, optional): Ignore 127.* addresses
+            (localhost).
+        ignore_unassigned (bool, optional): Ignore 169.* addresses
+            (missing DHCP server or disconnected from the network).
     '''
     import psutil  # works on Windows, macOS, Linux systems (requires package)
     # Based on <https://stackoverflow.com/a/73559817/4541104>.
@@ -281,22 +282,24 @@ def sendall(sock, data, flags=0, count=0, cb_progress=None, cb_done=None,
     import socket
     STATUS_DONE = "done"
 
-    Keyword arguments:
-    flags -- See the socket.sendall documentation on python.org.
-    count -- Leave this at 0. It will be counted automatically.
-        otherwise, it will be added to the callback's count.
-    cb_progress -- This function will be called if the number of
-        bytes uploaded increases.
-    cb_done -- This function will be called when the transfer is
-        complete.
-    evt -- The event. This is necessary if you want to send additional
-        keys back to the callbacks such as 'url'. It is recommended for
-        compatibility with download callback code, since the download
-        method is coded parallel to this one. It can also have special
-        keys such as:
-        - total_size -- If not None, the callbacks will not only
-          receive the number of bytes written ('loaded') but also
-          'ratio' based on this denominator.
+    Args:
+        flags (int, optional): See the socket.sendall documentation on
+            python.org.
+        count (int, optional): Leave this at 0. It will be counted
+            automatically. otherwise, it will be added to the callback's
+            count.
+        cb_progress (Callable, optional): This function will be called
+            if the number of bytes uploaded increases.
+        cb_done (Callable, optional): This function will be called when
+            the transfer is complete.
+        evt (dict): The event. This is necessary if you want to send
+            additional keys back to the callbacks such as 'url'. It is
+            recommended for compatibility with download callback code,
+            since the download method is coded parallel to this one. It
+            can also have special keys such as:
+            - total_size -- If not None, the callbacks will not only
+              receive the number of bytes written ('loaded') but also
+              'ratio' based on this denominator.
     '''
     if evt is None:
         evt = {}
@@ -423,28 +426,32 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
 
     nc -N $hostname $port < $BIN_FILE_PATH
 
-    Sequential arguments:
-    hostname -- The hostname or IP address.
-    port -- The port number as an integer.
-    content -- The binary data.
-    cb_progress -- This function will be called with an event
-        dictionary as a param whenever status is able to be updated.
-    cb_done -- This function will be called if the completion or
-        failure code is reached, along with setting the status to
-        STATUS_DONE or a different message if failed.
-    evt -- This optional event dictionary provides static data other
-        than the keys that this function generates. Whatever data
-        this function generates will either overwrite or appear
-        alongside your custom event keys. It can also have special keys
-        such as:
-        - total_size --  If this is not None, this byte count will be
-          used to set evt['ratio'] for cb_progress and cb_done calls.
-        - connection_timeout -- Set the timeout in seconds for the
-          connection (only applies to netcat function, not sys_netcat
-          function).
-    chunk_size -- This size of a chunk will be sent through netcat.
-    path -- Provide the path to the file that is equivalent to the
-        content, for logging purposes only.
+    Args:
+        hostname (str): The hostname or IP address.
+        port (int): The port number as an integer.
+        content (str): The binary data.
+        cb_progress (Callable, optional): This function will be called
+            with an event dictionary as a param whenever status is able
+            to be updated.
+        cb_done (Callable, optional): This function will be called if
+            the completion or failure code is reached, along with
+            setting the status to STATUS_DONE or a different message if
+            failed.
+        evt (dict, optional): This optional event dictionary provides
+            static data other than the keys that this function
+            generates. Whatever data this function generates will either
+            overwrite or appear alongside your custom event keys. It can
+            also have special keys such as:
+            - total_size --  If this is not None, this byte count will
+              be used to set evt['ratio'] for cb_progress and cb_done
+              calls.
+            - connection_timeout -- Set the timeout in seconds for the
+              connection (only applies to netcat function, not
+              sys_netcat function).
+        chunk_size (int, optional): This size of a chunk will be sent
+            through netcat.
+        path (str, optional): Provide the path to the file that is
+            equivalent to the content, for logging purposes only.
     '''
     # This function is based on run_and_get_lists from "__init__.py"
     # except:
@@ -591,35 +598,34 @@ def sys_netcat(hostname, port, content, cb_progress=None, cb_done=None,
 def download(stream, url, cb_progress=None, cb_done=None,
              chunk_size=16*1024, evt=None, path=None):
     '''
-    Sequential arguments:
-    stream -- This is assumed to be an open stream (or any other
-        class) on which *binary* "write" can be called, for writing
-        binary data directly from the internet address. If it is
-        a file stream, open with the 'wb' mode.
-    url -- The internet address to read.
+    Args:
+        stream (writeable): This is assumed to be an open stream (or any
+            other class) on which *binary* "write" can be called, for
+            writing binary data directly from the internet address. If
+            it is a file stream, open with the 'wb' mode.
+        url (str): The internet address to read.
+        cb_progress (Callable, optional): The callback (function) that
+            receives the amount of data read so far. It must receive an
+            event in the form of a dictionary as the only argument.
+        cb_done (Callable, optional): The callback (function) that is
+            called when the download has completed. It must receive an
+            event in the form of a dictionary as the only argument.
+        chunk_size (int, optional): The chunk size for reading data from
+            the URL.
+        evt (dict, optional): Provide a dictionary with additional keys
+            that will be returned along with the event dict to
+            callbacks. It can also have special keys such as:
+            - total_size (int): If not None, the callbacks will not only
+              receive the number of bytes written ('loaded') but also
+              'ratio' based on this denominator.
+        path (str, optional): Provide the path to the file that is
+            equivalent to the content, for logging purposes only.
 
-    Keyword arguments:
-    cb_progress -- The callback (function) that receives the amount
-        of data read so far. It must receive an event in the form of
-        a dictionary as the only argument.
-    cb_done -- The callback (function) that is called when the
-        download has completed. It must receive an event in the form
-        of a dictionary as the only argument.
-    chunk_size -- The chunk size for reading data from the URL.
-    evt -- Provide a dictionary with additional keys that will be
-        returned along with the event dict to callbacks. It can also
-        have special keys such as:
-        - total_size -- If not None, the callbacks will not only
-          receive the number of bytes written ('loaded') but also
-          'ratio' based on this denominator.
-    path -- Provide the path to the file that is equivalent to the
-        content, for logging purposes only.
-
-    Raises
-    urllib.error.URLError -- (or on Python 2, urllib2.URLError)
-        (access either using `from hierosoft.moreweb import URLError`)
-        if there is no connection to the host. The Exception is
-        raised by the Python request module.
+    Raises:
+        urllib.error.URLError -- (or on Python 2, urllib2.URLError)
+            (access either using `from hierosoft.moreweb import URLError`)
+            if there is no connection to the host. The Exception is
+            raised by the Python request module.
     '''
 
     '''

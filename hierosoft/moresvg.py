@@ -7,7 +7,7 @@ some copies of Python 3 included with early macs).
 
 Why not use <https://github.com/TkinterEP/python-tksvg/tree/master>:
 - Requires a C module (disadvantage due to cross-platform issues
-  and potentiall requiring Dev Tools to install on mac)
+  and potentially requiring Dev Tools to install on mac)
 
 
 Node's public members:
@@ -34,7 +34,7 @@ Attr (node.attributes[x])'s public members:
 'previousSibling', 'removeChild', 'replaceChild', 'schemaType',
 'setUserData', 'specified', 'toprettyxml', 'toxml', 'unlink', 'value'
 """
-# from __future__ import annotations  # allows getter, setter, etc, but *postponed*:
+# from __future__ import annotations  # allow getter setter etc but *postponed*
 #     still not in Python 2.7.17!
 from __future__ import division  # workarounds are used, but import to be sure
 from __future__ import print_function
@@ -658,7 +658,7 @@ class MoreSVG(object):  # Must be new-style class (object) for get/set in Py 2
                 self.shapes.append(
                     canvas.create_line(
                         *buffer2d,
-                        fill=stroke,  # create_line never filled so fill is stroke
+                        fill=stroke,  # create_line not filled--fill is stroke
                         smooth=segment.smooth
                     )  # ^ Python 2 does not like trailing comma above.
                 )
@@ -669,7 +669,7 @@ class MoreSVG(object):  # Must be new-style class (object) for get/set in Py 2
         For documentation see draw_svg.
         """
         viewBoxAttr = root.attributes['viewBox']
-        # echo0("Attr has: %s" % dir(viewBoxAttr))  # See module dostring
+        # echo0("Attr has: %s" % dir(viewBoxAttr))  # See module docstring
         viewBox = str_to_viewBox(viewBoxAttr.value)
         # for node in root.getElementsByTagName("path"):
         path_count = 0
@@ -717,7 +717,7 @@ class MoreSVG(object):  # Must be new-style class (object) for get/set in Py 2
         done = False
         for root in dom.childNodes:
             # usually just one
-            # print("node has: %s" % dir(root))  # See module dostring
+            # print("node has: %s" % dir(root))  # See module docstring
             if type(root).__name__ == "DocumentType":
                 continue
             if done:

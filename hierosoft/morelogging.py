@@ -13,7 +13,6 @@ import re
 import sys
 import traceback
 import os
-import warnings
 
 from collections import OrderedDict
 
@@ -336,6 +335,7 @@ def echo0_long(*args, **kwargs):  # formerly prerr
     """
     # This level is like logging.CRITICAL
     # logging.CRITICAL = 50
+    global echo_stack_trace
     if echo_stack_trace is None:
         echo_stack_trace = get_verbosity() >= 3
     stack_trace = kwargs.pop('stack_trace', echo_stack_trace)
@@ -381,8 +381,9 @@ def echo0_long(*args, **kwargs):  # formerly prerr
             frame = frame_info[STACK_ELEMENT_FRAME_IDX]
             function_name = frame_info[STACK_ELEMENT_FUNCTION_IDX]
             module = inspect.getmodule(frame)
-            module_name = module.__name__ if module and hasattr(module, '__name__') else '<module>'
-            # if module_name == "__main__" and hasattr(module, '__file__') and module.__file__:
+            module_name = module.__name__ if module and hasattr(module, '__name__') else '<module>'  # noqa: E501
+            # if ((module_name == "__main__") and hasattr(module, '__file__')
+            #         and module.__file__):
             #     module_name = module.__file__
             # ^ doesn't work (__main__ is set below)
             # Prepend module name only if this frame is below the main script
@@ -391,7 +392,8 @@ def echo0_long(*args, **kwargs):  # formerly prerr
                 class_name = frame.f_locals["self"].__class__.__name__
             # Build the name with module, class (if any), and function
             if class_name:
-                name = "{}.{}.{}".format(module_name, class_name, function_name)
+                name = "{}.{}.{}".format(module_name, class_name,
+                                         function_name)
             else:
                 name = "{}.{}".format(module_name, function_name)
             # Prepend module name only for the parent of the main script
@@ -501,7 +503,10 @@ def echo0(*args, **kwargs):
             if args and args[0]:
                 # Get the tab & place it before the prefix
                 #   (safe: not-found group(s) still return '' string)
-                tab, no_tab = space_nospace_rc.match(args[0]).groups()
+                matched = space_nospace_rc.match(args[0])
+                assert matched, \
+                    "if has arg, must match space_nospace_rc else fix regex"
+                tab, no_tab = matched.groups()
                 args = (tab+prefix,) + (no_tab,) + args[1:]
             else:
                 args = (prefix,) + args
@@ -604,7 +609,6 @@ def get_traceback(indent=""):
     msg += traceback.format_exc()
     del tb
     return msg
-
 
 
 # syntax_error_fmt = "{path}:{row}:{column}: {message}"

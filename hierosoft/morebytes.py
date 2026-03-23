@@ -270,23 +270,23 @@ class Byter:
     Edit a file regardless of those naggy old encodings. Detect the
     newline character on load, otherwise use the system's default.
 
-    Public attributes:
-    padded_assignment_operator -- Set padded_assignment_operator as
-        anything you want as long as syntax is proper. New values will
-        have this in between. For example, if the syntax allows spaces
-        around the operator, padded_assignment_operator can be " = "
-        where "=" is in assignment operators (Warning:
-        padded_assignment_operator cannot have spaces in shell script
-        and likely some other languages).
+    Attributes:
+        padded_assignment_operator (str): Set padded_assignment_operator
+            as anything you want as long as syntax is proper. New values
+            will have this in between. For example, if the syntax allows
+            spaces around the operator, padded_assignment_operator can
+            be " = " where "=" is in assignment operators (Warning:
+            padded_assignment_operator cannot have spaces in shell
+            script and likely some other languages).
     '''
     # TODO: merge this code with newer rewrite_conf (may be more
     #   fault-tolerant)
     def __init__(self):
-        self.path = None  # type: str
+        self.path = None  # type: str|None
         self.comment_marks = [b"#"]  # type: list[bytes]
         self.assignment_operators = [b":"]  # type: list[bytes]
         self.padded_assignment_operator = b":"  # type: bytes
-        self.newline = os.linesep.encode('utf-8')  # type: bytes
+        self.newline = os.linesep.encode('utf-8')  # type: bytes|None
         self.changes = 0
 
     def load(self, path):
@@ -295,7 +295,7 @@ class Byter:
         self.cursor = 0
         self.path = path
         i = -1
-        self.newline = None  # type: bytes
+        self.newline = None
         while True:
             i += 1
             if i >= len(self.data):
@@ -494,6 +494,7 @@ class Byter:
         if self.changes < 1:
             echo0("[Byter save] Warning:"
                   " There are no tracked changes (saving anyway).")
+        assert self.path
         with open(self.path, 'wb') as outs:
             outs.write(self.data)
             self.changes = 0
@@ -809,9 +810,11 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
         echo0("Warning: performance may be slow"
               " due to no precompiled regex for %s"
               % repr(sign))
-        spaceOpSpace = re.compile(moresix.ensure_type(r"[^\S\r\n]*", type(sign))
-                                  + re.escape(sign)
-                                  + moresix.ensure_type(r"[^\S\r\n]*"), type(sign))
+        spaceOpSpace = re.compile(
+            moresix.ensure_type(r"[^\S\r\n]*", type(sign))
+            + re.escape(sign)
+            + moresix.ensure_type(r"[^\S\r\n]*"), type(sign)
+        )
     match = spaceOpSpace.search(line_strip)
     if not match:
         where = ""
@@ -848,6 +851,7 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
     post_value_spacing = None  # type: str|bytes|bytearray|None
     comment = None  # type: str|bytes|bytearray|None
     line_end = None  # type: str|bytes|bytearray|None
+    _ = None
     if allow_comment_after_value:
         comment_i = find_not_quoted(rvalue, comment_mark)
         if comment_i > -1:
@@ -884,7 +888,7 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
             "None for one of: value=%s, post_value_spacing=%s, line_end=%s"
             % (value, post_value_spacing, line_end)
         )
-    if len(_) > 0:
+    if (_ is not None) and len(_) > 0:
         raise RuntimeError(
             "spaceOpSpace should have obtained pre-value space"
             " but left '%s' in line_strip=%s"
@@ -962,6 +966,7 @@ class AssignmentInfo:
 
 
 def tokenize_conf_line(raw_line, allow_comment_after_value, **kwargs):
+    # type: (str, bool, ...) -> list[str]
     """Tokenize conf or *any* assignment line without spaces in var name.
 
     Uses consistent indices that indicate meaning of token.
@@ -1019,7 +1024,7 @@ def tokenize_conf_line_as_dict(raw_line, allow_comment_after_value, **kwargs):
             type of raw_line).
     """
     parts = tokenize_conf_line(raw_line, allow_comment_after_value, **kwargs)
-    results = {}
+    results = {}  # dict[str, Any]
     if len(AssignmentInfo.PARTS) != len(parts):
         raise NotImplementedError(
             "expected %s values from but got %s from tokenize_conf_line"

@@ -3,11 +3,12 @@ from __future__ import print_function
 import glob
 import os
 import psutil
-import shutil
+import six
 import subprocess
 import sys
 
 from pathlib import Path
+from typing import Iterable  # noqa: F401
 
 enable_tk = False
 
@@ -15,7 +16,7 @@ try:
     if sys.version_info.major >= 3:
         from tkinter import messagebox
     else:
-        import tkMessageBox as messagebox
+        import tkMessageBox as messagebox  # type:ignore
     enable_tk = True
 except ImportError:
     print("Warning: tk could not be imported,"
@@ -27,10 +28,11 @@ except ImportError:
 if sys.version_info.major >= 3:
     from shlex import join as shlex_join
 else:
-    def shlex_join(parts):
+    def shlex_join(split_command):
+        # type: (Iterable[str]) -> str
         result = ""
         space = ""
-        for part in parts:
+        for part in split_command:
             if " " in part:
                 result += space + "'" + part.replace("'", "\\'") + "'"
             space = " "
@@ -48,10 +50,12 @@ REPO_DIR = os.path.dirname(MODULE_DIR)
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
 
-from hierosoft.programinfo import (
+from hierosoft.programinfo import (  # noqa: E402
     ProgramInfo,
 )
+from hierosoft.logging2 import getLogger  # noqa: E402
 
+logger = getLogger(__name__)
 
 
 def clean_file_name(name):
@@ -82,7 +86,9 @@ class ProcessWrapper:
     """
 
     # ardour_path = "/opt/Ardour-8.6.0/bin/ardour8"
-    ardour_path = "/opt/Ardour-*/bin/ardour8"  # FIXME: ardour* doesn't work since ardour-8.9.0 is binary but ardour8 is necessary script that loads shared libraries
+    ardour_path = "/opt/Ardour-*/bin/ardour8"  # FIXME: ardour* doesn't work
+    #  since ardour-8.9.0 is binary but ardour8 is necessary script that
+    #  loads shared libraries
     my_pid_path = os.path.join(MY_PIDS_DIR, "bash.pid")
     yad_pid_path = os.path.join(MY_PIDS_DIR, "yad.pid")
     nextcloud_pid_path = os.path.join(MY_PIDS_DIR, "nextcloud.pid")
@@ -99,14 +105,14 @@ class ProcessWrapper:
         if "*" in self.target:
             programs = []
             highest_i = -1
-            highest_version = (0, 0, 0)
+            highest_version = (0, 0, 0)  # tuple[int, ...]
             for path in list(sorted(glob.glob(self.target))):
                 prog = ProgramInfo()
                 prog.set_path(path)
-                if (prog.version_tuple()
-                        and (prog.version_tuple() > highest_version)):
+                version_tuple = prog.version_tuple()
+                if (version_tuple and (version_tuple > highest_version)):
                     highest_i = len(programs)
-                    highest_version = prog.version_tuple()
+                    highest_version = version_tuple
                     # Keep the "highest" version, such as if the file
                     #   has 8 and the directory has 8.6.0, keep
                     #   8.6.0 since it has the most info.
@@ -251,7 +257,7 @@ class ProcessWrapper:
             print(error)
             if enable_tk:
                 # error = error.replace("\n", " ").replace("  ", " ")
-                messagebox.showinfo(ME, error)
+                messagebox.showinfo(ME, error)  # type: ignore
             else:
                 subprocess.run(["xmessage", error])
             # os.remove(self.my_pid_path)  # not yet: created below
@@ -314,9 +320,8 @@ class ProcessWrapper:
         # Wait for the target program to exit
         # target_proc.wait()
         out, err = target_proc.communicate()
-        if sys.version_info.major >= 3:
-            out = out.decode()
-            err = err.decode()
+        out = six.ensure_str(out)
+        err = six.ensure_str(err)
         return_code = target_proc.returncode
         if return_code != 0:
             print("", file=sys.stderr)
@@ -333,7 +338,10 @@ class ProcessWrapper:
                 print("%s" % err, file=sys.stderr)
                 error += "\n" + err
             print("", file=sys.stderr)
-            messagebox.showerror("ProcessWrapper.", error)
+            if enable_tk:
+                messagebox.showerror("ProcessWrapper.", error)  # type: ignore
+            else:
+                logger.error(error)
         os.remove(target_pid_path)
 
         # Restart Nextcloud

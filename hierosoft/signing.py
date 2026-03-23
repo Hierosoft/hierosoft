@@ -27,7 +27,7 @@ def echo0(*args, **kwargs):
 
 
 if sys.version_info.major < 3:
-    input = raw_input  # noqa F821
+    input = raw_input  # noqa F821  # type:ignore
 
 SIGN_CMD_FMT = (
     "{signtool} sign /tr {timestamp_server}"
@@ -72,6 +72,7 @@ if os.path.isfile(_signtool_list_file):
 
 KNOWN_SIGNTOOLS = KNOWN_SIGNTOOLS_PER_SYSTEM.get(SYSTEM)
 SIGNTOOL = None
+KNOWN_SIGNTOOL = None
 if KNOWN_SIGNTOOLS is not None:
     for KNOWN_SIGNTOOL in KNOWN_SIGNTOOLS:
         if os.path.isfile(KNOWN_SIGNTOOL):
@@ -106,8 +107,8 @@ def main():
         "/TR": "timestamp_server",
     }
     key = None
-    for argi in range(1, len(sys.argv)):
-        arg = sys.argv[argi]
+    for argI in range(1, len(sys.argv)):
+        arg = sys.argv[argI]
         if key is not None:
             options[key] = arg
             key = None

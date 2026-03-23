@@ -14,7 +14,7 @@ import tempfile
 import zipfile
 
 from collections import OrderedDict
-from typing import Callable
+from typing import Callable  # noqa: F401
 from zipfile import ZipFile
 
 from hierosoft.morelogging import echo2, hr_repr

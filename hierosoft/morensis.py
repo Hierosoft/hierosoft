@@ -124,6 +124,7 @@ class NSISInclude:
             openers.append(opener+" ")
             openers.append(opener+"\t")
         lineN = 0
+        assert self.path
         with open(self.path, 'r') as stream:
             for rawL in stream:
                 lineN += 1  # Counting numbers start at 1.

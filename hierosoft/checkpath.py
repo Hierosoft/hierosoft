@@ -277,6 +277,7 @@ def usage():
         command = "python checkpath.py"
         # ^ See the windows_command_note global.
         note = windows_command_note
+    assert __doc__
     echo0(__doc__.format(
         pathsep=os.pathsep,
         dirsep=os.path.sep,

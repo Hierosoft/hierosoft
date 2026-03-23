@@ -353,7 +353,7 @@ class RepoState:
         if not results.get('assets'):
             results = self.list_latest_release_assets(
                 None,
-                content_type=None,
+                # content_type=None,  # FIXME: document None value if necessary
             )
             if name_pattern:
                 results['error'] = ("No assets matched the specified"
@@ -376,6 +376,7 @@ class RepoState:
 
     def list_latest_release_assets(self, name_pattern,
                                    content_type="application/octet-stream"):
+        # type (str, str) -> list
         """Get a list of matching assets from a release.
 
         Args:
@@ -389,10 +390,11 @@ class RepoState:
                 Defaults to "application/octet-stream".
 
         Raises:
-            ValueError: _description_
+            ValueError: The downloaded asset doesn't match the
+                content_type.
 
         Returns:
-            _type_: _description_
+            list: assets from a release matching the criteria
         """
         results = {}
         if self._latest_release_meta is None:
@@ -401,7 +403,7 @@ class RepoState:
             if error:
                 results.update(release_results)
                 return results
-
+        assert self._latest_release_meta is not None
         assets = self._latest_release_meta.get('assets')
         if not assets:
             results['error'] = \

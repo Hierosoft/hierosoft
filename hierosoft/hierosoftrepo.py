@@ -6,7 +6,6 @@ import platform
 
 from collections import OrderedDict
 import shutil
-from hierosoft import join_if_exists
 from hierosoft.morelogging import (
     # is_enclosed,
     hr_repr,

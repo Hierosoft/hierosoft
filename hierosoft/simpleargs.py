@@ -186,7 +186,7 @@ class SimpleArgs:
     def collect(self):
         '''
         Collect the command-line interface (CLI) arguments as long as
-        they are defind (by the constructor arguments). If the
+        they are defined (by the constructor arguments). If the
         arguments do not match the programmer's specifications from the
         constructor, an exception will be raised.
         '''
@@ -285,7 +285,7 @@ class SimpleArgs:
                 if value is None:
                     # Allow a default of None.
                     pass
-                elif type(value) != type(converted):
+                elif type(value) is not type(converted):
                     raise KeyError(
                         # KeyError since that is the programmer error.
                         "The default value {} is a {} but the"

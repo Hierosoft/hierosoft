@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This submodule mimics Python 3 logging but works in either Python 2 or Python 3.
+This submodule mimics Python 3 logging but works in Python 2 or 3.
 
 Project: hierosoft
 
@@ -21,7 +21,10 @@ See also:
 
 However, basicConfig has changed as follows:
 > Changed in version 3.2: The style argument was added.
-> Changed in version 3.3: The handlers argument was added. Additional checks were added to catch situations where incompatible arguments are specified (e.g. handlers together with stream or filename, or stream together with filename).
+> Changed in version 3.3: The handlers argument was added. Additional
+>   checks were added to catch situations where incompatible arguments
+>   are specified (e.g. handlers together with stream or filename, or
+>   stream together with filename).
 > Changed in version 3.8: The force argument was added.
 > Changed in version 3.9: The encoding and errors arguments were added.
 -<https://docs.python.org/3/library/logging.html>
@@ -36,13 +39,18 @@ getLevelName changed as follows:
 
 Other Changes:
 > logging.disable(level=CRITICAL):
-> Changed in version 3.7: The level parameter was defaulted to level CRITICAL. See bpo-28524 for more information about this change.
+> Changed in version 3.7: The level parameter was defaulted to level
+>   CRITICAL. See bpo-28524 for more information about this change.
 >
 > logging.getLogRecordFactory():
-> Added in version 3.2: This function has been provided, along with setLogRecordFactory(), to allow developers more control over how the LogRecord representing a logging event is constructed.
+> Added in version 3.2: This function has been provided, along with
+>   setLogRecordFactory(), to allow developers more control over how the
+>   LogRecord representing a logging event is constructed.
 >
 > logging.setLogRecordFactory(factory):
-> Added in version 3.2: This function has been provided, along with getLogRecordFactory(), to allow developers more control over how the LogRecord representing a logging event is constructed.
+> Added in version 3.2: This function has been provided, along with
+>   getLogRecordFactory(), to allow developers more control over how the
+>   LogRecord representing a logging event is constructed.
 >
 > logging.lastResort:
 > "handler of last resort"
@@ -180,6 +188,7 @@ class Formatter:
             return self.fmt.format(message=message)
         elif self.style == "$":
             # such as "Error: $message in some method"
+            assert self.t
             return self.t.substitute(message=message)
         else:
             raise ValueError(

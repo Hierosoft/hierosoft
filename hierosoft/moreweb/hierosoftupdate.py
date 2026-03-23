@@ -1326,6 +1326,7 @@ def show_images(root, app, canvas, enable_svg=False, test_only=False,
     if not test_only:
         if enable_svg:
             # Not implemented
+            assert svg
             svg.draw_svg(
                 hierosoft_svg,
                 canvas,  # TODO: aa_canvas,
@@ -1333,7 +1334,8 @@ def show_images(root, app, canvas, enable_svg=False, test_only=False,
                 pos=pos,
             )
         else:
-            canvas.create_image(pos[0], pos[1], image=root.logo_photo, anchor=tk.NW)
+            canvas.create_image(pos[0], pos[1],
+                                image=root.logo_photo, anchor=tk.NW)
 
     # aa_canvas.render(canvas, divisor=aa, transparent="FFFFFF")
 

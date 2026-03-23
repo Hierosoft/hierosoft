@@ -21,14 +21,14 @@ class HierosoftUpdateFrameWx(HierosoftUpdateFrameWxBase, HierosoftUpdate):
         # HierosoftUpdate.__init__(self, *args, **kwargs)
         # Assuming 'self.m_auinotebook1' is the name from wxFormBuilder
         # Hide tab (only works for AUINotebook):
-        self.m_notebook.SetSelection(0)  # Select the page you want displayed (0-based index)
+        self.m_notebook.SetSelection(0)  # Select the page (0-indexed)
         self.m_notebook.SetTabCtrlHeight(0)  # Hide the tab bar
         self.Layout()  # Refresh the layout if needed
 
 
 def main():
-    app = wx.App(False)  # Create the application (False to not redirect stdout/stderr)
-    frame = HierosoftUpdateFrameWx(None)  # Instantiate the frame with no parent
+    app = wx.App(False)  # (False to not redirect stdout/stderr)
+    frame = HierosoftUpdateFrameWx(None)  # None for no parent
     frame.Show(True)  # Show the frame
     wx.CallAfter(frame.start)
     app.MainLoop()  # Start the main event loop

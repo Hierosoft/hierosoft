@@ -46,7 +46,8 @@ def split_version(name):
             version_end = starts[version_ii+1]
             suffix_i = version_end
             # ^ such as git in 6.0.0-git or {hash} in 6.0.0-{hash}
-            return name[name_i:version_i], name[version_i+1:version_end], name[suffix_i+1:]
+            return (name[name_i:version_i], name[version_i+1:version_end],
+                    name[suffix_i+1:])
         return name[:starts[version_ii]], name[starts[version_ii]+1:]
     return (name, )
 
@@ -72,6 +73,7 @@ class ProgramInfo:
         self.set_version_from_path(path)
 
     def version_tuple(self):
+        # type: () -> tuple[int, ...] | None
         if not self.version:
             return None
         if not is_dot_notation(self.version):

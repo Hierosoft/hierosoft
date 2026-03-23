@@ -203,4 +203,3 @@ class TextExtension(ttk.Frame):
 
     def leaf_configure(self, **kwargs):
         self._text_widget.configure(**kwargs)
-

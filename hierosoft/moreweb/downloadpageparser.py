@@ -10,7 +10,7 @@ from hierosoft import (
 
 from hierosoft.moreweb import (
     name_from_url,
-    HTMLParser,  # imported from hierosoft instead of html.parser to handle 2to3 issues
+    HTMLParser,  # hierosoft instead of html.parser to handle 2to3 issues
 )
 
 

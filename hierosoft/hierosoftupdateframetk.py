@@ -21,15 +21,16 @@ class HierosoftUpdateFrameTk(HierosoftUpdateFrameTkBase, HierosoftUpdate):
         # Assuming 'self.m_notebook' is the name from the base class
         # Hide tab (only works for Notebook with custom style):
         self.style = ttk.Style(self)
-        self.style.layout("Hidden.TNotebook", [("Hidden.TNotebook.client", {"sticky": "nswe"})])
+        self.style.layout("Hidden.TNotebook", [("Hidden.TNotebook.client",
+                                                {"sticky": tk.NSEW})])
         self.style.layout("Hidden.TNotebook.Tab", [])
         self.m_notebook.configure(style="Hidden.TNotebook")
-        self.m_notebook.select(self.m_packagesTabPanel)  # Select the page you want displayed
+        self.m_notebook.select(self.m_packagesTabPanel)  # Select the page
 
 
 def main():
     root = tk.Tk()  # Create the root window
-    frame = HierosoftUpdateFrameTk(root)  # Instantiate the frame with root as parent
+    frame = HierosoftUpdateFrameTk(root)
     frame.pack(fill="both", expand=True)  # Pack the frame to fill the root
     root.after(0, frame.start)
     root.mainloop()  # Start the main event loop

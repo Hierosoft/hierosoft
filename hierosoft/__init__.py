@@ -22,6 +22,8 @@ from hierosoft.morelogging import (  # noqa F401
     # verbosity,
 )
 
+import subprocess  # FIXME: move to moreplatform so can use polyfill
+
 from hierosoft.sysdirs import sysdirs
 
 ALREADY_LAUNCHED = "--already-launched"
@@ -592,6 +594,7 @@ def which(program_name, more_paths=[]):
     Returns:
         str: The full path to the executable or None.
     '''
+    result = None
     prefix = "[which] "
     # from https://github.com/Hierosoft/DigitalMusicMC
     preferred_path = None

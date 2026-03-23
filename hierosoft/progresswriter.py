@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 
+
 class ProgressWriter:
     cli_print_delta = 1024 * 400  # 1024 * 400 is 400K
 
@@ -9,7 +10,7 @@ class ProgressWriter:
         self.prev_percent = None
         self.prev_hr = None  # rounded
         self.prev_ratio = None  # precise
-        self.hr_fn = None
+        self.hr_fn = None  # Callable[[Any], str]
 
     def write(self, size, total, force=False):
         min_d = ProgressWriter.cli_print_delta

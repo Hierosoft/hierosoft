@@ -4,7 +4,7 @@ import sys
 import os
 import shlex
 
-MODULE = os.environ.get('MODULE')
+MODULE = os.environ.get('MODULE')  # type: str  # type:ignore
 
 if MODULE is None:
     MODULE = "hierosoft"

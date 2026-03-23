@@ -926,6 +926,8 @@ def filter_tree(path, more_args=None, include=None, exclude=None, ex_by=None,
                 # ^ keep "/" since checkPath will start with "/" after
                 #   ignore_root is removed in the case of a match.
                 checkPath = path
+                assert ignore_root, \
+                    "ignore_root is required when ignore is set"
                 if checkPath.startswith(ignore_root):
                     checkPath = checkPath[len(ignore_root):]
                     # ^ Now checkPath starts with "/" like ignore_s
@@ -1138,21 +1140,21 @@ def filter_tree(path, more_args=None, include=None, exclude=None, ex_by=None,
                 # <https://www.reddit.com/r/learnpython/comments/4rc15s/comment/d4zuk5l/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button>
                 # yield from filter_tree(
                 for this_sub in filter_tree(
-                    subPath,
-                    more_args=more_args,
-                    include=include,
-                    exclude=exclude,
-                    ex_by=ex_by,
-                    recursive=recursive,
-                    quiet=quiet,
-                    ignore=ignore,
-                    ignore_root=ignore_root,
-                    show_args_warnings=show_args_warnings,
-                    trace_ignore_files=trace_ignore_files,
-                    follow_symlinks=follow_symlinks,
-                    followed_targets=followed_targets,
-                    root=root,
-                    ):
+                        subPath,
+                        more_args=more_args,
+                        include=include,
+                        exclude=exclude,
+                        ex_by=ex_by,
+                        recursive=recursive,
+                        quiet=quiet,
+                        ignore=ignore,
+                        ignore_root=ignore_root,
+                        show_args_warnings=show_args_warnings,
+                        trace_ignore_files=trace_ignore_files,
+                        follow_symlinks=follow_symlinks,
+                        followed_targets=followed_targets,
+                        root=root,
+                ):
                     yield this_sub
                 # ^ filter the files too
                 # ^ don't yield here, even if directory, since filtering
@@ -1189,6 +1191,8 @@ def quoted(path):
 
 # TODO: Ignore the .git directory.
 def main():
+    results = None
+    mb = None
     start_dt = datetime.now()
     # include_args = default_includes.copy()
     include_args = []
@@ -1282,6 +1286,7 @@ def main():
                 _found_include = True
                 # grep can accept more than one --include, so force the
                 # old one and the new one:
+                assert include_args
                 include_args.append("--include")
                 if inline_k is not None:
                     if not inline_v:
@@ -1482,6 +1487,7 @@ def main():
                         gitignore=gitignore)
         files = results.get('files')
         mb = results.get('read_mb')
+        assert files, "files is not set: {}".format(results)
         for line in files:
             colon1 = line.find(":")
             colon2 = line.find(":", colon1+1)
@@ -1538,11 +1544,15 @@ def main():
               " .git directories and in files listed in"
               " .gitignore or .grepignore files")
     delta = datetime.now() - start_dt
-    echo0("read_count: {}".format(results['read_count']))
-    echo0("match_count: {}".format(results['match_count']))
+    if results:
+        echo0("read_count: {}".format(results['read_count']))
+        echo0("match_count: {}".format(results['match_count']))
+    else:
+        echo0("results: {}".format(results))
     echo0("MB read: {}".format(mb))
     echo0("elapsed: {}".format(delta))
-    echo0("MB/s: {}".format(float(mb)/delta.total_seconds()))
+    if mb is not None:
+        echo0("MB/s: {}".format(float(mb)/delta.total_seconds()))
     return 0
 
 

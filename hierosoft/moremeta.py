@@ -846,6 +846,7 @@ def neatMetaTags(path, makeAllValidPathChars=True):
             # category = None
         else:
             album = decodeAny(album)
+        assert album
         if len(album) == 0:
             album = "unknown"
         if title is not None:
