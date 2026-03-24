@@ -888,7 +888,7 @@ def _tokenize_conf_line(raw_line, allow_comment_after_value, sign=None,
             "None for one of: value=%s, post_value_spacing=%s, line_end=%s"
             % (value, post_value_spacing, line_end)
         )
-    if (_ is not None) and len(_) > 0:
+    if (_ is not None) and (len(_) > 0):
         raise RuntimeError(
             "spaceOpSpace should have obtained pre-value space"
             " but left '%s' in line_strip=%s"
