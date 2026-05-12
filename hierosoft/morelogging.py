@@ -133,7 +133,8 @@ def set_emit_quote(quote):
     emit_quote = quote
 
 
-def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None):
+def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None,
+            force_double_quote=False):
     """Human-readable repr is mostly like pformat from pprint
     except without newlines (existing ones get escaped).
 
@@ -158,6 +159,8 @@ def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None):
             function). For example, change "\n" (literal newline, on
             character) to "\\n" (actually one backslash followed by
             newline). Defaults to True.
+        force_double_quote (Optional[bool]): Always make the
+            outermost quotes double quotes.
 
     Returns:
         str: string where only strings are quote_if_like_str (without
@@ -168,6 +171,8 @@ def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None):
     if escape_if_like_str is None:
         escape_if_like_str = True
     if quote_if_like_str is None:
+        quote_if_like_str = True
+    if force_double_quote:
         quote_if_like_str = True
     original_value = value
     enclosures = None
@@ -187,8 +192,15 @@ def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None):
                 for key, item in value.items():
                     parts[key] = hr_repr(item, quote_if_like_str=False)
                 if isinstance(parts, OrderedDict):
-                    return str(parts).replace("OrderedDict", "")[1:-1]
-                return parts
+                    if force_double_quote:
+                        return d_quote(str(parts)
+                                       .replace("OrderedDict", "")[1:-1])
+                    else:
+                        return str(parts).replace("OrderedDict", "")[1:-1]
+                if force_double_quote:
+                    return d_quote(str(parts))
+                else:
+                    return parts
             for i, item in enumerate(value):
                 iterated = True
                 parts.append(hr_repr(item, quote_if_like_str=False))
@@ -208,32 +220,50 @@ def hr_repr(value, quote_if_like_str=None, escape_if_like_str=None):
             # It is not str-like. To avoid adding quotes to non-str-like
             #   (number, bool, etc.) leave it as is
             #   (otherwise it will get quotes on list to str).
-            return value
+            if force_double_quote:
+                return '"%s"' % str(value)
+            else:
+                return value
     value = str(value)
     # big_enclosures = ["OrderedDict(", ")"]
     if is_enclosed(value, "b'", "'") or is_enclosed(value, "u'", "'"):
-        if quote_if_like_str:
-            return value[1:]  # Only remove b or u not b'' etc.
+        if force_double_quote:
+            return '"%s"' % value[2:-1].replace('"', '\\"')
         else:
-            return value[2:-1]
+            if quote_if_like_str:
+                return value[1:]  # Only remove b or u not b'' etc.
+            else:
+                return value[2:-1]
     elif is_str_like(original_value):
         if escape_if_like_str:
             value = value.replace("\r", "\\r").replace("\n", "\\n")
             value = value.replace("\b", "\\b")
             value = value.replace("\t", "\\t")
         if quote_if_like_str:
+            quo = emit_quote  # type: str|None
+            if force_double_quote:
+                quo = '"'
             if emit_quote is None:
                 if '"' in value:
                     return "'%s'" % value.replace("'", "\\'")
                 else:
                     return '"%s"' % value.replace('"', '\\"')
             else:
+                assert isinstance(quo, str)
                 # This is universal but isn't as nice since it will
                 #   force escaped quotes. The case above is adaptive.
-                quo = emit_quote
                 return '%s%s%s' % (quo, value.replace(quo, '\\'+quo), quo)
     # elif isinstance(value, OrderedDict)
     return value
+
+
+def d_quote(value):
+    if value is None:
+        return '""'
+    # if not isinstance(value, six.string_types):
+    #     value = str(value)
+    return hr_repr(value, quote_if_like_str=True,
+                   force_double_quote=True)
 
 
 def write0(msg, traceback_start=2, stack_trace=True):
