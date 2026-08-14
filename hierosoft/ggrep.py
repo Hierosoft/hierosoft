@@ -581,7 +581,7 @@ def is_like_any(haystack, needles, allow_blank=False, quiet=False):
 def gitignore_to_rsync_pair(gitignore_path, rsync_from, tmp_dir,
                             ignore_root=None):
     '''Get a pair of include and exclude files
-    (one or both can be None if not applicable) from the projects
+    (one or both may not exist if not applicable) from the projects
     .gitignore file.
 
     The --include-from must be used before --exclude-from since rsync uses
@@ -652,12 +652,13 @@ def gitignore_to_rsync_pair(gitignore_path, rsync_from, tmp_dir,
             patterns[AS_IDX].append(line)
 
     for i in range(2):
-        if len(patterns[i]) < 1:
-            continue
         path = os.path.join(
             tmp_dir,
             "{}.txt".format(names[i])
         )
+        paths[i] = path
+        if len(patterns[i]) < 1:
+            continue
         with open(path, 'w') as outs:
             for line in patterns[i]:
                 outs.write(line+"\n")
