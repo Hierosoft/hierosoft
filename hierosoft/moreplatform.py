@@ -70,7 +70,7 @@ except ModuleNotFoundError:
 
 # TODO: if shlex is used, do (or contribute code to six?):
 """
-if sys.version_info.major > 3 and sys.version_info.minor > 8:
+if sys.version_info.major >= 3 and sys.version_info.minor > 8:
     shlex_join = shlex.join
 else:
     import pipes  # deprecated, slated for removal in 3.13
